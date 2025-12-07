@@ -1,0 +1,1455 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Micro Strength & Mobility Routine</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    :root {
+      --bg: #050816;
+      --bg-alt: #0b1020;
+      --accent: #4f46e5;
+      --accent-soft: rgba(79, 70, 229, 0.18);
+      --text: #f9fafb;
+      --muted: #9ca3af;
+      --card: #111827;
+      --border: #1f2937;
+      --radius-xl: 20px;
+      --shadow-soft: 0 14px 40px rgba(0,0,0,0.6);
+      --success: #22c55e;
+    }
+
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif;
+      background: radial-gradient(circle at top, #111827 0, #020617 40%, #000 100%);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+    }
+
+    .app {
+      width: 100%;
+      max-width: 480px;
+      padding: 12px 14px 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    header {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      padding: 10px 14px;
+      border-radius: 16px;
+      background: linear-gradient(135deg, rgba(15,23,42,0.9), rgba(30,64,175,0.66));
+      box-shadow: 0 10px 30px rgba(15,23,42,0.9);
+      border: 1px solid rgba(148,163,184,0.2);
+    }
+
+    .app-title {
+      font-size: 1.1rem;
+      font-weight: 600;
+      letter-spacing: 0.03em;
+      text-transform: uppercase;
+      color: #e5e7eb;
+    }
+
+    .app-subtitle {
+      font-size: 0.88rem;
+      color: var(--muted);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .chip {
+      padding: 4px 8px;
+      border-radius: 999px;
+      background: rgba(15,23,42,0.8);
+      border: 1px solid rgba(148,163,184,0.4);
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #e5e7eb;
+    }
+
+    .day-selector {
+      display: flex;
+      gap: 6px;
+      overflow-x: auto;
+      padding: 0 2px;
+      scrollbar-width: none;
+      margin-top: 4px;
+    }
+
+    .day-selector::-webkit-scrollbar { display: none; }
+
+    .day-pill {
+      font-size: 0.8rem;
+      padding: 6px 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(148,163,184,0.3);
+      background: rgba(15,23,42,0.9);
+      color: var(--muted);
+      flex: 0 0 auto;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .day-pill span.dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 999px;
+      background: rgba(148,163,184,0.7);
+    }
+
+    .day-pill.active {
+      border-color: var(--accent);
+      background: rgba(79,70,229,0.16);
+      color: #e5e7eb;
+    }
+
+    .day-pill.active span.dot {
+      background: var(--accent);
+    }
+
+    .session-selector {
+      display: flex;
+      gap: 6px;
+      margin-top: 6px;
+    }
+
+    .session-pill {
+      flex: 1;
+      font-size: 0.78rem;
+      padding: 5px 8px;
+      border-radius: 999px;
+      border: 1px solid rgba(148,163,184,0.4);
+      background: rgba(15,23,42,0.88);
+      color: var(--muted);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      white-space: nowrap;
+    }
+
+    .session-pill span.dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 999px;
+      background: rgba(148,163,184,0.7);
+    }
+
+    .session-pill.active {
+      border-color: var(--accent);
+      background: rgba(79,70,229,0.26);
+      color: #e5e7eb;
+    }
+
+    .session-pill.active span.dot {
+      background: var(--accent);
+    }
+
+    .phase-chip {
+      padding: 5px 9px;
+      border-radius: 999px;
+      background: rgba(15,23,42,0.9);
+      border: 1px solid rgba(148,163,184,0.4);
+      font-size: 0.75rem;
+      color: #e5e7eb;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .phase-chip small {
+      font-size: 0.72rem;
+      color: var(--muted);
+    }
+
+    .progress-header {
+      font-size: 0.74rem;
+      color: var(--muted);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      margin-top: 6px;
+    }
+
+    .dots {
+      display: inline-flex;
+      gap: 3px;
+      align-items: center;
+    }
+
+    .dot-indicator {
+      width: 8px;
+      height: 8px;
+      border-radius: 999px;
+      background: rgba(51,65,85,0.7);
+      transition: transform 0.18s ease, background 0.18s ease;
+    }
+
+    .dot-indicator.active {
+      background: var(--accent);
+      transform: scale(1.12);
+    }
+
+    .card-container {
+      position: relative;
+      flex: 1;
+      display: flex;
+      align-items: stretch;
+      margin-top: 2px;
+    }
+
+    .exercise-card {
+      width: 100%;
+      background: radial-gradient(circle at top left, #111827 0, #020617 40%, #020617 100%);
+      border-radius: var(--radius-xl);
+      box-shadow: var(--shadow-soft);
+      border: 1px solid var(--border);
+      padding: 14px 14px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      animation: fadeIn 0.25s ease-out;
+      touch-action: pan-y;
+      position: relative;
+    }
+
+    .exercise-card.done {
+      border-color: rgba(34,197,94,0.9);
+      box-shadow:
+        0 0 0 1px rgba(34,197,94,0.45),
+        0 16px 40px rgba(22,163,74,0.4);
+    }
+
+    .done-flag {
+      position: absolute;
+      top: 10px;
+      right: 12px;
+      padding: 3px 8px;
+      border-radius: 999px;
+      background: rgba(22,163,74,0.18);
+      border: 1px solid rgba(22,163,74,0.65);
+      font-size: 0.7rem;
+      color: #bbf7d0;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .done-flag span {
+      width: 8px;
+      height: 8px;
+      border-radius: 999px;
+      background: var(--success);
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(6px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .exercise-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 8px;
+      padding-right: 70px; /* room for done flag */
+    }
+
+    .exercise-title {
+      font-size: 1rem;
+      font-weight: 600;
+    }
+
+    .exercise-meta {
+      text-align: right;
+      font-size: 0.75rem;
+      color: var(--muted);
+    }
+
+    .exercise-meta strong {
+      display: block;
+      font-size: 0.8rem;
+      color: #e5e7eb;
+    }
+
+    .gif-wrapper {
+      margin-top: 4px;
+      border-radius: 16px;
+      overflow: hidden;
+      background: radial-gradient(circle at top, #1f2937 0, #020617 65%);
+      border: 1px solid rgba(55,65,81,0.9);
+      position: relative;
+      aspect-ratio: 16/10;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      isolation: isolate;
+    }
+
+    .gif-wrapper img {
+      width: 100%;
+      height: auto;
+      max-height: 100%;
+      object-fit: contain;
+      display: block;
+    }
+
+    .gif-overlay {
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(circle at center, rgba(15,23,42,0), rgba(15,23,42,0.65));
+      pointer-events: none;
+    }
+
+    .gif-label {
+      position: absolute;
+      bottom: 8px;
+      left: 10px;
+      padding: 3px 8px;
+      border-radius: 999px;
+      background: rgba(15,23,42,0.82);
+      border: 1px solid rgba(148,163,184,0.4);
+      font-size: 0.7rem;
+      color: #e5e7eb;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .gif-label span {
+      width: 6px;
+      height: 6px;
+      border-radius: 999px;
+      background: var(--success);
+      box-shadow: 0 0 0 6px rgba(34, 197, 94, 0.25);
+    }
+
+    .gif-attribution {
+      font-size: 0.72rem;
+      color: var(--muted);
+      margin-top: 6px;
+    }
+
+    .gif-attribution a {
+      color: #c7d2fe;
+      text-decoration: none;
+    }
+
+    .gif-attribution a:hover {
+      text-decoration: underline;
+    }
+
+    .exercise-body {
+      font-size: 0.85rem;
+      color: #e5e7eb;
+      margin-top: 6px;
+      line-height: 1.5;
+    }
+
+    .tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 6px;
+    }
+
+    .tag {
+      font-size: 0.72rem;
+      padding: 3px 8px;
+      border-radius: 999px;
+      background: rgba(15,23,42,0.9);
+      border: 1px solid rgba(55,65,81,0.9);
+      color: #e5e7eb;
+    }
+
+    .done-row {
+      margin-top: 8px;
+      display: flex;
+      justify-content: flex-start;
+    }
+
+    .done-toggle {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.8rem;
+      cursor: pointer;
+      user-select: none;
+      color: var(--muted);
+    }
+
+    .done-toggle input {
+      display: none;
+    }
+
+    .done-toggle .checkmark {
+      width: 18px;
+      height: 18px;
+      border-radius: 6px;
+      border: 1px solid rgba(148,163,184,0.7);
+      background: rgba(15,23,42,0.9);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.9rem;
+      transition: all 0.15s ease;
+    }
+
+    .done-toggle input:checked + .checkmark {
+      border-color: rgba(34,197,94,0.9);
+      background: rgba(22,163,74,0.1);
+      box-shadow: 0 0 0 1px rgba(34,197,94,0.4);
+    }
+
+    .done-toggle input:checked + .checkmark::before {
+      content: "✓";
+      color: #bbf7d0;
+    }
+
+    .done-label-text {
+      color: #e5e7eb;
+    }
+
+    .bottom-bar {
+      margin-top: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .nav-buttons {
+      display: flex;
+      gap: 6px;
+      flex: 1;
+    }
+
+    button {
+      border: none;
+      outline: none;
+      cursor: pointer;
+      font: inherit;
+    }
+
+    .btn {
+      flex: 1;
+      padding: 10px 12px;
+      border-radius: 999px;
+      font-size: 0.9rem;
+      font-weight: 500;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      border: 1px solid rgba(148,163,184,0.5);
+      background: rgba(15,23,42,0.95);
+      color: #e5e7eb;
+      transition: background 0.15s ease, transform 0.08s ease, box-shadow 0.15s ease;
+    }
+
+    .btn span.icon {
+      font-size: 1.05rem;
+      display: inline-block;
+      transform: translateY(1px);
+    }
+
+    .btn-primary {
+      background: radial-gradient(circle at top left, #4f46e5, #1d4ed8);
+      border-color: rgba(129,140,248,0.9);
+      box-shadow: 0 10px 25px rgba(37,99,235,0.6);
+    }
+
+    .btn:active {
+      transform: translateY(1px) scale(0.99);
+      box-shadow: none;
+    }
+
+    .btn:disabled {
+      opacity: 0.4;
+      cursor: default;
+      box-shadow: none;
+    }
+
+    .status {
+      font-size: 0.78rem;
+      color: var(--muted);
+      text-align: right;
+      flex: 0 0 auto;
+    }
+
+    .rest-card {
+      margin-top: 8px;
+      padding: 16px 14px;
+      border-radius: 16px;
+      background: radial-gradient(circle at top, #111827 0, #020617 60%);
+      border: 1px dashed rgba(148,163,184,0.6);
+      box-shadow: var(--shadow-soft);
+      font-size: 0.9rem;
+      line-height: 1.55;
+    }
+
+    .rest-card h2 {
+      margin: 0 0 8px;
+      font-size: 1rem;
+    }
+
+    .rest-card ul {
+      margin: 6px 0 0 20px;
+      padding: 0;
+      font-size: 0.85rem;
+      color: var(--muted);
+    }
+
+    @media (max-width: 380px) {
+      header { padding: 10px; }
+      .exercise-card { padding: 12px 12px 14px; }
+      .app { padding-inline: 10px; }
+    }
+  </style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div class="app-title">Micro Strength & Mobility</div>
+    <div class="app-subtitle">
+      <div>
+        <span id="todayLabel"></span>
+        <div style="margin-top:2px;font-size:0.8rem;color:#cbd5f5;" id="workoutTitle"></div>
+      </div>
+      <div class="chip">
+        Session • <span id="phaseLabel">Rest / Recovery</span>
+      </div>
+    </div>
+    <div class="day-selector" id="daySelector"></div>
+    <div class="session-selector" id="sessionSelector"></div>
+    <div class="progress-header" id="progressSummary"></div>
+  </header>
+
+  <div id="contentArea"></div>
+</div>
+
+<script>
+  // === PROGRAM CONFIG: Twice-a-day micro sessions ===================
+  // Each session ~10–20 minutes; built from our previous DEXA-aware plan.
+
+  const program = {
+    Monday: {
+      sessions: {
+        AM: {
+          label: "AM: Strength Foundations (Lower + Push)",
+          phases: [
+            {
+              name: "Quick Warm-up (3–4 min)",
+              exercises: [
+                {
+                  name: "Cat–Cow",
+                  sets: "1",
+                  reps: "8–10",
+                  notes: "Gentle spine motion; exhale as you round, inhale as you arch.",
+                  tags: ["Spine", "Warm-up"],
+                  gifUrl: "https://cdn.yogajournal.com/wp-content/uploads/2020/01/cat-cow-1.gif?width=3840&auto=webp&quality=75&fit=cover",
+                  attribution: {
+                    label: "Yoga Journal",
+                    url: "https://www.yogajournal.com/yoga-101/yoga-poses/cat-cow-pose/"
+                  }
+                },
+                {
+                  name: "Bodyweight Squats to Box",
+                  sets: "1",
+                  reps: "10–12",
+                  notes: "Tap a bench or box; think ‘hips back’ and ‘knees over mid-foot’.",
+                  tags: ["Lower body", "Patterning"],
+                  gifUrl: "https://cdn.jefit.com/assets/img/exercises/gifs/493.gif",
+                  attribution: {
+                    label: "Jefit Exercise Library",
+                    url: "https://www.jefit.com/exercises/bodyweight-box-squat"
+                  }
+                }
+              ]
+            },
+            {
+              name: "Strength Block (10–12 min)",
+              exercises: [
+                {
+                  name: "Goblet Squat",
+                  sets: "3",
+                  reps: "6–8",
+                  notes: "3s down, solid pause at bottom, drive up. Stop before back feels strained.",
+                  tags: ["Quads", "Glutes", "Core"],
+                  gifUrl: "https://www.strengthlog.com/wp-content/uploads/2020/02/Goblet-squat.gif",
+                  attribution: {
+                    label: "StrengthLog",
+                    url: "https://www.strengthlog.com/goblet-squat/"
+                  }
+                },
+                {
+                  name: "Dumbbell Bench Press",
+                  sets: "3",
+                  reps: "6–8",
+                  notes: "Control the descent, keep shoulder blades tucked into the bench.",
+                  tags: ["Chest", "Triceps"],
+                  gifUrl: "https://www.strengthlog.com/wp-content/uploads/2020/03/Dumbbell-Chest-Press.gif",
+                  attribution: {
+                    label: "StrengthLog",
+                    url: "https://www.strengthlog.com/dumbbell-bench-press/"
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        PM: {
+          label: "PM: Walk + Core",
+          phases: [
+            {
+              name: "Walk (Zone 2)",
+              exercises: [
+                {
+                  name: "Brisk Walk",
+                  sets: "1",
+                  reps: "10–20 min",
+                  notes: "Comfortable but purposeful pace; you can still speak in sentences.",
+                  tags: ["Cardio", "Zone 2"],
+                  gifUrl: "https://media.giphy.com/media/l0K4kWJir91VEoa1W/giphy.gif",
+                  attribution: {
+                    label: "Peloton creators on Giphy",
+                    url: "https://giphy.com/peloton"
+                  }
+                }
+              ]
+            },
+            {
+              name: "Core (Spine-Friendly)",
+              exercises: [
+                {
+                  name: "Dead Bug",
+                  sets: "2",
+                  reps: "6–8 / side",
+                  notes: "Press low back gently into floor; small controlled movements.",
+                  tags: ["Core", "Spine-friendly"],
+                  gifUrl: "https://media.giphy.com/media/l0K4lDyF7VrbL2K5q/giphy.gif",
+                  attribution: {
+                    label: "Peloton creators on Giphy",
+                    url: "https://giphy.com/peloton"
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      }
+    },
+
+    Tuesday: {
+      sessions: {
+        AM: {
+          label: "AM: Mobility + Core",
+          phases: [
+            {
+              name: "Mobility (5–7 min)",
+              exercises: [
+                {
+                  name: "Cat–Cow + T-Spine Rotations",
+                  sets: "1–2",
+                  reps: "6–8 / side",
+                  notes: "Smooth and easy; focus on breathing and reducing stiffness from sitting.",
+                  tags: ["Spine", "Mobility"],
+                  gifUrl: "https://static.wixstatic.com/media/11c3fa_012512721ae2466192342d7d75831fe5~mv2.gif",
+                  attribution: {
+                    label: "Wixstatic - T-Spine Mobility Demo",
+                    url: "https://static.wixstatic.com/media/11c3fa_012512721ae2466192342d7d75831fe5~mv2.gif"
+                  }
+                },
+                {
+                  name: "Side Plank (Knees)",
+                  sets: "2 / side",
+                  reps: "15–20 sec",
+                  notes: "Hips stacked. Drop to knees for spine-friendly version.",
+                  tags: ["Core", "Obliques"],
+                  gifUrl: "https://cdn-life.dailyburn.com/life/wp-content/uploads/2022/02/09234326/ezgif.com-gif-maker-copy.gif",
+                  attribution: {
+                    label: "DailyBurn",
+                    url: "https://dailyburn.com/life/fitness/side-plank-variations/"
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        PM: {
+          label: "PM: Easy Cardio",
+          phases: [
+            {
+              name: "Walk / Bike",
+              exercises: [
+                {
+                  name: "Easy Walk or Bike",
+                  sets: "1",
+                  reps: "15–25 min",
+                  notes: "Very easy pace; this is about daily movement and recovery, not intensity.",
+                  tags: ["Cardio", "Recovery"],
+                  gifUrl: "https://media.giphy.com/media/l41m2KOnLx9tDNoYU/giphy.gif",
+                  attribution: {
+                    label: "Peloton creators on Giphy",
+                    url: "https://giphy.com/peloton"
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      }
+    },
+
+    Wednesday: {
+      sessions: {
+        AM: {
+          label: "AM: Strength – Hinge + Row",
+          phases: [
+            {
+              name: "Quick Warm-up",
+              exercises: [
+                {
+                  name: "March in Place + Arm Circles",
+                  sets: "1",
+                  reps: "30–45 sec each",
+                  notes: "Gradually raise heart rate; relax the neck and shoulders.",
+                  tags: ["Warm-up", "Cardio"],
+                  gifUrl: "https://www.nerdfitness.com/wp-content/uploads/2023/10/Marching.gif",
+                  attribution: {
+                    label: "Nerd Fitness",
+                    url: "https://www.nerdfitness.com/blog/dynamic-warm-up/"
+                  }
+                }
+              ]
+            },
+            {
+              name: "Strength Block",
+              exercises: [
+                {
+                  name: "Romanian Deadlift (DB or Barbell)",
+                  sets: "3",
+                  reps: "6–8",
+                  notes: "Soft knees, hinge from hips, back neutral. Stop if low back feels off.",
+                  tags: ["Hamstrings", "Glutes"],
+                  gifUrl: "https://i0.wp.com/www.strengthlog.com/wp-content/uploads/2020/10/dumbbell-deadlift.gif?resize=600%2C600&ssl=1",
+                  attribution: {
+                    label: "StrengthLog",
+                    url: "https://www.strengthlog.com/romanian-deadlift/"
+                  }
+                },
+                {
+                  name: "1-Arm Dumbbell Row",
+                  sets: "3",
+                  reps: "8–10 / arm",
+                  notes: "Elbow toward hip; think ‘proud chest’ not shrugging.",
+                  tags: ["Back", "Posture"],
+                  gifUrl: "https://www.strengthlog.com/wp-content/uploads/2020/03/Dumbbell-Row.gif",
+                  attribution: {
+                    label: "StrengthLog",
+                    url: "https://www.strengthlog.com/dumbbell-row/"
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        PM: {
+          label: "PM: Walk + Stretch",
+          phases: [
+            {
+              name: "Light Cardio",
+              exercises: [
+                {
+                  name: "Comfortable Walk",
+                  sets: "1",
+                  reps: "10–15 min",
+                  notes: "Short walk to keep joints happy and help recovery.",
+                  tags: ["Cardio", "Recovery"],
+                  gifUrl: "https://media.giphy.com/media/3o7buirYcmV5nSwIRW/giphy.gif",
+                  attribution: {
+                    label: "Peloton creators on Giphy",
+                    url: "https://giphy.com/peloton"
+                  }
+                }
+              ]
+            },
+            {
+              name: "Cool-down",
+              exercises: [
+                {
+                  name: "Figure-4 Glute Stretch",
+                  sets: "1–2 / side",
+                  reps: "20–30 sec",
+                  notes: "Gentle stretch for hips and low back relief.",
+                  tags: ["Cool-down", "Glutes"],
+                  gifUrl: "https://media.giphy.com/media/l3q2LH45XElELRzRm/giphy.gif",
+                  attribution: {
+                    label: "Peloton creators on Giphy",
+                    url: "https://giphy.com/peloton"
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      }
+    },
+
+    Thursday: {
+      sessions: {
+        AM: {
+          label: "AM: Hip Stability + Carry",
+          phases: [
+            {
+              name: "Strength / Stability",
+              exercises: [
+                {
+                  name: "Front-Foot Elevated Split Squat",
+                  sets: "3",
+                  reps: "6–8 / leg",
+                  notes: "Use small plate/step; hold on to support if balance is tricky.",
+                  tags: ["Quads", "Glutes", "Stability"],
+                  gifUrl: "https://images.squarespace-cdn.com/content/v1/5e4d6f65b48f984d6ee476fd/1615223536005-QF6EPAV91FSSHZOIOGTC/Coach+Camm+Split+Squat",
+                  attribution: {
+                    label: "Coach Camm – Elevated Split Squat demo",
+                    url: "https://www.coachcamm.com/"
+                  }
+                },
+                {
+                  name: "Farmer Carry",
+                  sets: "3",
+                  reps: "20–30 steps",
+                  notes: "Heavy-ish dumbbells; walk tall, slow breathing.",
+                  tags: ["Grip", "Core"],
+                  gifUrl: "https://barbend.com/wp-content/uploads/2024/02/farmers-carry-with-dumbbells-barbend-movement-gif-masters.gif",
+                  attribution: {
+                    label: "BarBend – Farmer Carry demo",
+                    url: "https://barbend.com/farmers-walk/"
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        PM: {
+          label: "PM: Very Easy Movement",
+          phases: [
+            {
+              name: "Recovery",
+              exercises: [
+                {
+                  name: "Easy Walk or Gentle Mobility",
+                  sets: "1",
+                  reps: "10–15 min",
+                  notes: "Optional: if you feel tired, this can be just 5 minutes of walking or skipped.",
+                  tags: ["Recovery", "Optional"],
+                  gifUrl: "https://media.giphy.com/media/l41m2KOnLx9tDNoYU/giphy.gif",
+                  attribution: {
+                    label: "Peloton creators on Giphy",
+                    url: "https://giphy.com/peloton"
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      }
+    },
+
+    Friday: {
+      sessions: {
+        AM: {
+          label: "AM: Strength – Push + Pull + Legs",
+          phases: [
+            {
+              name: "Quick Warm-up",
+              exercises: [
+                {
+                  name: "Tempo Step-Ups (Bodyweight)",
+                  sets: "1",
+                  reps: "8–10 / leg",
+                  notes: "Low step, 2s up/2s down, light hand support if needed.",
+                  tags: ["Warm-up", "Legs"],
+                  gifUrl: "https://i.pinimg.com/originals/ab/9f/63/ab9f63bda71dbc9505a4dab09b38dd5b.gif",
+                  attribution: {
+                    label: "Pinterest – Tempo Step-Up demo",
+                    url: "https://www.pinterest.com/pin/ab9f63bda71dbc9505a4dab09b38dd5b/"
+                  }
+                }
+              ]
+            },
+            {
+              name: "Strength Circuit",
+              exercises: [
+                {
+                  name: "Dumbbell Shoulder Press",
+                  sets: "3",
+                  reps: "6–8",
+                  notes: "Ribs down, avoid shrugging. Seated version is back-friendly.",
+                  tags: ["Shoulders", "Upper body"],
+                  gifUrl: "https://www.strengthlog.com/wp-content/uploads/2020/02/Dumbbell-shoulder-press.gif",
+                  attribution: {
+                    label: "StrengthLog",
+                    url: "https://www.strengthlog.com/dumbbell-shoulder-press/"
+                  }
+                },
+                {
+                  name: "Bent-Over Row (DB or Barbell)",
+                  sets: "3",
+                  reps: "8–10",
+                  notes: "Hinge from hips; if low back complains, reduce weight or go chest-supported.",
+                  tags: ["Back", "Posterior chain"],
+                  gifUrl: "https://i.pinimg.com/originals/b0/01/2e/b0012e05f4bb0c758ca0ba3f36ce0ae8.gif",
+                  attribution: {
+                    label: "Pinterest – Bent-Over Row demo",
+                    url: "https://www.pinterest.com/pin/b0012e05f4bb0c758ca0ba3f36ce0ae8/"
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        PM: {
+          label: "PM: Walk + Stretch",
+          phases: [
+            {
+              name: "Walk",
+              exercises: [
+                {
+                  name: "Brisk or Easy Walk",
+                  sets: "1",
+                  reps: "10–20 min",
+                  notes: "Your choice: either light or slightly challenging, depending on energy.",
+                  tags: ["Cardio"],
+                  gifUrl: "https://media.giphy.com/media/l0K4kWJir91VEoa1W/giphy.gif",
+                  attribution: {
+                    label: "Peloton creators on Giphy",
+                    url: "https://giphy.com/peloton"
+                  }
+                }
+              ]
+            },
+            {
+              name: "Cool-down",
+              exercises: [
+                {
+                  name: "Hamstring + Hip Flexor Stretch",
+                  sets: "1–2",
+                  reps: "20–30 sec each",
+                  notes: "Gentle stretch, no bouncing. Helps offset sitting and walking volume.",
+                  tags: ["Cool-down", "Hips"],
+                  gifUrl: "https://media.giphy.com/media/3ohzdIuqJoo8QdKlnW/giphy.gif",
+                  attribution: {
+                    label: "Peloton creators on Giphy",
+                    url: "https://giphy.com/peloton"
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      }
+    },
+
+    Saturday: {
+      sessions: {
+        AM: {
+          label: "AM: Optional Outdoor Cardio",
+          phases: [
+            {
+              name: "Outdoor Movement",
+              exercises: [
+                {
+                  name: "Hike / Longer Walk / Easy Ride",
+                  sets: "1",
+                  reps: "30–60 min",
+                  notes: "Use this if you feel good and want extra movement.",
+                  tags: ["Cardio", "Outdoor", "Optional"],
+                  gifUrl: "https://media.giphy.com/media/3o7buirYcmV5nSwIRW/giphy.gif",
+                  attribution: {
+                    label: "Peloton creators on Giphy",
+                    url: "https://giphy.com/peloton"
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        PM: {
+          label: "PM: Light Mobility (Optional)",
+          phases: [
+            {
+              name: "Reset",
+              exercises: [
+                {
+                  name: "Gentle Mobility (Your Choice)",
+                  sets: "1",
+                  reps: "5–10 min",
+                  notes: "Any light stretches or movements that feel good (hips, back, shoulders).",
+                  tags: ["Mobility", "Optional"],
+                  gifUrl: "https://media.giphy.com/media/3oKIPp7fmUqbd6hbDi/giphy.gif",
+                  attribution: {
+                    label: "Peloton creators on Giphy",
+                    url: "https://giphy.com/peloton"
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      }
+    },
+
+    Sunday: {
+      sessions: {
+        AM: {
+          label: "AM: Rest / Very Light Movement",
+          phases: [] // treated as rest
+        },
+        PM: {
+          label: "PM: Rest / Recovery",
+          phases: [] // treated as rest
+        }
+      }
+    }
+  };
+
+  // === STATE & STORAGE =============================================
+  let currentDayName = null;
+  let currentSessionKey = null; // "AM" or "PM"
+  let flatExercises = [];
+  let currentIndex = 0;
+  const STORAGE_KEY = "routineMicroProgress_v1";
+
+  const todayLabelEl = document.getElementById("todayLabel");
+  const workoutTitleEl = document.getElementById("workoutTitle");
+  const phaseLabelEl = document.getElementById("phaseLabel");
+  const daySelectorEl = document.getElementById("daySelector");
+  const sessionSelectorEl = document.getElementById("sessionSelector");
+  const contentAreaEl = document.getElementById("contentArea");
+  const progressSummaryEl = document.getElementById("progressSummary");
+
+  function getTodayName() {
+    const options = { weekday: "long" };
+    return new Date().toLocaleDateString(undefined, options);
+  }
+
+  function getTodayKey() {
+    const d = new Date();
+    return d.toISOString().slice(0, 10); // YYYY-MM-DD
+  }
+
+  function loadProgress() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      return raw ? JSON.parse(raw) : {};
+    } catch (e) {
+      return {};
+    }
+  }
+
+  function saveProgress(progress) {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(progress));
+    } catch (e) {}
+  }
+
+  function isExerciseDone(dayName, sessionKey, idx) {
+    const dateKey = getTodayKey();
+    const progress = loadProgress();
+    return !!(progress[dateKey] &&
+              progress[dateKey][dayName] &&
+              progress[dateKey][dayName][sessionKey] &&
+              progress[dateKey][dayName][sessionKey][idx]);
+  }
+
+  function setExerciseDone(dayName, sessionKey, idx, isDone) {
+    const dateKey = getTodayKey();
+    const progress = loadProgress();
+    if (!progress[dateKey]) progress[dateKey] = {};
+    if (!progress[dateKey][dayName]) progress[dateKey][dayName] = {};
+    if (!progress[dateKey][dayName][sessionKey]) progress[dateKey][dayName][sessionKey] = {};
+    if (isDone) {
+      progress[dateKey][dayName][sessionKey][idx] = true;
+    } else {
+      delete progress[dateKey][dayName][sessionKey][idx];
+    }
+    saveProgress(progress);
+    updateProgressSummary();
+  }
+
+  function computeSessionCompletion() {
+    const dateKey = getTodayKey();
+    const progress = loadProgress();
+    const map = progress[dateKey]?.[currentDayName]?.[currentSessionKey] || {};
+    const completedCount = Object.keys(map).filter(k => map[k]).length;
+    const total = flatExercises.length;
+    return { completedCount, total };
+  }
+
+  // === RENDER HELPERS ==============================================
+  function flattenSession(sessionCfg) {
+    const result = [];
+    if (!sessionCfg || !sessionCfg.phases) return result;
+    sessionCfg.phases.forEach((phase, pIdx) => {
+      phase.exercises.forEach((ex, eIdx) => {
+        result.push({
+          phaseIndex: pIdx,
+          exerciseIndex: eIdx,
+          phaseName: phase.name,
+          exercise: ex
+        });
+      });
+    });
+    return result;
+  }
+
+  function formatTodayLabel(date = new Date()) {
+    const options = { weekday: "long", month: "short", day: "numeric" };
+    return date.toLocaleDateString(undefined, options);
+  }
+
+  function buildDaySelector(activeDay) {
+    const dayOrder = ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"];
+    daySelectorEl.innerHTML = "";
+    dayOrder.forEach(dayName => {
+      const btn = document.createElement("button");
+      btn.className = "day-pill" + (dayName === activeDay ? " active" : "");
+      btn.type = "button";
+      btn.dataset.day = dayName;
+      btn.innerHTML = `<span class="dot"></span>${dayName.slice(0,3)}`;
+      btn.addEventListener("click", () => {
+        loadDay(dayName);
+      });
+      daySelectorEl.appendChild(btn);
+    });
+  }
+
+  function buildSessionSelector(dayName, activeSessionKey) {
+    sessionSelectorEl.innerHTML = "";
+    const dayCfg = program[dayName];
+    if (!dayCfg || !dayCfg.sessions) return;
+    const keys = Object.keys(dayCfg.sessions);
+
+    keys.forEach(key => {
+      const btn = document.createElement("button");
+      btn.className = "session-pill" + (key === activeSessionKey ? " active" : "");
+      btn.type = "button";
+      btn.dataset.session = key;
+      btn.innerHTML = `<span class="dot"></span>${key} Session`;
+      btn.addEventListener("click", () => {
+        loadSession(key);
+      });
+      sessionSelectorEl.appendChild(btn);
+    });
+  }
+
+  function updateSelectorsHighlight() {
+    Array.from(daySelectorEl.querySelectorAll(".day-pill")).forEach(btn => {
+      btn.classList.toggle("active", btn.dataset.day === currentDayName);
+    });
+    Array.from(sessionSelectorEl.querySelectorAll(".session-pill")).forEach(btn => {
+      btn.classList.toggle("active", btn.dataset.session === currentSessionKey);
+    });
+  }
+
+  function updatePhaseChip() {
+    if (!flatExercises.length) {
+      phaseLabelEl.textContent = "Rest / Recovery";
+      return;
+    }
+    const { phaseName } = flatExercises[currentIndex];
+    phaseLabelEl.textContent = phaseName;
+  }
+
+  function renderDots() {
+    if (!flatExercises.length) return "";
+    return flatExercises
+      .map((_, idx) => {
+        const active = idx === currentIndex ? "active" : "";
+        return `<span class="dot-indicator ${active}"></span>`;
+      })
+      .join("");
+  }
+
+  function updateProgressSummary() {
+    if (!progressSummaryEl) return;
+    if (!flatExercises.length) {
+      progressSummaryEl.textContent = "Rest / optional movement – no structured sets this session.";
+      return;
+    }
+    const { completedCount, total } = computeSessionCompletion();
+    progressSummaryEl.innerHTML = `
+      <span>Session: ${completedCount}/${total} exercises done</span>
+      <span class="dots">${renderDots()}</span>
+    `;
+  }
+
+  function renderExerciseOrRestCard() {
+    contentAreaEl.innerHTML = "";
+
+    const dayCfg = program[currentDayName];
+    const sessionCfg = dayCfg?.sessions?.[currentSessionKey];
+
+    if (!sessionCfg || !sessionCfg.phases || sessionCfg.phases.length === 0 || flatExercises.length === 0) {
+      const restDiv = document.createElement("div");
+      restDiv.className = "rest-card";
+      restDiv.innerHTML = `
+        <h2>Rest / Recovery Session</h2>
+        <p>This session is intentionally light to help recovery and muscle retention.</p>
+        <ul>
+          <li>Optional 5–10 min easy walk or gentle stretching</li>
+          <li>Stay on top of hydration and protein</li>
+          <li>Sleep 7–9 hours to support body comp and energy</li>
+        </ul>
+      `;
+      contentAreaEl.appendChild(restDiv);
+      updateProgressSummary();
+      return;
+    }
+
+    const { phaseName, exercise } = flatExercises[currentIndex];
+    const total = flatExercises.length;
+    const done = isExerciseDone(currentDayName, currentSessionKey, currentIndex);
+    const hasGif = Boolean(exercise.gifUrl);
+    const gifSrc = hasGif ? exercise.gifUrl : "gifs/not-found.svg";
+    const attribution = hasGif ? exercise.attribution : null;
+
+    const card = document.createElement("div");
+    card.className = "exercise-card" + (done ? " done" : "");
+    card.setAttribute("data-card", "exercise");
+    card.innerHTML = `
+      ${done ? `<div class="done-flag"><span></span>Done</div>` : ""}
+      <div class="exercise-header">
+        <div>
+          <div class="exercise-title">${exercise.name}</div>
+          <div class="phase-chip">
+            ${phaseName}
+            <small>• #${currentIndex + 1} of ${total}</small>
+          </div>
+        </div>
+        <div class="exercise-meta">
+          <strong>${exercise.sets} × ${exercise.reps}</strong>
+          <span>Sets × Reps / Time</span>
+        </div>
+      </div>
+
+      <div class="gif-wrapper">
+        <img src="${gifSrc}" alt="${hasGif ? `${exercise.name} demonstration` : "Placeholder graphic – add a GIF URL"}" loading="lazy" />
+        <div class="gif-overlay"></div>
+        <div class="gif-label"><span></span>Live form reference</div>
+      </div>
+      ${
+        attribution
+          ? `<div class="gif-attribution">
+               Art credit: ${
+                 attribution.url
+                   ? `<a href="${attribution.url}" target="_blank" rel="noopener noreferrer">${attribution.label}</a>`
+                   : attribution.label
+               }
+             </div>`
+          : ""
+      }
+
+      <div class="exercise-body">
+        ${exercise.notes || ""}
+        ${
+          exercise.tags && exercise.tags.length
+            ? `<div class="tags">${exercise.tags
+                .map(t => `<span class="tag">${t}</span>`)
+                .join("")}</div>`
+            : ""
+        }
+      </div>
+
+      <div class="done-row">
+        <label class="done-toggle">
+          <input type="checkbox" id="doneCheckbox" ${done ? "checked" : ""} />
+          <span class="checkmark"></span>
+          <span class="done-label-text">Mark this exercise as done</span>
+        </label>
+      </div>
+
+      <div class="bottom-bar">
+        <div class="nav-buttons">
+          <button class="btn" id="prevBtn" type="button">
+            <span class="icon">⟵</span> Prev
+          </button>
+          <button class="btn btn-primary" id="nextBtn" type="button">
+            Next <span class="icon">⟶</span>
+          </button>
+        </div>
+        <div class="status">
+          <div class="dots">${renderDots()}</div>
+          <div style="margin-top:3px;">Exercise ${currentIndex + 1}/${total}</div>
+        </div>
+      </div>
+    `;
+
+    contentAreaEl.appendChild(card);
+    updatePhaseChip();
+    updateProgressSummary();
+    hookInteractions(card, done);
+  }
+
+  function hookInteractions(card, done) {
+    const prevBtn = card.querySelector("#prevBtn");
+    const nextBtn = card.querySelector("#nextBtn");
+    const doneCheckbox = card.querySelector("#doneCheckbox");
+
+    if (!flatExercises.length) return;
+
+    prevBtn.disabled = currentIndex === 0;
+    nextBtn.disabled = currentIndex === flatExercises.length - 1;
+
+    prevBtn.addEventListener("click", () => {
+      goToExercise(currentIndex - 1);
+    });
+
+    nextBtn.addEventListener("click", () => {
+      goToExercise(currentIndex + 1);
+    });
+
+    if (doneCheckbox) {
+      doneCheckbox.addEventListener("change", (e) => {
+        const isDone = e.target.checked;
+        setExerciseDone(currentDayName, currentSessionKey, currentIndex, isDone);
+        if (isDone) {
+          card.classList.add("done");
+          if (!card.querySelector(".done-flag")) {
+            const flag = document.createElement("div");
+            flag.className = "done-flag";
+            flag.innerHTML = `<span></span>Done`;
+            card.appendChild(flag);
+          }
+        } else {
+          card.classList.remove("done");
+          const flag = card.querySelector(".done-flag");
+          if (flag) flag.remove();
+        }
+      });
+    }
+
+    // Swipe handling
+    let touchStartX = 0;
+    let touchStartY = 0;
+    let isSwiping = false;
+
+    card.addEventListener("touchstart", (e) => {
+      if (!e.touches || e.touches.length === 0) return;
+      const touch = e.touches[0];
+      touchStartX = touch.clientX;
+      touchStartY = touch.clientY;
+      isSwiping = true;
+    }, { passive: true });
+
+    card.addEventListener("touchend", (e) => {
+      if (!isSwiping) return;
+      isSwiping = false;
+
+      const touch = e.changedTouches[0];
+      const dx = touch.clientX - touchStartX;
+      const dy = touch.clientY - touchStartY;
+
+      const absDx = Math.abs(dx);
+      const absDy = Math.abs(dy);
+
+      if (absDx > 40 && absDx > absDy) {
+        if (dx < 0 && currentIndex < flatExercises.length - 1) {
+          goToExercise(currentIndex + 1);
+        } else if (dx > 0 && currentIndex > 0) {
+          goToExercise(currentIndex - 1);
+        }
+      }
+    }, { passive: true });
+  }
+
+  function goToExercise(idx) {
+    if (idx < 0 || idx >= flatExercises.length) return;
+    currentIndex = idx;
+    renderExerciseOrRestCard();
+  }
+
+  function loadSession(sessionKey) {
+    currentSessionKey = sessionKey;
+    const dayCfg = program[currentDayName];
+    const sessionCfg = dayCfg?.sessions?.[sessionKey];
+
+    todayLabelEl.textContent = formatTodayLabel();
+    workoutTitleEl.textContent = sessionCfg?.label || "No session defined";
+    flatExercises = flattenSession(sessionCfg);
+    currentIndex = 0;
+    updateSelectorsHighlight();
+    renderExerciseOrRestCard();
+  }
+
+  function loadDay(dayName) {
+    currentDayName = dayName;
+    const dayCfg = program[dayName];
+    const sessionKeys = dayCfg ? Object.keys(dayCfg.sessions || {}) : [];
+
+    if (!sessionKeys.length) {
+      currentSessionKey = null;
+      flatExercises = [];
+      buildDaySelector(dayName);
+      sessionSelectorEl.innerHTML = "";
+      todayLabelEl.textContent = formatTodayLabel();
+      workoutTitleEl.textContent = "No sessions defined";
+      renderExerciseOrRestCard();
+      return;
+    }
+
+    // Prefer to keep same session (AM/PM) if it exists; otherwise choose first.
+    if (!currentSessionKey || !dayCfg.sessions[currentSessionKey]) {
+      currentSessionKey = sessionKeys.includes("AM") ? "AM" : sessionKeys[0];
+    }
+
+    buildDaySelector(dayName);
+    buildSessionSelector(dayName, currentSessionKey);
+    loadSession(currentSessionKey);
+  }
+
+  // === INIT ========================================================
+  (function init() {
+    const todayName = getTodayName();
+    currentDayName = program[todayName] ? todayName : "Monday";
+
+    // Default session preference: AM if available
+    const dayCfg = program[currentDayName];
+    const sessionKeys = dayCfg ? Object.keys(dayCfg.sessions || {}) : [];
+    currentSessionKey = sessionKeys.includes("AM") ? "AM" : sessionKeys[0] || null;
+
+    todayLabelEl.textContent = formatTodayLabel();
+    buildDaySelector(currentDayName);
+    buildSessionSelector(currentDayName, currentSessionKey || "AM");
+
+    if (currentSessionKey) {
+      loadSession(currentSessionKey);
+    } else {
+      renderExerciseOrRestCard();
+    }
+  })();
+</script>
+</body>
+</html>

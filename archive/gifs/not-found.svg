@@ -1,0 +1,16 @@
+<svg width="640" height="400" viewBox="0 0 640 400" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#111827"/>
+      <stop offset="100%" stop-color="#0f172a"/>
+    </linearGradient>
+  </defs>
+  <rect width="640" height="400" fill="url(#bg)"/>
+  <rect x="60" y="60" width="520" height="280" rx="24" stroke="#1d4ed8" stroke-width="3" fill="none" opacity="0.6"/>
+  <text x="50%" y="48%" font-family="SF Pro Display, system-ui, -apple-system, BlinkMacSystemFont, sans-serif" font-size="42" fill="#c7d2fe" text-anchor="middle">
+    GIF NOT FOUND
+  </text>
+  <text x="50%" y="62%" font-family="SF Pro Display, system-ui, -apple-system, BlinkMacSystemFont, sans-serif" font-size="24" fill="#94a3b8" text-anchor="middle">
+    Add a reference in routine_micro.html
+  </text>
+</svg>
