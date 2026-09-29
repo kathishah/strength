@@ -2,9 +2,9 @@
 import { test, describe, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { ulid, nextTs } from '../app/js/ids.js';
-import { buildTestEvent } from '../app/js/api.js';
+import { buildTestEvent } from '../app/js/store/api.js';
 import { validateBatch } from '../lambda/events/registry.mjs';
-import { AuthError, getIdToken, hasRefreshToken, signIn, signOut } from '../app/js/auth.js';
+import { AuthError, getIdToken, hasRefreshToken, signIn, signOut } from '../app/js/store/auth.js';
 
 describe('ids', () => {
   test('ulid is 26 Crockford characters, sortable by time', () => {

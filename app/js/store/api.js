@@ -1,8 +1,8 @@
 // Client for POST /events and GET /events (DEPLOYMENT-PLAN.md section 3).
 
-import { config } from './config.js';
+import { config } from '../config.js';
 import { getIdToken } from './auth.js';
-import { ulid, nextTs } from './ids.js';
+import { ulid, nextTs } from '../ids.js';
 
 export class ApiError extends Error {
   constructor(status, body, message) {

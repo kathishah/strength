@@ -2,7 +2,7 @@
 // USER_PASSWORD_AUTH, then REFRESH_TOKEN_AUTH. No SDK, no redirects.
 // The ID token stays in memory; only the refresh token is kept in localStorage.
 
-import { config } from './config.js';
+import { config } from '../config.js';
 
 const ENDPOINT = `https://cognito-idp.${config.region}.amazonaws.com/`;
 const REFRESH_KEY = 'strength.refreshToken';
