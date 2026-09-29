@@ -1,8 +1,11 @@
-# Recomp Tracker — Product Spec (v1.8)
+# Recomp Tracker — Product Spec (v1.9)
 
 A personal, mobile-first web app to track a body recomposition program: build lean mass, reduce visceral fat, and strengthen the back. Used at the gym on a phone and at home on a desktop, with data synced across devices.
 
 ## Changelog
+- **v1.9**
+  - v0.2 header collapses again: the status line is a tap target with a chevron that shows or hides the day picker. Picking a day or scrolling down collapses it (0.B.1).
+  - v0.2 carousel: Prev/Next buttons, progress dots, and the bottom bar removed; navigation is by swipe only (0.B.1).
 - **v1.8**
   - App v0.2 shipped. Section 0 status updated; 0.B now describes what shipped.
   - v0.2 header simplified: one status line plus the day picker, with a small icon button that cycles the theme (System, Light, Dark). The title, date, phase chip, progress row and collapse behavior were removed (0.B.1).
@@ -125,8 +128,8 @@ Same delivery as v0.1: a single static `index.html` on GitHub Pages, no build st
 | Friday | Workout C |
 | Saturday, Sunday | Rest / activity |
 
-- **Header (sticky):** pinned to the top while scrolling. It has only two parts: a status line, e.g. "Mon · Workout A · 2/6 done", "Tue · Recovery · Round 1 · 3/8", or "Sat · Rest day"; and the day selector (v0.1 dots). A small icon button at the right end of the status line cycles the theme. There is no title, date, phase chip, progress row, or collapse/expand.
-- **Card carousel:** all of a day's cards sit in one continuous horizontal swipe carousel (one card per swipe, neighbors peeking at the edges). Swiping past the second exercise of a superset continues into the next superset. A single bar below the carousel has Prev/Next, tappable dots, and "Exercise n/total". Replaces v0.1's one-card-at-a-time view.
+- **Header (sticky):** pinned to the top while scrolling. It has only two parts: a status line, e.g. "Mon · Workout A · 2/6 done", "Tue · Recovery · Round 1 · 3/8", or "Sat · Rest day"; and the day selector (v0.1 dots). It starts collapsed, showing only the status line with a chevron. Tapping the status line expands it to show the day selector. Picking a day collapses it, and so does scrolling down while it's expanded. A small icon button at the right end of the status line cycles the theme and is always visible. There is no title, date, phase chip, or progress row.
+- **Card carousel:** all of a day's cards sit in one continuous horizontal swipe carousel (one card per swipe, neighbors peeking at the edges). Swiping past the second exercise of a superset continues into the next superset. Navigation is by swipe only: no Prev/Next buttons, dots, or position indicator. Replaces v0.1's one-card-at-a-time view.
 - Rest card: Bollyx, a longer hike, or 8,000–10,000 steps, plus "Take at least one full rest day this week (an easy walk is fine)" and the next gym day.
 - **Theme:** light and dark themes. A single small icon button (44 px tap area, 18 px icon) in the header cycles System → Light → Dark, showing a half-filled circle, a sun, or a moon. The default "System" follows the device setting and switches live when it changes. Stored per device (`localStorage` key `strengthTheme`) and applied before first paint, so there's no flash of the wrong theme.
 

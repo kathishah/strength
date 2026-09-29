@@ -209,9 +209,26 @@
     }
 
     .header-line {
+      flex: 1;
+      min-height: 44px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      background: none;
+      color: var(--text-soft);
       font-size: 0.9rem;
       font-weight: 500;
-      color: var(--text-soft);
+      text-align: left;
+    }
+
+    .header-line .chevron {
+      color: var(--muted);
+      transition: transform 0.2s ease;
+    }
+
+    header.expanded .header-line .chevron {
+      transform: rotate(180deg);
     }
 
     .theme-icon-btn {
@@ -234,12 +251,22 @@
     }
 
     .day-selector {
+      max-height: 0;
+      opacity: 0;
+      visibility: hidden;
+      transition: max-height 0.22s ease, opacity 0.18s ease, visibility 0.22s;
       display: flex;
       gap: 6px;
       overflow-x: auto;
       padding: 0 2px;
       scrollbar-width: none;
       margin-top: 4px;
+    }
+
+    header.expanded .day-selector {
+      max-height: 80px;
+      opacity: 1;
+      visibility: visible;
     }
 
     .day-selector::-webkit-scrollbar { display: none; }
@@ -297,28 +324,6 @@
       gap: 6px;
     }
 
-    .dots {
-      display: inline-flex;
-      gap: 3px;
-      align-items: center;
-    }
-
-    .dot-indicator {
-      width: 8px;
-      height: 8px;
-      border-radius: 999px;
-      background: var(--dot-off);
-      transition: transform 0.18s ease, background 0.18s ease;
-      border: none;
-      padding: 0;
-      cursor: pointer;
-    }
-
-    .dot-indicator.active {
-      background: var(--accent);
-      transform: scale(1.12);
-    }
-
     .track {
       display: flex;
       gap: 10px;
@@ -326,7 +331,7 @@
       scroll-snap-type: x mandatory;
       scrollbar-width: none;
       align-items: flex-start;
-      padding: 0 16px 76px; /* bottom pad: room for the sticky bar over tall cards */
+      padding: 0 16px 24px;
       margin: 0 -2px;
       position: relative;
       touch-action: pan-x pan-y;
@@ -722,81 +727,11 @@
       color: var(--text-soft);
     }
 
-    .bottom-bar {
-      margin-top: 10px;
-      padding-top: 6px;
-      padding-bottom: calc(8px + env(safe-area-inset-bottom));
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 8px;
-      position: sticky;
-      bottom: 0;
-      z-index: 20;
-      background: var(--bar-bg);
-      backdrop-filter: blur(6px);
-      -webkit-backdrop-filter: blur(6px);
-    }
-
-    .nav-buttons {
-      display: flex;
-      gap: 6px;
-      flex: 1;
-    }
-
     button {
       border: none;
       outline: none;
       cursor: pointer;
       font: inherit;
-    }
-
-    .btn {
-      flex: 1;
-      padding: 10px 12px;
-      min-height: 44px;
-      border-radius: 999px;
-      font-size: 0.9rem;
-      font-weight: 500;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap: 6px;
-      border: 1px solid var(--btn-border);
-      background: var(--btn-bg);
-      color: var(--btn-text);
-      transition: background 0.15s ease, transform 0.08s ease, box-shadow 0.15s ease;
-    }
-
-    .btn span.icon {
-      font-size: 1.05rem;
-      display: inline-block;
-      transform: translateY(1px);
-    }
-
-    .btn-primary {
-      background: radial-gradient(circle at top left, #4f46e5, #1d4ed8);
-      border-color: rgba(129,140,248,0.9);
-      box-shadow: 0 10px 25px rgba(37,99,235,0.6);
-      color: #e5e7eb;
-    }
-
-    .btn:active {
-      transform: translateY(1px) scale(0.99);
-      box-shadow: none;
-    }
-
-    .btn:disabled {
-      opacity: 0.4;
-      cursor: default;
-      box-shadow: none;
-    }
-
-    .status {
-      font-size: 0.78rem;
-      color: var(--muted);
-      text-align: right;
-      flex: 0 0 auto;
     }
 
     .rest-card {
@@ -913,7 +848,10 @@
 <div class="app">
   <header id="appHeader">
     <div class="header-top">
-      <div class="header-line" id="headerCompactText" aria-live="polite"></div>
+      <button type="button" class="header-line" id="headerToggle" aria-expanded="false" aria-controls="daySelector">
+        <span id="headerCompactText" aria-live="polite"></span>
+        <span class="chevron" aria-hidden="true">▾</span>
+      </button>
       <button type="button" class="theme-icon-btn" id="themeBtn"></button>
     </div>
     <div class="day-selector" id="daySelector"></div>
@@ -1462,6 +1400,8 @@
   const PROGRESS_KEY = "strengthV02Progress";
   const SWAPS_KEY = "strengthV01Swaps";
 
+  const appHeaderEl = document.getElementById("appHeader");
+  const headerToggleEl = document.getElementById("headerToggle");
   const headerCompactTextEl = document.getElementById("headerCompactText");
   const daySelectorEl = document.getElementById("daySelector");
   const contentAreaEl = document.getElementById("contentArea");
@@ -1624,14 +1564,6 @@
     });
   }
 
-  function renderDots() {
-    if (!flatExercises.length) return "";
-    return flatExercises
-      .map((_, idx) =>
-        `<button type="button" class="dot-indicator ${idx === currentIndex ? "active" : ""}" data-idx="${idx}" aria-label="Go to exercise ${idx + 1}"></button>`)
-      .join("");
-  }
-
   function sessionShortLabel() {
     if (currentSessionKey === "M1" || currentSessionKey === "M2")
       return `Recovery · Round ${currentRound}`;
@@ -1648,6 +1580,11 @@
         (currentSessionKey.startsWith("M") ? "" : " done");
     }
     headerCompactTextEl.textContent = text;
+  }
+
+  function collapseHeader() {
+    appHeaderEl.classList.remove("expanded");
+    headerToggleEl.setAttribute("aria-expanded", "false");
   }
 
   function imgTag(src, alt, cls) {
@@ -1854,33 +1791,8 @@
     flatExercises.forEach((item, idx) => track.appendChild(buildCard(item, idx)));
     contentAreaEl.appendChild(track);
 
-    const bottomBar = document.createElement("div");
-    bottomBar.className = "bottom-bar";
-    bottomBar.innerHTML = `
-      <div class="nav-buttons">
-        <button class="btn" id="prevBtn" type="button" aria-label="Previous exercise">
-          <span class="icon">⟵</span> Prev
-        </button>
-        <button class="btn btn-primary" id="nextBtn" type="button" aria-label="Next exercise">
-          Next <span class="icon">⟶</span>
-        </button>
-      </div>
-      <div class="status">
-        <div class="dots" id="bottomDots">${renderDots()}</div>
-        <div style="margin-top:3px;" id="bottomStatus"></div>
-      </div>`;
-    contentAreaEl.appendChild(bottomBar);
-
     wireTrack(track);
-    bottomBar.querySelector("#prevBtn").addEventListener("click", () => goToExercise(currentIndex - 1));
-    bottomBar.querySelector("#nextBtn").addEventListener("click", () => goToExercise(currentIndex + 1));
-    bottomBar.querySelector("#bottomDots").addEventListener("click", (e) => {
-      const dot = e.target.closest(".dot-indicator");
-      if (dot) goToExercise(Number(dot.dataset.idx));
-    });
-
     updateHeaderCompact();
-    updateCarouselNav();
     // restore position to the same card without animation
     requestAnimationFrame(() => scrollToIndex(currentIndex, false));
   }
@@ -1894,7 +1806,6 @@
         const idx = indexFromScroll(track);
         if (idx !== currentIndex) {
           currentIndex = idx;
-          updateCarouselNav();
         }
       });
     }, { passive: true });
@@ -1977,26 +1888,6 @@
     track.scrollTo({ left, behavior: smooth ? "smooth" : "auto" });
   }
 
-  function updateCarouselNav() {
-    const total = flatExercises.length;
-    const prevBtn = contentAreaEl.querySelector("#prevBtn");
-    const nextBtn = contentAreaEl.querySelector("#nextBtn");
-    const status = contentAreaEl.querySelector("#bottomStatus");
-    if (prevBtn) prevBtn.disabled = currentIndex === 0;
-    if (nextBtn) nextBtn.disabled = currentIndex === total - 1;
-    if (status) status.textContent = `Exercise ${currentIndex + 1}/${total}`;
-    document.querySelectorAll(".dot-indicator").forEach(d => {
-      d.classList.toggle("active", Number(d.dataset.idx) === currentIndex);
-    });
-  }
-
-  function goToExercise(idx) {
-    if (idx < 0 || idx >= flatExercises.length) return;
-    currentIndex = idx;
-    updateCarouselNav();
-    scrollToIndex(idx, true);
-  }
-
   function loadDay(dayName) {
     currentDayName = dayName;
     currentSessionKey = DAY_PLAN[dayName] || null;
@@ -2016,6 +1907,7 @@
       btn.classList.toggle("active", btn.dataset.day === currentDayName);
     });
 
+    collapseHeader(); // picking a day collapses the header
     renderTrack();
   }
 
@@ -2025,6 +1917,16 @@
     const startDay = DAY_PLAN.hasOwnProperty(todayName) ? todayName : "Monday";
     buildDaySelector(startDay);
     loadDay(startDay);
+
+    // Collapsible header: status line toggles the day picker; scrolling collapses it.
+    headerToggleEl.addEventListener("click", () => {
+      const expanding = !appHeaderEl.classList.contains("expanded");
+      appHeaderEl.classList.toggle("expanded", expanding);
+      headerToggleEl.setAttribute("aria-expanded", String(expanding));
+    });
+    window.addEventListener("scroll", () => {
+      if (appHeaderEl.classList.contains("expanded") && window.scrollY > 40) collapseHeader();
+    }, { passive: true });
 
     // Theme: "system" | "light" | "dark", persisted in localStorage.
     const THEME_KEY = "strengthTheme";
