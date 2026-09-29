@@ -1,0 +1,180 @@
+# Deployment & Implementation Plan (v1)
+
+Companion to `SPEC-strength.md` (v1.11). Covers how v1 is hosted, authenticated, stored, and built. The spec says *what* the app does; this says *how it runs*.
+
+## 1. Goals and constraints
+- Keep the front end a **static site with plain HTML + JS (ES modules, no build step)**.
+- One small on-demand backend. No servers, no idle cost.
+- Private health data: sign-in required, self-signup off, nothing public.
+- Logging must never wait on the network (gym Wi-Fi, Lambda cold starts).
+- Single user, but keyed per user so it isn't a rewrite if that changes.
+
+## 2. Architecture
+```
+Browser (installed PWA)                         AWS
+┌──────────────────────────────┐   HTTPS   ┌───────────────────────────────────┐
+│ index.html + ES modules      │──────────▶│ Cognito User Pool (login, JWT)    │
+│ IndexedDB: cache + outbox    │           │ HTTP API (JWT authorizer)         │
+│ event log → replay → state   │──────────▶│   └─ Lambda "events" (Node, arm64)│
+└──────────────────────────────┘  Bearer   │        └─ S3 data bucket (private)│
+        ▲ static files                      └───────────────────────────────────┘
+v1 on S3 + CloudFront (app/); GitHub Pages keeps the frozen v0.2 viewer
+```
+- **Hosting:** two sites, side by side.
+  - **GitHub Pages** keeps serving the root `index.html` (the v0.2 viewer), frozen: bug fixes only.
+  - **v1** lives in `app/` and is deployed to a private S3 bucket behind CloudFront (Origin Access Control, HTTPS only). Deploy with `aws s3 sync app/ s3://<site-bucket> --delete` followed by a CloudFront invalidation.
+  - Pages also publishes `app/` at `/strength/app/`, since it serves the whole repo. That is harmless (no data, and the Cognito pool id and API URL are not secrets), but if it bothers you, switch Pages to a workflow that publishes only `index.html`.
+  - Use a **custom domain** for v1 if you can (Route 53 + ACM). The installed PWA, `localStorage` (refresh token) and IndexedDB are tied to the origin, so changing the domain later means reinstalling and signing in again.
+- **Auth:** Cognito **User Pool only** (no Identity Pool; the browser never holds AWS credentials). Self-signup disabled, one user with a **single permanent password and no MFA** (for now). The page signs in with plain `fetch` to Cognito (`InitiateAuth` with `USER_PASSWORD_AUTH`, then `REFRESH_TOKEN_AUTH`), so there is no SDK and no redirect (avoids the iOS standalone-PWA redirect problem). The ID token is the bearer token.
+  - The app client must explicitly enable `ALLOW_USER_PASSWORD_AUTH` and `ALLOW_REFRESH_TOKEN_AUTH` (password auth is not in the defaults).
+  - The user is created with `admin-create-user` and then `admin-set-user-password --permanent`, so the account is never in the `NEW_PASSWORD_REQUIRED` state. The page therefore handles no auth challenges; if Cognito returns one, it shows "sign-in unavailable" instead.
+  - A forgotten password is reset by an admin with `admin-set-user-password` (no email-based reset flow).
+  - Google/Apple sign-in is a possible later addition (redirect-based, riskier on iOS home-screen apps); see section 12.
+- **API:** one HTTP API with a JWT authorizer, so the Lambda contains no token-verification code. As defence in depth, the Lambda also checks the token's `sub` against an `OWNER_SUB` environment variable.
+- **Lambda:** one function, Node 22, arm64, esbuild single-file bundle, no VPC, no heavy SDK (use `@aws-sdk/client-s3` only).
+- **Storage:** private S3 bucket, versioning on, public access blocked, encryption at rest (SSE-S3).
+
+## 3. The two endpoints
+
+Base path is the HTTP API URL. Both require `Authorization: Bearer <ID token>`. CORS allows only the v1 site origin (the CloudFront or custom domain), and the `Authorization` and `Content-Type` headers.
+
+### `POST /events` — append events
+Request:
+```json
+{
+  "deviceId": "d_7f3a",
+  "events": [
+    { "id": "01J9Z…ULID", "ts": "2026-09-30T17:42:11.120Z-0003-d_7f3a",
+      "v": 1, "type": "set.logged", "entityId": "s_01J9…",
+      "payload": { "sessionId": "…", "exerciseId": "goblet-squat", "setNumber": 1,
+                   "weightLbs": 25, "suggestedWeightLbs": 20, "reps": 12,
+                   "isRampUp": false, "isCalibration": true } }
+  ]
+}
+```
+Response `200`:
+```json
+{ "accepted": 1, "duplicates": 0 }
+```
+Behavior:
+- **Idempotent by `id`:** an event that is already stored counts as a duplicate, not an error, so the client can safely retry the whole outbox.
+- The server stamps each stored event with `recvAt` (server time, for information only). Clients never set it. The response has no cursor: only `GET /events` moves the client's sync position, so a device can never skip events written by another device.
+- **Validation** (reject the whole batch with `400` and a per-event reason): max 200 events and 256 KB per request; known `type` and `v`; ULID `id`; required payload fields by type; ranges (weight 0–1000, reps 0–500, level 1–5, RIR 0–10, back pain 0–10); `ts` not more than 1 day in the future.
+- **Write path.** Events are stored in the file for the month they are **received** (server UTC), not the month in `ts`: `u/<sub>/events/<yyyy-mm>.json`, an append-only array. An offline workout from September uploaded in October therefore lands in October's file, where every device syncing from an October cursor will find it.
+  1. `GET` the current month file. If it exists, note its ETag; if not, the array is empty.
+  2. Skip events whose `id` is already present (duplicates); append the rest in order.
+  3. `PUT` with `If-None-Match: *` when the file did not exist, or `If-Match: <etag>` when it did.
+  4. On `412` (someone else wrote first) or `409` (a concurrent conditional write is in flight), start over from step 1. Retry up to 5 times with a short random delay; then return `503` and the client retries later.
+  Two devices posting at the same moment is rare, and this makes it safe. A missing key with `If-Match` returns `404`, which is why creation uses `If-None-Match`.
+- `401` bad or missing token, `403` `sub` is not the owner, `413` too large, `429` throttled.
+
+### `GET /events?since=<cursor>&limit=<n>` — read events
+Response `200`:
+```json
+{ "events": [ { "...": "as stored, plus recvAt" } ], "cursor": "2026-10:37", "more": false }
+```
+Behavior:
+- **The cursor is a position in the append-only files, not a timestamp.** Format `<yyyy-mm>:<index>`: "in that month's file, everything from this index on, plus every later month's file from the start". Events are only ever appended (never edited or removed) and appends are serialized by the conditional writes, so positions are unique, stable, and free of timestamp ties.
+- With no `since`, the Lambda lists `u/<sub>/events/`, reads all month files in order, and returns everything. The returned `cursor` points just past the last event returned.
+- With a cursor, it reads that month's file from the index onward, then any later month files. If nothing is new, it returns `events: []` and the same cursor.
+- `limit` defaults to 2,000 (max 5,000). When more remain, `more: true` and the cursor points just past the last returned event; the client calls again immediately. Because the cursor is a position, pagination cannot skip or repeat events.
+- The client saves the cursor only after the returned events are stored locally. It also deduplicates by event `id`.
+- **Warm-up:** the app-open sync is the warm-up. The client runs its normal `GET /events?since=<saved cursor>` as soon as the app opens; it is cheap and wakes the Lambda before the first set is logged. There is no separate ping and no fake cursor.
+
+Nothing else is exposed. There is no update or delete endpoint: edits are new events on the same `entityId`, and deletes are tombstone events, both created through `POST /events`.
+
+## 4. Data layout and event format
+```
+s3://<data-bucket>/u/<cognito-sub>/events/2026-10.json     # append-only array, one file per RECEIVE month (UTC)
+```
+- **Event envelope:** `{ id, ts, v, type, entityId, payload, recvAt }`. `ts` is a hybrid logical clock string (ISO time, counter, device id) so ordering is stable across devices with skewed clocks. `ts` decides replay order; the file/position decides only sync order.
+- **Event types (v1):** `session.started`, `session.finished`, `set.logged`, `set.edited`, `session.notes`, `setting.changed` (starting weight, increment, trap bar weight, program start date, scheduled-increase options), `swap.set` / `swap.cleared`, `deload.started`, `deload.postponed`, `entity.deleted` (tombstone).
+- **State** is `replay(events sorted by ts)` (ties broken by `id`). Sorting first means events that arrive out of order, for example a session uploaded a week late, still produce the same state on every device.
+- **Reducers are field-level, not whole-entity.** Every event carries a *patch* of the fields it sets, and replay merges patches per `entityId`, last `ts` winning **per field**:
+  - `session.started` sets `{templateCode, startedAt, programWeek, phase, isDeload, backPainBefore}`.
+  - `session.finished` sets `{finishedAt, backPainAfter}`; `session.notes` sets `{notes}`. Applying them in any order gives the same session, and none erases another's fields.
+  - `set.logged` creates a set with all its fields (`sessionId`, `exerciseId`, `setNumber`, weight, reps, and so on); `set.edited` patches individual fields of an existing set.
+  - `setting.changed` sets one key (for example `startingWeight:goblet-squat`); `swap.set` / `swap.cleared` set the swap for a slot; `deload.*` events set the deload record for a program week.
+  - `entity.deleted` is final for that `entityId` (ids are never reused): patches for a deleted entity are ignored, whatever their `ts`.
+  - A patch for an entity that has not been created yet (arrived early) is held and applied once its creating event appears; a set whose session never appears is ignored by the engine.
+- **The catalog is fixed** (spec 4.5): there are no events for creating exercises.
+- **Not stored:** the catalog, templates, routines, alternatives, and pushup ladder. They ship inside the app code; a code deploy updates them.
+- **Size:** about 45 sets a week is roughly 600 KB a year. Loading everything on a fresh device is fine for years; month files keep the incremental reads small.
+
+## 5. Client behavior (local first)
+- **Outbox in IndexedDB:** every user action writes the event locally first and updates the UI immediately. A background task sends the outbox with `POST /events`; on success it removes the sent events.
+- **Sync triggers:** app open, `visibilitychange` to visible, `online`, and after each completed set (debounced ~2 s). iOS has no Background Sync, so a session finished with no signal uploads next time the app opens.
+- **Draft safety:** the in-progress session is rebuilt from local events, so a refresh or app switch loses nothing. `session.finished` is just another event.
+- **Cold starts:** the first request after idle may take about 0.3–1 s. Nothing blocks on it, because reads use the local cache and writes go through the outbox. The sync that runs when the app opens doubles as the warm-up.
+- **Auth handling:** keep the refresh token in `localStorage`. If refresh fails (expired, or iOS cleared storage), show the password form and keep the outbox; nothing is lost.
+- **Timers** use timestamps, not intervals, so they survive screen lock (spec Section 9).
+
+## 6. Security
+- Cognito: self-signup disabled, long random password (password manager), no MFA at first (TOTP can be added later, but it needs challenge handling in the page). Token lifetimes: ID/access 1 h, refresh token 365 days so sign-in is rare.
+- Bucket: block all public access, versioning on, lifecycle rule to expire old versions after 90 days.
+- IAM: the Lambda role can only `GetObject`, `PutObject`, `ListBucket` on this bucket.
+- HTTP API: throttle to a low rate (for example 10 requests per second, burst 20), CORS locked to the site origin.
+- Page: a Content-Security-Policy meta tag allowing only self, the Cognito and API origins, and the GIF publishers; no third-party scripts or analytics.
+- Nothing sensitive in URLs; only the opaque `since` cursor (a month and a position).
+
+## 7. Infrastructure as code
+A single **AWS SAM** template (`infra/template.yaml`) creates: the site bucket and CloudFront distribution (OAC), the data bucket, the Lambda, the HTTP API with JWT authorizer, the Cognito User Pool and app client (password + refresh auth flows enabled, no client secret; no Identity Pool), and log retention (14 days). Commands:
+```
+sam build && sam deploy --guided        # first time
+sam deploy                              # afterwards
+aws cognito-idp admin-create-user …           # create the single user once
+aws cognito-idp admin-set-user-password … --permanent   # no first-login challenge
+```
+Two stacks (`strength-dev`, `strength-prod`) from the same template. Estimated cost: a few cents a month; everything sits inside free tiers.
+
+## 8. Repo layout
+```
+index.html                # FROZEN v0.2 viewer, served by GitHub Pages (bug fixes only)
+app/                      # v1, deployed to S3 + CloudFront
+  index.html              # shell, loads js/main.js
+  manifest.webmanifest, sw.js
+  js/
+    engine/               # pure progression functions (spec Section 5), no DOM
+    store/                # events, outbox, replay, sync, auth
+    ui/                   # screens (home, session, history, settings, recovery guidance)
+    seed/                 # catalog, templates, recovery routine, ladder, alternatives
+lambda/events/index.mjs   # both endpoints + validation
+infra/template.yaml       # SAM template
+test/                     # node --test (engine, replay, lambda validation)
+```
+Tests run with Node's built-in runner (`node --test`), so there is still no bundler or dependency for the front end. `esbuild` is used only to bundle the Lambda.
+
+## 9. Delivery phases (each ends deployable)
+| Phase | Spec milestone | Work | Done when |
+|---|---|---|---|
+| 0. Freeze | 0.C | Tag the current `index.html` as the frozen v0.2 viewer; create `app/` with an empty shell and the S3 + CloudFront deploy step | Both sites load; Pages unchanged |
+| A. Spike | 1 | Deploy SAM stack; login from the page via fetch; `POST`/`GET /events` with a test event; measure cold start | Works from an installed iPhone PWA and desktop; cold start acceptable |
+| B. Backbone | 1–2 | Auth screen, outbox, sync, replay, seed data bundled; two-device merge test | Event written on phone appears on desktop |
+| C. Engine | 3 | Pure functions for Section 5 with tests for every 5.7 and 5.12 example | All example tests pass |
+| D. Logging | 4 | Session screen, ramp sets, calibration, rest timer, draft safety, swaps, rotation, recovery guidance cards | A full Workout A is logged offline and syncs later |
+| E. History and polish | 5 | Exercise history, settings, export, deload controls, PWA manifest and service worker | Spec Section 11 acceptance criteria all pass |
+
+Phase C can start in parallel with A and B, since the engine has no dependencies.
+
+## 10. Risks and mitigations
+| Risk | Mitigation |
+|---|---|
+| Login in an iOS standalone PWA | In-page password form, no redirects; Phase A tests it on the phone |
+| iOS evicts local storage | S3 is the source of truth; local is a cache; re-login restores everything |
+| Two devices write at once | `If-None-Match: *` to create, `If-Match` to update, retry on 412/409; idempotent event ids |
+| Offline events uploaded later are missed by other devices | Files are partitioned by receive time; the cursor is a file position |
+| Concurrent edits to one session | Field-level patches; replay sorted by `ts` |
+| Clock skew between devices | Hybrid logical clock in `ts` |
+| Schema changes later | Every event has `v`; old versions are upgraded when read |
+| Lambda cold start | Local-first UI; the app-open sync is the warm-up |
+| Origin change after install (PWA, tokens and IndexedDB are per origin) | Pick the final domain before daily use; custom domain recommended |
+
+## 11. Decisions made
+- Warm-up, post-lift cardio, and recovery-routine tracking are out of the app (spec v1.11).
+- The v0.2 viewer stays on GitHub Pages, frozen; v1 is built in `app/` on S3 + CloudFront.
+- Cognito User Pool only, one permanent password, no MFA, no Identity Pool.
+- The exercise catalog is fixed; no custom exercise events.
+
+## 12. Open decisions
+1. **Custom domain** for the v1 site (recommended) or the default CloudFront domain to start.
+2. **Google/Apple sign-in later:** only if the password form becomes a nuisance. It would need a hosted-UI redirect (test on the installed iPhone app first), a way to keep unknown Google accounts out, and a fixed data owner instead of one prefix per `sub`.

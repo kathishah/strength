@@ -1,8 +1,19 @@
-# Recomp Tracker — Product Spec (v1.9)
+# Recomp Tracker — Product Spec (v1.11)
 
-A personal, mobile-first web app to track a body recomposition program: build lean mass, reduce visceral fat, and strengthen the back. Used at the gym on a phone and at home on a desktop, with data synced across devices.
+A personal, mobile-first web app for logging gym workouts in a body recomposition program (build lean mass, reduce visceral fat, strengthen the back) and telling the user what to lift next. Used at the gym on a phone and at home on a desktop, with data synced across devices. Activity tracking (steps, Bollyx, hikes, mobility) and body metrics (DEXA, waist, weight) are out of scope: activity is tracked on an Apple Watch, and body metrics are not tracked in this app.
 
 ## Changelog
+- **v1.11**
+  - Gym warm-up (4.2) and post-lift cardio (4.4) dropped from the app: not shown, not logged. Their session fields and settings are removed.
+  - Recovery routine (4.6) is guidance only: exercise cards with prescription and cues, no done state, no logging, no sync.
+  - Custom exercise entry removed: the exercise catalog is fixed and ships with the app (4.5, 5.6, 7, 8).
+  - Hosting (Section 0.C): the v0.2 viewer (`index.html`) is frozen on GitHub Pages; v1 is built in a separate `app/` directory and deployed to S3 + CloudFront.
+- **v1.10**
+  - Scope reduced to workout logging and exercise history. Removed: activity log (6.4), body metrics (6.5), weekly progress and reminders on Home (6.2), DEXA seed data and comparison (Sections 3, 8), the back pain trend chart. Steps, Bollyx, hikes, and mobility are tracked on the Apple Watch.
+  - The Tue/Thu recovery routine stays as a checklist with local-only done state (4.6); it is no longer logged as an activity.
+  - Data model trimmed (Section 8): ActivityLog, DexaScan, WaistMeasurement, BodyWeight removed; storage is an append-only event log.
+  - Milestones renumbered (Section 10) and acceptance criteria trimmed (Section 11).
+  - Deployment architecture (static site + one Lambda behind an HTTP API + Cognito + private S3 event log) is described in DEPLOYMENT-PLAN.md.
 - **v1.9**
   - v0.2 header collapses again: the status line is a tap target with a chevron that shows or hides the day picker. Picking a day or scrolling down collapses it (0.B.1).
   - v0.2 carousel: Prev/Next buttons, progress dots, and the bottom bar removed; navigation is by swipe only (0.B.1).
@@ -59,7 +70,13 @@ App release versions (v0.x) are separate from spec versions (v1.x in the Changel
 | App version | Status | Program it shows |
 |---|---|---|
 | v0.1 | Shipped (commit `543d99b`) | Spec v1.0 program |
-| v0.2 | Shipped | Spec v1.6 program (Section 4) |
+| v0.2 | Shipped; frozen (bug fixes only) | Spec v1.6 program (Section 4) |
+| v1 | Planned | Full app: logging, progression, history (Sections 5–6) |
+
+### 0.C Hosting of v0.x and v1
+- **v0.2 viewer:** the single `index.html` at the repo root stays on GitHub Pages, frozen. Only bug fixes go in; no new features.
+- **v1:** built in `app/` in the same repo (separate `index.html`, JS modules, PWA files) and deployed to S3 + CloudFront with the backend in DEPLOYMENT-PLAN.md. v1 starts from the v0.2 catalog data (copied into `app/js/seed/`) and then diverges.
+- When v1 meets the acceptance criteria (Section 11), it replaces the viewer as the daily-use app; the viewer can stay up as a read-only guide.
 
 ### 0.A App v0.1 — Static program viewer (shipped)
 
@@ -103,7 +120,7 @@ A read-only guide to the **spec v1.0** program (the v1.0 text is in git at commi
 - Known gap: suitcase carry has no GIF (no free one-sided carry GIF was found); it shows the placeholder.
 
 #### 0.A.8 Not in v0.1
-Weight/rep logging, progression suggestions (Section 5), rest timer, sign-in and sync, activity log, body metrics, exercise history, settings/export, PWA install. These arrive with the v1 milestones in Section 10.
+Weight/rep logging, progression suggestions (Section 5), rest timer, sign-in and sync, exercise history, settings/export, PWA install. These arrive with the v1 milestones in Section 10.
 
 #### 0.A.9 Gaps vs. spec v1.6
 All closed by v0.2 (0.B) except the gym warm-up, which stays out by choice.
@@ -202,7 +219,7 @@ Each gym card can open two separate lists from a single row of small buttons: **
 - **Known gaps (placeholder):** TRX face pull, TRX hip thrust, TRX hamstring curl (no matching free GIF found; Planfit only offers video); McGill curl-up, open book thoracic rotation, dowel hip hinge; suitcase carry (as in v0.1).
 
 #### 0.B.7 Not in v0.2
-Gym warm-up (4.2), post-lift cardio (4.4), weight/rep/level logging, progression, calibration, scheduled increases, deloads and program-week tracking (no program start date), back pain gate, rest/hold/warm-up timers, sign-in and sync, activity log, body metrics, exercise history, settings/export, PWA install. These arrive with the v1 milestones in Section 10.
+Weight/rep/level logging, progression, calibration, scheduled increases, deloads and program-week tracking (no program start date), back pain gate, rest timer, sign-in and sync, exercise history, settings/export, PWA install. These arrive with the v1 milestones in Section 10. The gym warm-up (4.2) and post-lift cardio (4.4) are not planned at all (dropped in v1.11).
 
 #### 0.B.8 Known issues (accepted for v0.2)
 - The default day uses the device's weekday name (`toLocaleDateString`), so a non-English locale falls back to Monday.
@@ -217,12 +234,12 @@ Gym warm-up (4.2), post-lift cardio (4.4), weight/rep/level logging, progression
 1. Increase lean mass (especially appendicular lean mass).
 2. Reduce visceral fat (VAT).
 3. Strengthen the back and reduce sitting-related lower back pain.
-4. Stay consistent: 3 gym sessions, 3 Bollyx dance classes, 2 mobility sessions (Tue/Thu), 1 longer hike, and at least 1 full rest day per week, plus 8,000–10,000 daily steps.
+4. Stay consistent with 3 gym sessions per week. (Other activity is tracked on the Apple Watch, not here.)
 
 **What the app must do well**
 - Make logging a gym session fast enough to do between sets on a phone.
 - Tell the user what weight to use next time, including ramp-up sets, based on the progression rules in Section 5.
-- Show whether body composition is trending the right way across DEXA scans and monthly waist measurements.
+- Show per-exercise history so progress is visible (6.6).
 
 ---
 
@@ -240,11 +257,11 @@ Gym warm-up (4.2), post-lift cardio (4.4), weight/rep/level logging, progression
 | Training history | HIIT ~3 years ago for a year; bodyweight/pushups for last 3 months. Pushup baseline: 4 sets of 15, 15, 10, 5 with good form, 60–90 s rest |
 | Equipment | Full gym (including TRX suspension trainer); resistance band, mat, and dowel/broomstick at home |
 
-Units throughout: **lbs** for mass, **inches** for waist, **kg/m²** for lean mass indices (as reported by the DEXA provider).
+Units throughout: **lbs** for mass.
 
 ---
 
-## 3. Baseline DEXA data (seed these three records)
+## 3. Baseline DEXA data (context only; not stored in the app)
 
 | Field | Dec 02, 2025 10:24am | Apr 26, 2026 1:24pm | Sep 15, 2026 7:39am |
 |---|---|---|---|
@@ -260,11 +277,6 @@ Units throughout: **lbs** for mass, **inches** for waist, **kg/m²** for lean ma
 | ALMI (kg/m²) | 8.89 | 9.10 | 9.16 |
 | ALMI percentile | 36 | 43 | 45 |
 
-**Notes for the app**
-- Scans were taken at different times of day. Store `scanTime` and a `fasted` boolean on every scan. Morning fasted scans are the comparable standard. When comparing two scans where one is not a morning/fasted scan, show a small note: "Scan conditions differ; lean mass changes may partly reflect food and water."
-- Percentiles are for display only (from the provider); lower VAT percentile is better, higher lean mass/ALMI percentile is better. Color trend arrows accordingly (e.g. VAT going down = good/green).
-- Next DEXA is due ~3–4 months after the most recent scan (Sep 15, 2026 → mid-Dec 2026 to mid-Jan 2027). Show a "next scan due" indicator computed from the latest scan date + 90 days.
-
 ---
 
 ## 4. Training program
@@ -272,34 +284,14 @@ Units throughout: **lbs** for mass, **inches** for waist, **kg/m²** for lean ma
 ### 4.1 Weekly structure
 - 3 full-body gym sessions per week, rotating **A → B → C → A …**. Rotation is by last completed workout, not by weekday.
 - No gym sessions on consecutive days. If the user starts a gym session the day after a previous gym session, show a non-blocking warning.
-- Tuesday and Thursday: sitting recovery mobility routine only (Section 4.6), done at home. May be split into two chunks in one day. These are recovery days for the upper body: no pushups or other resistance work.
+- Tuesday and Thursday: sitting recovery mobility routine only (Section 4.6), done at home. These are recovery days for the upper body: no pushups or other resistance work.
 - Recovery rule: each muscle group gets at least 48 hours between resistance sessions (ACSM guidance for older adults). The Mon/Wed/Fri gym schedule satisfies this; pushups live in Workout B for this reason.
 - At least one full rest day per week (an easy walk is fine).
-- Bollyx 3x/week and 1 longer hike per week are logged as activities (Section 6.4).
-- Target gym session length: ~45 minutes including warm-up.
+- Bollyx 3x/week, 1 longer hike per week, and daily steps are tracked on the Apple Watch, outside this app.
+- Target gym session length: ~45 minutes.
 
-### 4.2 Gym warm-up (~8 min)
-
-**Part 1 — Cardio, 5 min.** Build intensity: ~2 min easy, ~2 min moderate, ~1 min brisk (breathing harder but able to talk). Log modality and minutes.
-
-| Modality | Notes to display |
-|---|---|
-| Incline treadmill walk (default) | 5–10% incline, brisk pace. Upright, glute-focused, easy on the back. |
-| Stationary bike | Best on sore-back days. |
-| Recumbent bike | Gentlest option. |
-| Elliptical | Fine alternative. |
-
-Show a one-line tip: "Avoid the rower and jumping/sprint work as a warm-up while the back is sensitive."
-
-**Part 2 — Back activation (McGill Big 3), ~3 min, one round.** Checklist; each item individually checkable.
-
-| Exercise | Prescription | Cue to display |
-|---|---|---|
-| McGill curl-up | 5 holds × 8–10 s | One knee bent, hands under lower back; lift head and shoulders only slightly. |
-| Side plank | 2 holds × 15–20 s per side | From knees to start. |
-| Bird dog | 5 per side, 8–10 s hold each | Keep hips level; slow and controlled. |
-
-**Part 3 — Ramp-up sets.** Not part of the warm-up checklist; shown inline before the first exercise of Supersets 1 and 2 (Section 5.5).
+### 4.2 Gym warm-up — not in the app
+A warm-up (about 5 min of easy-to-brisk cardio, then the McGill Big 3: curl-up, side plank, bird dog) is still recommended, but the app does not show, time, or log it. Ramp-up sets (5.5) are part of the workout, not the warm-up.
 
 ### 4.3 Workouts
 
@@ -337,10 +329,10 @@ Exercises are grouped as supersets: slots with the same superset group are alter
 **Exercise cues to seed (shown on tap):**
 - 45° back extension: "Start bodyweight only. Move slowly, pause 1 s at the top. Go only as low as comfortable. Stop when the body forms a straight line; don't arch or swing."
 - Face pull: "Rope at face height, pull toward forehead, elbows high, squeeze shoulder blades."
-- Pushup: "Body in a straight line from head to heels, like a moving plank. Stop 2–3 reps short of failure." Starting point: level 1 (standard), target 10 reps per set. Rationale to display in exercise info: "Baseline was 15, 15, 10, 5 over 4 sets, so later sets reached failure. Starting at 10 reps with 2–3 in reserve keeps quality high and leaves room to progress." Pushups double as core (anti-extension) work, replacing the Pallof press; warm-up bird dogs cover anti-rotation.
+- Pushup: "Body in a straight line from head to heels, like a moving plank. Stop 2–3 reps short of failure." Starting point: level 1 (standard), target 10 reps per set. Rationale to display in exercise info: "Baseline was 15, 15, 10, 5 over 4 sets, so later sets reached failure. Starting at 10 reps with 2–3 in reserve keeps quality high and leaves room to progress." Pushups double as core (anti-extension) work, replacing the Pallof press.
 
-### 4.4 Optional post-lift cardio
-After the last exercise, offer an optional "Incline walk" block: 10–15 min at a conversational pace (can talk in full sentences, not sing). Log minutes on the session. Tip: "Short on time? Skip this before skipping back work."
+### 4.4 Post-lift cardio — not in the app
+An optional 10–15 min incline walk after lifting is still fine, but the app does not show or log it.
 
 ### 4.5 Back-friendly substitutions
 Each slot must support swapping the exercise for an alternative. Swaps persist for future sessions of that workout until changed back. Seed these alternatives:
@@ -358,7 +350,7 @@ Each slot must support swapping the exercise for an alternative. Swaps persist f
 | 45° back extension | Machine back extension, Bird dog (weighted hold) |
 | Pushup | Machine chest press, Pallof press (for sessions where pressing should be skipped, e.g. shoulder discomfort) |
 
-The exercise catalog must be user-extendable (add custom exercise with type and rep range).
+The exercise catalog is fixed: it ships with the app, and there is no UI to add custom exercises. Changing the catalog is a code change.
 
 #### 4.5.1 TRX alternatives
 Add these as additional swap options for the listed slot exercises. TRX exercises use the `suspension` type (Section 5.4): difficulty is logged as a level from 1 (easiest) to 5 (hardest) instead of a weight. Default starting level: 2. Exercises with no good TRX equivalent (shoulder press, trap bar deadlift, back extension, farmer carry) have none.
@@ -383,20 +375,18 @@ Pairing note: when a swap puts two TRX exercises in the same superset (e.g., TRX
 
 
 ### 4.6 Tuesday/Thursday sitting recovery routine (~10 min, at home)
-2 rounds. Logged as a `mobility` activity with a per-exercise checklist.
+2 rounds. Shown as guidance only: one card per exercise with prescription and cue. Nothing is checked off, logged, or synced.
 
 | Exercise | Prescription | Cue to display |
 |---|---|---|
 | Half-kneeling hip flexor stretch | 30 s per side | Squeeze the glute of the back leg. |
 | Glute bridge | 12 reps | Pause at the top. |
-| McGill curl-up | 5 holds × 8–10 s | As in warm-up. |
+| McGill curl-up | 5 holds × 8–10 s | One knee bent, hands under lower back; lift head and shoulders only slightly. |
 | Side plank | 15–20 s per side | From knees if needed. |
 | Bird dog | 5 per side, 8–10 s hold | Hips level. |
 | Open book thoracic rotation | 5 per side | Lying on side, rotate top arm open. |
 | Band pull-apart | 15 reps | Arms straight, squeeze shoulder blades. |
 | Dowel hip hinge | 5 reps | Dowel touches head, upper back, and tailbone throughout. |
-
-Support "split into two chunks" (log round 1 and round 2 separately, same day).
 
 Band pull-aparts here are light activation, not a training stimulus; no progression.
 
@@ -433,7 +423,7 @@ For per-side exercises (reverse lunge, Pallof press, dead bug), reps are per sid
 - **Bodyweight (dead bug):** no load. When all sets hit the top of the range, show a text hint suggesting a harder variation or slower tempo (no auto-change).
 - **Bodyweight loadable (45° back extension):** load starts at 0 (bodyweight). Apply double progression (5.2); when all sets hit the top of the range, suggest adding the increment (0 → 5 lbs → 10 lbs …). Never suggest a negative load; a reduction from 5 lbs goes to 0.
 - **First-loaded weight:** any exercise whose current load is 0 and has `firstLoadedWeightLbs` set jumps to that value on its first increase instead of the normal increment (e.g. hip thrust 0 → 45 lb empty bar; reverse lunge 0 → 10 lbs per hand). A reduction below `firstLoadedWeightLbs` goes to 0.
-- **Warm-up activation and mobility items** are completion checklists only; no progression.
+- **Recovery routine items** are guidance only; no progression.
 - **Suspension (TRX):** load is the level (1–5), not weight. Apply double progression (5.2) with levels in place of load: when every working set reaches the top of the rep range, suggest the next level (max 5) at the bottom of the range; if reps fall below the bottom of the range on a set in each of the last 2 sessions, suggest dropping one level (min 1). At level 5 and top of range, show a hint to add slower lowering (3 s) or switch back to the loaded gym exercise. The level field replaces the weight field in the set-logging UI (stepper 1–5), pre-filled with the suggested level and always editable. No ramp-up sets, no calibration prompts, not affected by the back pain gate (not flagged loadsBack). Suspension holds (TRX plank) follow the hold rules: completion only.
 - **Bodyweight ladder (pushup):** progress by reps, then by variation. Each variation has its own rep range. When every working set reaches the top of the current level's range, suggest moving up one level at the bottom of the next level's range, with the increase highlight from 6.3 (label "↑ Next level · Earned"). If reps fall below the bottom of the range in each of the last 2 sessions at a new level, suggest dropping back one level. Scheduled increases (5.12) do not apply. The user can pick any level manually.
 
@@ -481,7 +471,7 @@ Dumbbell values are per hand. Leg press values are added plates, excluding the s
 | Seated cable row | 60 | — | |
 | Farmer carry | 35 | — | |
 
-Custom exercises and swapped-in alternatives without a seeded value: no pre-fill; prompt the user to enter a weight they could lift for the top of the range with ~3 reps to spare.
+Swapped-in alternatives without a seeded value: no pre-fill; prompt the user to enter a weight they could lift for the top of the range with ~3 reps to spare.
 
 **Calibration.** An exercise's first 2 completed sessions are calibration sessions (`isCalibration` on its SetLogs). During calibration, after each working set of a weighted exercise, show a one-tap prompt: "How did that feel?"
 - **Too easy** (could do 5+ more reps than the top of the range) → next set's pre-filled weight goes up one increment (or to `firstLoadedWeightLbs` from 0).
@@ -595,13 +585,10 @@ Test cases:
 
 ### 6.2 Home / Today screen
 - Next workout (A/B/C) with a "Start" button and the no-consecutive-days warning if applicable.
-- On Tuesdays and Thursdays, show the mobility routine as today's primary card (still allow starting a workout).
-- This week's progress (Mon–Sun): gym sessions x/3, Bollyx x/3, mobility x/2, hikes x/1, rest days x/1, average steps vs 8,000 target. A rest day is a day with no gym session, Bollyx, or hike logged (mobility and steps don't count against it). If it's Saturday and no rest day has been logged yet, show a gentle nudge.
-- Reminders shown inline (not push notifications in v1): waist measurement due (30+ days since last), DEXA due.
-- Quick-add buttons: log steps, log Bollyx, log hike, start mobility routine.
+- On Tuesdays and Thursdays, show the recovery routine (4.6) as today's primary card (still allow starting a workout).
+- Deload banner during a deload week (5.8), and the Start deload / Postpone controls.
 
 ### 6.3 Workout session (most important screen; phone-first)
-- **Warm-up section:** cardio modality picker (default incline walk) and minutes (default 5); a guided 5-minute timer with the easy/moderate/brisk phase shown; Back activation checklist (Section 4.2 Part 2) with per-hold timers.
 - **Exercises grouped by superset**, each showing: suggested weight, target reps, set count for the current phase, and last session's result (e.g. "Last: 35 × 12, 12, 11"). Ramp-up sets shown above the first working set for slots 1 and 3, visually distinct.
 - Per set: weight (pre-filled with the suggestion or starting weight, always editable) and reps; optional RIR. Large tap targets; numeric keypad inputs; quick +/− buttons that step by the exercise's increment. When the logged weight differs from the suggestion, show a subtle "changed from X" indicator. Carries log load and distance.
 - Changing the weight (or TRX level) on one set pre-fills it into the remaining sets of the same exercise in this session.
@@ -612,74 +599,57 @@ Test cases:
 - Deload banner and halved set counts during deload weeks (5.8).
 - Rest timer (default 90 s, adjustable) that starts when a set is marked done.
 - Swap exercise (Section 4.5). Tap exercise name for cues.
-- **Optional post-lift cardio** (Section 4.4): minutes input with timer.
 - Optional session fields: back pain rating 0–10 (before and after), notes.
 - **Draft safety:** an in-progress session must survive a page refresh, app switch, or dropped gym Wi-Fi. Persist the draft locally and save to the backend on finish (and opportunistically during the session).
 - Finish → summary screen showing total working sets, session duration, and any "weight increase next time" callouts.
 
-### 6.4 Activity log
-| Type | Fields |
-|---|---|
-| Steps | date, step count (manual entry; one record per day, editable) |
-| Bollyx | date, duration (min, default 60), optional effort 1–10 |
-| Hike | date, trail name, duration (min), distance (mi), elevation gain (ft), optional notes |
-| Mobility | date, rounds completed (1–2), checklist of completed exercises, duration (min), optional back pain 0–10, notes |
+### 6.4 Activity log — removed
+Steps, Bollyx, hikes, and mobility are tracked on the Apple Watch. Nothing is logged in this app.
 
-- Mobility routine opens as a guided checklist with hold timers (Section 4.6); allows logging round 1 and round 2 separately on the same day, counted as one mobility day.
-- Weekly and monthly views. Hike duration trend (goal: build toward 90–120 min hikes).
-- Back pain trend: chart of back pain ratings from gym sessions and mobility logs over time.
-
-### 6.5 Body metrics
-- **DEXA scans:** list, add, edit. All fields from Section 3 plus `scanTime`, `fasted`, provider, notes.
-- **Charts over time:** fat mass, lean mass, visceral fat, ALMI (each its own small chart; mark non-fasted scans).
-- **Scan comparison:** pick two scans → table of deltas with good/bad coloring and the scan-conditions note from Section 3.
-- **Waist:** date, inches (measured at navel, morning). Line chart. Reminder when 30+ days since last entry.
-- Optional body weight log (date, lbs), same chart style as waist.
+### 6.5 Body metrics — removed
+DEXA, waist, and body weight are not tracked in this app.
 
 ### 6.6 Exercise history
 - Per exercise: table of past sessions and a chart of top-set weight and working-set volume over time (ramp sets excluded).
 - Shows date of last increase, next scheduled increase date (or "off"), and marks each increase on the chart as earned or scheduled.
 
 ### 6.7 Settings
-- Program start date, rest timer default, default warm-up cardio modality, mobility days (default Tue/Thu), units display (lbs fixed for v1).
+- Program start date, rest timer default, recovery days (default Tue/Thu), units display (lbs fixed for v1).
 - Per exercise: starting weight, first-loaded weight, load increment.
 - Trap bar weight (default 45 lbs).
 - Deload: show next scheduled deload week; Start deload week now; Postpone 1 week.
 - Scheduled increases: on/off, interval in days (default 21); per-exercise on/off.
-- Export all data as JSON (and CSV per table).
+- Export all data as JSON (and CSV of logged sets).
 
 ---
 
 ## 7. Out of scope for v1
 - Protein / nutrition tracking (planned for v2).
-- Wearable integrations (Apple Health, Google Fit, Garmin); steps are manual in v1.
+- Activity tracking (steps, Bollyx, hikes, mobility logs) and body metrics (DEXA, waist, weight): not tracked in this app (v1.10).
+- Wearable integrations (Apple Health, Google Fit, Garmin). Steps and other activity are not tracked in this app at all.
 - Push notifications.
-- Program builder UI beyond swaps and custom exercises.
+- Program builder UI beyond swaps; custom exercise entry (the catalog is fixed, v1.11).
 - Social or multi-user features, AI coaching.
 
 ---
 
 ## 8. Data model (logical; adapt to the chosen backend)
 
-All records belong to an owner (the signed-in user).
+All records belong to an owner (the signed-in user). Storage is an append-only event log (one event per change, edits are later events on the same entity, state is derived by replaying events); see DEPLOYMENT-PLAN.md. The static seed data below ships with the app code; only user-generated records (sessions, set logs, settings, swaps, deloads) are stored as events.
 
-- **UserProfile**: heightIn, birthYear, programStartDate, restTimerDefaultSec, stepTarget (default 8000), defaultWarmupModality, mobilityDays (default [Tue, Thu]), trapBarWeightLbs (default 45), scheduledIncreasesEnabled (default true), scheduledIncreaseDays (default 21)
-- **Exercise**: name, type (dumbbell | barbell | machine | cable | bodyweight | bodyweight_loadable | bodyweight_ladder | suspension | carry | hold | mobility), repMin, repMax, perSide (bool), holdSeconds (nullable), loadIncrementLbs, startingWeightLbs (nullable), firstLoadedWeightLbs (nullable), startingNote (nullable), startingLevel (nullable; suspension, default 2), levelDescription (nullable; suspension), loadsBack (bool), scheduledIncreasesEnabled (default true), isCustom, cues (optional text)
+- **UserProfile**: programStartDate, restTimerDefaultSec, recoveryDays (default [Tue, Thu]), trapBarWeightLbs (default 45), scheduledIncreasesEnabled (default true), scheduledIncreaseDays (default 21)
+- **Exercise**: name, type (dumbbell | barbell | machine | cable | bodyweight | bodyweight_loadable | bodyweight_ladder | suspension | carry | hold | mobility), repMin, repMax, perSide (bool), holdSeconds (nullable), loadIncrementLbs, startingWeightLbs (nullable), firstLoadedWeightLbs (nullable), startingNote (nullable), startingLevel (nullable; suspension, default 2), levelDescription (nullable; suspension), loadsBack (bool), scheduledIncreasesEnabled (default true), cues (optional text)
 - **WorkoutTemplate**: code (A | B | C), name
 - **TemplateSlot**: templateId, slotNumber (1–6), supersetGroup (1 | 2 | 3 | null), exerciseId, phase2Sets, alternativeExerciseIds[]
 - **SlotOverride**: templateSlotId, exerciseId (the user's persistent swap)
-- **Routine**: code (GYM_ACTIVATION | SITTING_RECOVERY), name, rounds
+- **Routine**: code (SITTING_RECOVERY), name, rounds
 - **RoutineItem**: routineId, order, exerciseId, prescription (text), sets/holds, reps, holdSeconds, perSide
-- **WorkoutSession**: date, templateCode, startedAt, finishedAt, warmupModality, warmupMinutes, activationItemsDone[], postCardioMinutes (nullable), phase, programWeek, isDeload, backPainBefore, backPainAfter, notes
+- **WorkoutSession**: date, templateCode, startedAt, finishedAt, phase, programWeek, isDeload, backPainBefore, backPainAfter, notes
 - **ExerciseLevel** (for bodyweight_ladder): exerciseId, level, name, repMin, repMax, cue
 - **SetLog**: sessionId, exerciseId, levelNumber (nullable; ladder and suspension exercises), suggestedLevel (nullable), setNumber, isRampUp, isCalibration, suggestedWeightLbs (nullable), suggestionSource (starting | calibration | hold | earned | scheduled | reduction | deload | gated | null), weightLbs (nullable; actual, drives progression), reps (nullable), distanceM (nullable, carries), rir (nullable), calibrationFeel (too_easy | about_right | too_hard | null), completed
 - **DeloadWeek**: programWeek, source (scheduled | manual), postponedFromWeek (nullable)
-- **ActivityLog**: date, kind (steps | bollyx | hike | mobility), steps, durationMin, effort, trailName, distanceMi, elevationFt, roundNumber (mobility), itemsDone[] (mobility), backPain (nullable), notes
-- **DexaScan**: scanDateTime, fasted, bodyFatPct, totalMassLbs, fatMassLbs, leanMassLbs, boneMassLbs, vatLbs, vatPercentile, lmi, lmiPercentile, almi, almiPercentile, provider, notes
-- **WaistMeasurement**: date, inches
-- **BodyWeight**: date, lbs
 
-Seed data: exercise catalog with cues, starting weights, first-loaded weights, and loadsBack flags (Sections 4 and 5), templates A/B/C with slots and alternatives (including TRX alternatives with starting levels and level descriptions, Section 4.5.1), both routines (Sections 4.2 and 4.6), pushup ladder levels (Section 5.4), and the three DEXA scans (Section 3). Seeding must be idempotent.
+Seed data: exercise catalog with cues, starting weights, first-loaded weights, and loadsBack flags (Sections 4 and 5), templates A/B/C with slots and alternatives (including TRX alternatives with starting levels and level descriptions, Section 4.5.1), the recovery routine (Section 4.6), and pushup ladder levels (Section 5.4). Seed data is bundled with the app, so there is nothing to seed into storage.
 
 ---
 
@@ -688,7 +658,7 @@ Seed data: exercise catalog with cues, starting weights, first-loaded weights, a
 - Installable as a PWA (home screen icon, standalone display).
 - Light and dark mode.
 - Fast: session screen interactive in under 2 seconds on a phone over mobile data.
-- Timers (rest, holds, warm-up) must stay accurate if the screen locks or the app is backgrounded (compute from timestamps, not intervals).
+- The rest timer must stay accurate if the screen locks or the app is backgrounded (compute from timestamps, not intervals).
 - Accessible: 44px minimum tap targets, labeled inputs, sufficient contrast.
 - Privacy: health data is personal. No third-party analytics or trackers. All data access requires auth.
 
@@ -696,24 +666,19 @@ Seed data: exercise catalog with cues, starting weights, first-loaded weights, a
 
 ## 10. Milestones (build in order; each ends deployable)
 
-0. **Static viewer releases (Section 0):** App v0.1 program viewer (done, 0.A); App v0.2 viewer aligned to spec v1.6 (planned, 0.B).
-1. **Scaffold + auth + deploy:** project setup, sign-in, empty home screen, deployed to AWS and reachable from phone.
-2. **Data model + seed:** all models, seed script, exercise catalog, templates, and routines visible in app.
+0. **Static viewer releases (Section 0):** App v0.1 program viewer (done, 0.A); App v0.2 viewer aligned to spec v1.6 (done, 0.B).
+1. **Scaffold + auth + deploy:** sign-in, empty home screen, event sync endpoints, deployed and reachable from phone (see DEPLOYMENT-PLAN.md).
+2. **Event store + seed data:** local outbox, sync, replay into state, catalog/templates/routines bundled in the app.
 3. **Progression engine:** pure functions for Section 5 (starting weights, calibration, ramp-up sets, bodyweight_loadable, first-loaded weight, deloads, back pain gate, stall detection, scheduled increases and precedence) with unit tests covering every example in 5.7 and 5.12.
-4. **Workout logging:** warm-up section, pushup ladder in Workout B, session screen, ramp sets, rest timer, draft safety, swaps, post-lift cardio, summary, rotation logic.
-5. **Activity log + home weekly progress:** steps, Bollyx, hikes, guided mobility routine, rest-day tracking.
-6. **Body metrics:** DEXA list/add/compare, charts, waist and weight, reminders, back pain trend.
-7. **Exercise history, settings, data export, PWA polish.**
+4. **Workout logging:** pushup ladder in Workout B, session screen, ramp sets, rest timer, draft safety, swaps, summary, rotation logic, recovery routine guidance cards.
+5. **Exercise history, settings, data export, PWA polish.**
 
 ## 11. Acceptance criteria (v1 done when)
 - I can sign in on my phone and desktop and see the same data.
-- I can complete a full gym session (warm-up, activation, Workout A, post-lift walk) on my phone without the app losing data, and the next Workout A shows correct suggested weights and ramp-up sets per Section 5.
-- On a Tuesday, the home screen offers the mobility routine, and I can complete it in two chunks that count as one mobility day.
+- I can complete a full gym session (Workout A) on my phone without the app losing data, and the next Workout A shows correct suggested weights and ramp-up sets per Section 5.
+- On a Tuesday, the home screen offers the recovery routine.
 - Pushups appear in Workout B; after I hit 3×20 standard pushups, the next Workout B suggests tempo pushups at 8 reps, clearly highlighted.
 - On a new exercise, the starting weight is pre-filled, I can log a different weight, and the next session's suggestion is based on what I actually lifted.
 - An exercise whose weight hasn't gone up in 3 weeks shows an increased, clearly highlighted suggestion labeled "Scheduled" at its next session.
 - Program week 11 is automatically a deload week, and I can start or postpone a deload manually.
-- Home shows correct weekly counts for gym, Bollyx, mobility, hikes, rest days, and steps.
-- All three baseline DEXA scans appear with trend charts, and adding a fourth updates charts and comparisons.
-- Waist reminder appears 30 days after the last measurement.
 - Export produces a complete JSON file of my data.
