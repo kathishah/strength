@@ -1,8 +1,14 @@
-# Recomp Tracker — Product Spec (v1.7)
+# Recomp Tracker — Product Spec (v1.8)
 
 A personal, mobile-first web app to track a body recomposition program: build lean mass, reduce visceral fat, and strengthen the back. Used at the gym on a phone and at home on a desktop, with data synced across devices.
 
 ## Changelog
+- **v1.8**
+  - App v0.2 shipped. Section 0 status updated; 0.B now describes what shipped.
+  - v0.2 header simplified: one status line plus the day picker, with a small icon button that cycles the theme (System, Light, Dark). The title, date, phase chip, progress row and collapse behavior were removed (0.B.1).
+  - Carousel swipe fix for iOS (cards no longer restrict horizontal touch panning).
+  - Wording fixes: starting-weight prefix, glute bridge cue, pushup rationale, rest-card layout; the "(2 sets in weeks 1–4)" hint shows on every gym card.
+  - Known issues listed in 0.B.8.
 - **v1.7**
   - Section 0 (Releases) added: App v0.1 (shipped, built against the spec v1.0 program) with its gaps vs. v1.6, and the plan for App v0.2 (static viewer aligned to the v1.6 program).
   - Milestones (Section 10) include the static viewer releases.
@@ -50,7 +56,7 @@ App release versions (v0.x) are separate from spec versions (v1.x in the Changel
 | App version | Status | Program it shows |
 |---|---|---|
 | v0.1 | Shipped (commit `543d99b`) | Spec v1.0 program |
-| v0.2 | Planned | Spec v1.6 program (Section 4) |
+| v0.2 | Shipped | Spec v1.6 program (Section 4) |
 
 ### 0.A App v0.1 — Static program viewer (shipped)
 
@@ -97,13 +103,15 @@ A read-only guide to the **spec v1.0** program (the v1.0 text is in git at commi
 Weight/rep logging, progression suggestions (Section 5), rest timer, sign-in and sync, activity log, body metrics, exercise history, settings/export, PWA install. These arrive with the v1 milestones in Section 10.
 
 #### 0.A.9 Gaps vs. spec v1.6
+All closed by v0.2 (0.B) except the gym warm-up, which stays out by choice.
+
 - Workout A has no face pull (slot 6); Workout B has the Pallof press in slot 5 instead of the pushup, and no 45° back extension (slot 6). Supersets are fixed at slots 1+2 / 3+4 / 5.
 - Tue/Thu shows the old 4-item circuit instead of the sitting recovery routine (4.6).
 - Alternatives follow the v1.0 list: no face pull, back extension, or pushup alternatives, no TRX alternatives (4.5.1), and back extension is still listed for the Dumbbell Romanian deadlift.
 - The gym warm-up (4.2) is not shown. This stays out of v0.2 by choice.
 - Progress dates use the UTC date (`toISOString()`), so checkmarks made after ~5 pm Pacific are stored under the next day.
 
-### 0.B App v0.2 — Static viewer aligned to spec v1.6 (planned)
+### 0.B App v0.2 — Static viewer aligned to spec v1.6 (shipped)
 
 Same delivery as v0.1: a single static `index.html` on GitHub Pages, no build step, no backend, no sign-in, state only in `localStorage`. Shows the spec v1.6 program (Section 4). Still no logging.
 
@@ -117,10 +125,10 @@ Same delivery as v0.1: a single static `index.html` on GitHub Pages, no build st
 | Friday | Workout C |
 | Saturday, Sunday | Rest / activity |
 
-- **Header (sticky, collapsible):** pinned to the top while scrolling. It starts collapsed as one compact line, e.g. "Mon · Workout A · 2/6 done ▾", "Tue · Recovery · Round 1 · 3/8 ▾", or "Sat · Rest day ▾". Tapping it expands the full header (title, date, day selector with v0.1 dots, progress). Picking a day collapses it again, and so does scrolling down while it's expanded.
+- **Header (sticky):** pinned to the top while scrolling. It has only two parts: a status line, e.g. "Mon · Workout A · 2/6 done", "Tue · Recovery · Round 1 · 3/8", or "Sat · Rest day"; and the day selector (v0.1 dots). A small icon button at the right end of the status line cycles the theme. There is no title, date, phase chip, progress row, or collapse/expand.
 - **Card carousel:** all of a day's cards sit in one continuous horizontal swipe carousel (one card per swipe, neighbors peeking at the edges). Swiping past the second exercise of a superset continues into the next superset. A single bar below the carousel has Prev/Next, tappable dots, and "Exercise n/total". Replaces v0.1's one-card-at-a-time view.
 - Rest card: Bollyx, a longer hike, or 8,000–10,000 steps, plus "Take at least one full rest day this week (an easy walk is fine)" and the next gym day.
-- **Theme:** light and dark themes. A "System · Light · Dark" control at the bottom of the expanded header; the default "System" follows the device setting and switches live when it changes. Stored per device (`localStorage` key `strengthTheme`) and applied before first paint, so there's no flash of the wrong theme.
+- **Theme:** light and dark themes. A single small icon button (44 px tap area, 18 px icon) in the header cycles System → Light → Dark, showing a half-filled circle, a sun, or a moon. The default "System" follows the device setting and switches live when it changes. Stored per device (`localStorage` key `strengthTheme`) and applied before first paint, so there's no flash of the wrong theme.
 
 #### 0.B.2 Gym days
 **Workout slots only.** The gym warm-up (4.2 cardio and back activation) and the optional post-lift cardio (4.4) are not shown; the day opens directly on the first workout slot and ends on the last one.
@@ -139,12 +147,12 @@ Each workout card shows everything a v0.1 card shows (sets with the "(2 sets in 
 
 **Pushup card (B5):** level 1 (standard), target 10 reps, plus the rationale text from 4.3. An expandable **Pushup ladder** lists levels 0–5 with reps and cues (5.4); display only, no level tracking.
 
-Header: "Workout A: x/6", "Workout B: x/6", "Workout C: x/5".
+Header status line counts: "x/6 done" for A and B, "x/5 done" for C.
 
 #### 0.B.3 Recovery days (Tuesday, Thursday)
 - The 8 exercises from 4.6, one card each, with prescription and cue: half-kneeling hip flexor stretch, glute bridge, McGill curl-up, side plank, bird dog, open book thoracic rotation, band pull-apart, dowel hip hinge.
 - A **Round 1 / Round 2** toggle; done state is stored per round, so the routine can be split into two chunks on the same day.
-- Header: "Recovery · Round 1: x/8", plus the next gym day as in v0.1.
+- Header status line: "Tue · Recovery · Round 1 · x/8".
 - Equipment note: resistance band, mat, dowel/broomstick.
 
 #### 0.B.4 Alternatives (two groups)
@@ -192,6 +200,11 @@ Each gym card can open two separate lists from a single row of small buttons: **
 
 #### 0.B.7 Not in v0.2
 Gym warm-up (4.2), post-lift cardio (4.4), weight/rep/level logging, progression, calibration, scheduled increases, deloads and program-week tracking (no program start date), back pain gate, rest/hold/warm-up timers, sign-in and sync, activity log, body metrics, exercise history, settings/export, PWA install. These arrive with the v1 milestones in Section 10.
+
+#### 0.B.8 Known issues (accepted for v0.2)
+- The default day uses the device's weekday name (`toLocaleDateString`), so a non-English locale falls back to Monday.
+- Done state is stored under today's date, not the selected day's; ticking cards while viewing another day files them under today.
+- Cards with no GIF show the placeholder image with the "Live form reference" label still on it.
 
 ---
 
