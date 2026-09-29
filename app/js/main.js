@@ -2,8 +2,8 @@
 // No outbox, engine, or session screen yet (DEPLOYMENT-PLAN.md section 9, phase A).
 
 import { isConfigured } from './config.js';
-import { AuthError, hasRefreshToken, signIn, signOut } from './auth.js';
-import { ApiError, buildTestEvent, getEvents, postEvents } from './api.js';
+import { AuthError, hasRefreshToken, signIn, signOut } from './store/auth.js';
+import { ApiError, buildTestEvent, getEvents, postEvents } from './store/api.js';
 import { getDeviceId } from './ids.js';
 import { tsMs } from './time.js';
 
