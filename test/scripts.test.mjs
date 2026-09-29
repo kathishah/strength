@@ -29,3 +29,13 @@ test('buildEvents makes a valid, chronological session with a settings event', (
   assert.ok(sets.every((s) => s.payload.sessionId === body.events[1].entityId));
   assert.deepEqual(sets.map((s) => s.payload.setNumber), [1, 2, 1]);
 });
+
+test('rebuilding the same workout gives identical ids, so re-posting is a no-op on the server', () => {
+  const spec = {
+    date: '2026-06-01', startTime: '07:00', endTime: '07:30', templateCode: 'B', programWeek: 3, phase: 1,
+    deviceId: 'd_test', exercises: [{ exerciseId: 'leg-press', weightLbs: 50, suggestedWeightLbs: 50, reps: [10, 10] }],
+  };
+  assert.deepEqual(buildEvents(spec), buildEvents(spec));
+  const other = buildEvents({ ...spec, date: '2026-06-02' });
+  assert.notEqual(other.events[0].id, buildEvents(spec).events[0].id);
+});

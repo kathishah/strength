@@ -156,7 +156,7 @@ node scripts/build-events.mjs private/2026-09-28-workout-a.json > private/2026-0
 node scripts/post-events.mjs private/2026-09-28-workout-a.events.json "$EMAIL"     # asks for the PIN, then for y/N
 ```
 
-Posting is safe to repeat (events are de-duplicated by id), but rebuilding generates new ids, so post the same events file each time.
+The PIN prompt does not echo. After a successful post the script writes `<file>.posted` and refuses to send that file again unless you pass `--force`. Event ids are derived from the workout's date, device and contents, so rebuilding an unchanged workout gives identical ids and the server de-duplicates a re-post; a workout you *edit* (different reps, say) gets new ids for changed sets and would add to, not replace, what was posted. Corrections belong in `set.edited` events, not a re-post.
 
 ## Notes
 
