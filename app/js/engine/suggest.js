@@ -14,6 +14,9 @@ import { calendarFor } from './calendar.js';
 import { resolveExercise, setsFor } from './config.js';
 import { exerciseHistory, performance } from './history.js';
 import { increaseLoad, reduceLoad } from './load.js';
+import { expectedPace } from './pace.js';
+import { rampUpSets } from './rampup.js';
+import { stallInfo } from './stall.js';
 
 const HINTS = {
   'enter-weight': 'No starting weight for this exercise. Enter a weight you could lift for the top of the rep range with about 3 reps to spare.',
@@ -228,13 +231,14 @@ export function suggestExercise(state, { exerciseId, templateCode = null, slot =
   const fromLevel = r.fromLevel ?? (last?.baseLevel ?? null);
   const weightLbs = r.weightLbs ?? null;
   const level = r.level ?? null;
+  const stall = stallInfo(hist, today, { reducingNow: r.source === 'reduction' });
   const increased = (weightLbs !== null && fromWeightLbs !== null && weightLbs > fromWeightLbs) ||
     (level !== null && fromLevel !== null && level > fromLevel);
   return {
     exerciseId,
     type: cfg.type,
     progression: cfg.progression,
-    sets: cfg.slot ? setsFor(cfg.templateCode, cfg.slot, cal.phase, cal.isDeload) : null,
+    sets: slot ? setsFor(templateCode, slot, cal.phase, cal.isDeload) : null,
     repMin: r.repMin ?? cfg.repMin,
     repMax: r.repMax ?? cfg.repMax,
     perSide: cfg.perSide,
@@ -249,16 +253,16 @@ export function suggestExercise(state, { exerciseId, templateCode = null, slot =
     increased,
     incrementLbs: cfg.incrementLbs,
     firstLoadedWeightLbs: cfg.firstLoadedWeightLbs,
-    rampUp: [],
+    rampUp: rampUpSets({ weightLbs, exercise: cfg, slot, isCalibration: r.isCalibration }),
     isCalibration: r.isCalibration,
     calibrationSession: r.calibrationSession,
     hints: r.hints,
-    stalled: false,
-    reductionsInWindow: 0,
+    stalled: stall.stalled,
+    recentReductions: stall.recentReductions,
     lastIncreaseDate: r.lastIncreaseDate,
     nextScheduledDate: r.nextScheduledDate,
     scheduledIncrease: r.scheduledIncrease,
-    pace: null,
+    pace: expectedPace(exerciseId),
     last: last && {
       date: last.date,
       sets: last.sets.map((s) => ({ weightLbs: s.weightLbs ?? null, reps: s.reps ?? null, levelNumber: s.levelNumber ?? null, distanceM: s.distanceM ?? null })),
