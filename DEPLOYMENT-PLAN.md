@@ -143,7 +143,7 @@ app/                      # v1, deployed to S3 + CloudFront
       outbox.js sync.js                 # push with quarantine, pull, single-flight, triggers, backoff
     seed/                 # catalog.js program.js: the v0.2 data, copied verbatim (Phase B, built)
     ui/                   # auth-screen.js sync-panel.js format.js for now; home, session, history, settings, recovery later
-    engine/               # pure progression functions (spec Section 5), no DOM       (planned)
+    engine/               # pure progression functions (spec Section 5), no DOM       (planned; section 14)
 lambda/events/            # index.mjs (both endpoints), registry.mjs (types + validators),
                           # object-store.mjs (S3 interface + adapter), time.mjs (Pacific time)
 infra/template.yaml       # SAM template
@@ -161,13 +161,13 @@ Tests run with Node's built-in runner (`node --test`), so there is still no bund
 | 0. Freeze | 0.C | Tag the current `index.html` as the frozen v0.2 viewer; create `app/` with an empty shell and the S3 + CloudFront deploy step | Both sites load; Pages unchanged |
 | A. Spike | 1 | Deploy SAM stack; login from the page via fetch; `POST`/`GET /events` with a test event; measure cold start | Works from an installed iPhone PWA and desktop; cold start acceptable |
 | B. Backbone | 1–2 | Auth screen, outbox, sync, replay, seed data bundled; two-device merge test | Event written on phone appears on desktop |
-| C. Engine | 3 | Pure functions for Section 5 with tests for every 5.7 and 5.12 example | All example tests pass |
+| C. Engine | 3 | Pure functions for Section 5 with tests for every 5.7 and 5.12 example (design: section 14) | All example tests pass |
 | D. Logging | 4 | Session screen, ramp sets, calibration, rest timer, draft safety, swaps, rotation, recovery guidance cards | A full Workout A is logged offline and syncs later |
 | E. History and polish | 5 | Exercise history, settings, export, deload controls, PWA manifest and service worker | Spec Section 11 acceptance criteria all pass |
 
 Phase C can start in parallel with A and B, since the engine has no dependencies.
 
-**Status (2026-09-29):** Phase 0 and Phase A are built and deployed as `strength-prod` at `https://strength.logbook.me` (section 13). The owner confirmed a sign-in, a test event, and a sync round trip; cold-start timings and the installed home-screen check were not recorded. Phase B is built and tested but not deployed (section 13a). Phases C to E are not started.
+**Status (2026-09-29):** Phase 0 and Phase A are built and deployed as `strength-prod` at `https://strength.logbook.me` (section 13). The owner confirmed a sign-in, a test event, and a sync round trip; cold-start timings and the installed home-screen check were not recorded. Phase B is built and tested but not deployed (section 13a). Phase C is designed (section 14); Phases D and E are not started.
 
 ## 10. Risks and mitigations
 | Risk | Mitigation |
@@ -239,3 +239,38 @@ Built on branch `v1-phase-b`; nothing here has been deployed, and the Lambda and
 - What `deload.postponed` means for the original week. Replay stores raw records, `deloads[programWeek] = { programWeek, source?, postponedFromWeek? }`; the event carries no `source`, and spec 5.8 ("schedule restarts from it", "once per scheduled deload") needs the engine to say when a scheduled deload is written as an event at all.
 - The seed is the v0.2 display data. Spec section 8 wants numeric `repMin`, `repMax`, `loadIncrementLbs`, `startingWeightLbs`, `firstLoadedWeightLbs`, `startingLevel` and `loadsBack`; v0.2 has text (`sets: "3"`, `reps: "8–12"`, `start: "20 lbs per hand"`) and no increments or `loadsBack`. The pushup ladder and TRX level text are present. Phase C needs a structured catalog.
 - Two tabs of the app on one device do not see each other's writes until reload (no `BroadcastChannel`); both would upload, and the server de-duplicates.
+
+## 14. Phase C design (engine)
+Spec Section 5 is the rulebook and wins over this section; this section fixes what the spec leaves to the implementation. Work on branch `v1-phase-c`; the session's rules from Phase B apply (tests, small commits, ask before any AWS command, don't read `private/`).
+
+**Goal.** Pure functions that turn the replayed state (section 4, `store/replay.js`), the bundled seed and "today" into what the session screen needs: the suggested load or level, set count and target reps per exercise, its source, ramp-up sets, calibration pre-fills, deload status, back pain gate, stall flag and expected pace. No DOM, no storage, no network, no clock: `today` (a Pacific `yyyy-mm-dd`) and everything else are arguments. Phase D only draws these results and writes events.
+
+**Scope.** Spec 5.1 to 5.12, and the section 4.3 to 4.5.1 set counts and rep ranges. Not in Phase C: screens, writing events, the Lambda. If the engine needs something the events do not carry (the registry rejects unknown fields), report it; do not work around it.
+
+**Inputs and outputs.**
+- Input: `replay(events)` state (`sessions`, `sets`, `settings`, `swaps`, `deloads`), the seed, `today`. Setting keys are in the registry: `programStartDate`, `trapBarWeightLbs`, `scheduledIncreasesEnabled`, `scheduledIncreaseDays`, and per exercise `startingWeight:<id>`, `firstLoadedWeight:<id>`, `loadIncrement:<id>`, `scheduledIncrease:<id>`.
+- Output per exercise: `{ exerciseId, sets, repMin, repMax, perSide, weightLbs | null, level | null, targetReps, source, fromWeightLbs | fromLevel, rampUp: [{ weightLbs, reps }], hints, stalled }`. `source` is the `suggestionSource` vocabulary of the registry (`starting`, `calibration`, `hold`, `earned`, `scheduled`, `reduction`, `deload`, `gated`, or null), because Phase D stores it on `set.logged`. The exact shape is settled in the first engine commit and recorded here.
+- Suggested layout under `app/js/engine/`: program calendar (week, phase, deload weeks), history (what a session's base load and sets were), suggestion (5.2 to 5.4, 5.6, 5.8, 5.9, 5.12 precedence), ramp-up (5.5), calibration (5.6), stall (5.10), pace (5.11). Free to differ; keep the modules pure and small.
+
+**Decisions made for Phase C.**
+1. **Structured catalog.** A new `app/js/seed/rules.js` holds the numeric fields spec section 8 lists (`repMin`, `repMax`, `perSide`, `holdSeconds`, `loadIncrementLbs`, `startingWeightLbs`, `firstLoadedWeightLbs`, `startingLevel`, `loadsBack`) per exercise id, and numeric Phase 2 set counts per template slot. The v0.2 copy (`catalog.js`, `program.js`) stays untouched, so its parity test with the frozen viewer keeps working; `rules.js` uses the same ids. Values come from spec 4.3, 4.5.1, 5.3 and the 5.6 table; `trapBarWeightLbs` is the trap bar's starting weight. Tests check every catalog id is in `rules.js` (or is explicitly guidance-only) and that the values match the spec tables.
+2. **Scheduled deloads are computed, not stored.** Weeks 11, 18, 25 and so on follow from `programStartDate` (spec 5.8). Events record only choices: `deload.started` with `source: "manual"` (the current program week becomes a deload; the schedule restarts, next deload = that week + 7) and `deload.postponed` (`programWeek` is the new deload week, `postponedFromWeek` the one it moved from; the next deload is the new week + 7; a given scheduled deload can be postponed once). `source: "scheduled"` stays valid in the registry but the app does not write it. Replay keeps its raw `deloads` records; the engine interprets them. The check is spec 5.7: week 9 manual gives week 16 next; 11 and 18 scheduled, 10 and 12 not.
+3. **`entityId` conventions:** `swap_<template>_<slot>` (for example `swap_A_3`) for `swap.*` and `deload_<week>` (for example `deload_12`) for `deload.*`. Replay does not use them; this keeps ids readable and consistent.
+4. **Completed means finished.** A session counts as history when it has `finishedAt` and is not a deload (`isDeload`); unfinished sessions never count as history, and neither do sets of ramp-up (`isRampUp`). "Date" of a session is the Pacific date of `startedAt`.
+5. **Progression uses what was logged.** `weightLbs`/`levelNumber`/`reps` drive everything (spec 5.6). Stall detection (5.10) counts sessions whose logged `suggestionSource` was `reduction`; the timer for scheduled increases (5.12) is the date of the first session at a higher base load than the one before it, else the date of the exercise's second calibration session.
+6. **Deload weeks use the base load unchanged:** no increase and no reduction ("same weights, half the sets"), sets = ceil(normal / 2), ramp-up still applies, no calibration.
+7. **Carries are judged by distance** (`distanceM` reaching the prescribed distance on every set), since a carry has no reps; the spec's "40 m" is the target.
+8. **Program week** = `floor(days since programStartDate / 7) + 1`, by Pacific calendar-day arithmetic on `yyyy-mm-dd` strings (no clock or offset involved, so daylight saving cannot shift a week). Add a `pacificDate(ms)` helper next to `pacificIso` in `app/js/time.js` (with a parity test against `lambda/events/time.mjs`, like the others).
+
+**Tests.**
+- Every example in spec 5.7 (34 bullets) and every 5.12 test case (9 bullets) is a test whose name starts with its number (`5.7 #12: ...`, `5.12 #3: ...`). A meta-test reads `SPEC-strength.md`, counts the bullets in those two places and fails if a numbered test is missing, so an edited spec cannot leave an example untested.
+- Beyond the examples: never a negative load, never two increments at once, level clamped 1 to 5, ramp-up rounding ties up, the 5.12 precedence order in every combination, and results independent of event order (feed shuffled events through `replay`).
+- A guard test fails if any file in `app/js/engine/` mentions `Date`, `document`, `window`, `localStorage`, `fetch` or `indexedDB`.
+- Done when: all of the above pass in `node --test`, and `sam validate --lint` / `sam build` still pass (nothing under `lambda/` or `infra/` changes).
+
+**Spec questions to raise, not decide** (add to this section when found; these are the ones seen so far):
+- Program week before `programStartDate` (spec is silent).
+- The "hold rules: completion only" for suspension holds (5.4 refers to them; no section defines them).
+- Rule 2 (5.2) when only one earlier session exists, or when the two sessions were at different loads.
+- How reductions interact with a manual override heavier than the suggestion.
+- Swapped-in alternatives with no seeded starting weight (5.6: no pre-fill) versus an existing `startingWeight:<id>` setting.
