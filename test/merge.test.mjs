@@ -683,6 +683,24 @@ describe('which failures are worth retrying', () => {
     assert.equal(isRetryable(new Error('QuotaExceededError')), false);
   });
 
+  test('signing in again: the next sync starts with no error, so the form is not shown a second time', async () => {
+    const server = createServer();
+    const a = await createDevice(server, 'a');
+    await a.events.append('session.notes', 'sess_1', { notes: 'x' });
+    const real = { post: a.api.postEvents, get: a.api.getEvents };
+    a.api.postEvents = a.api.getEvents = async () => { throw new AuthError('signed_out', 'Your session expired.'); };
+    await assert.rejects(a.sync.sync(), (e) => e.kind === 'signed_out');
+    assert.equal(a.sync.status().lastError.kind, 'signed_out');
+
+    a.api.postEvents = real.post;
+    a.api.getEvents = real.get;
+    const seen = [];
+    a.sync.subscribe((s) => seen.push({ syncing: s.syncing, error: s.lastError }));
+    await a.sync.sync();
+    assert.deepEqual(seen.map((s) => s.error), [null, null], 'no update of the new sync carries the old error');
+    assert.equal(a.events.pendingCount(), 0, 'and the outbox kept through the sign-out went up');
+  });
+
   test('a signed-out sync keeps the outbox and does not retry', async () => {
     const server = createServer();
     const a = await createDevice(server, 'a');
