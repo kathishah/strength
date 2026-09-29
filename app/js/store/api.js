@@ -1,8 +1,7 @@
 // Client for POST /events and GET /events (DEPLOYMENT-PLAN.md section 3).
 
-import { config } from './config.js';
+import { config } from '../config.js';
 import { getIdToken } from './auth.js';
-import { ulid, nextTs } from './ids.js';
 
 export class ApiError extends Error {
   constructor(status, body, message) {
@@ -45,16 +44,5 @@ async function request(method, path, { query, body } = {}) {
 export const postEvents = (deviceId, events) => request('POST', '/events', { body: { deviceId, events } });
 export const getEvents = ({ since, limit } = {}) => request('GET', '/events', { query: { since, limit } });
 
-// The spike's test event: a note on an entity that is never created, so it cannot affect real
-// state. Its entityId starts with "spike_" so it is easy to recognise and skip later.
-export function buildTestEvent(deviceId, nowMs = Date.now()) {
-  const id = ulid(nowMs);
-  return {
-    id,
-    ts: nextTs(deviceId, nowMs),
-    v: 1,
-    type: 'session.notes',
-    entityId: `spike_${id}`,
-    payload: { notes: `Spike test from ${deviceId}` },
-  };
-}
+// What the sync code calls; tests pass their own with the same two functions.
+export const defaultApi = { postEvents, getEvents };

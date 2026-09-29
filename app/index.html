@@ -25,7 +25,7 @@
   <main class="page">
     <header class="top">
       <h1>Strength</h1>
-      <p class="tag">Sync spike</p>
+      <p class="tag">Backbone</p>
     </header>
 
     <p id="notice" class="notice" role="status" aria-live="polite" hidden></p>
@@ -39,28 +39,42 @@
         <input id="password" name="password" type="password" inputmode="numeric" pattern="[0-9]{6}" minlength="6" maxlength="6" autocomplete="current-password" required />
         <button id="signin-button" class="btn primary" type="submit">Sign in</button>
       </form>
+      <p id="signin-pending" class="muted" hidden></p>
     </section>
 
     <section id="app" class="card" aria-labelledby="app-title" hidden>
       <h2 id="app-title">Signed in</h2>
       <div class="actions">
-        <button id="send-button" class="btn primary" type="button">Send test event</button>
-        <button id="sync-button" class="btn" type="button">Sync</button>
+        <button id="note-button" class="btn primary" type="button">Add test note</button>
+        <button id="sync-button" class="btn" type="button">Sync now</button>
         <button id="signout-button" class="btn quiet" type="button">Sign out</button>
       </div>
 
       <dl class="stats">
-        <dt>Last round trip</dt>
-        <dd id="rtt">none yet</dd>
-        <dd id="rtt-hint" class="muted"></dd>
-        <dt>Cursor</dt>
-        <dd id="cursor" class="mono">none</dd>
+        <dt>Sync</dt>
+        <dd id="sync-state" data-kind="info">Not synced yet.</dd>
+        <dt>Waiting to upload</dt>
+        <dd id="pending">nothing</dd>
         <dt>Events on this device</dt>
         <dd id="count">0</dd>
+        <dt>Replayed state</dt>
+        <dd id="state-summary">0 sessions, 0 sets, 0 settings</dd>
+        <dt>Stored in</dt>
+        <dd id="storage">IndexedDB</dd>
+        <dt>Cursor</dt>
+        <dd id="cursor" class="mono">none</dd>
+        <dt>Last round trip</dt>
+        <dd id="rtt">none yet</dd>
       </dl>
 
+      <div id="rejected" hidden>
+        <h3>Set aside</h3>
+        <p class="muted">The server refused these events. They are kept here, and do not count towards your data.</p>
+        <ul id="rejected-list" class="events"></ul>
+      </div>
+
       <h3>Events</h3>
-      <p id="empty" class="muted">No events yet. Send a test event, then Sync.</p>
+      <p id="empty" class="muted">No events yet. Add a test note, then open the app on another device.</p>
       <ul id="events" class="events"></ul>
     </section>
   </main>
