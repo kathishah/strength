@@ -1,4 +1,4 @@
-# Build and deploy (v1, Phase 0 + Phase A spike)
+# Build and deploy (v1, through Phase B)
 
 Everything here is run by you, from the repo root. Nothing in this repo deploys itself.
 Stack region is `us-west-2`; the CloudFront certificate must be in `us-east-1` (it already is).
@@ -24,7 +24,7 @@ Time zone: everything uses US Pacific time (`America/Los_Angeles`, so PDT in sum
 node --test
 ```
 
-No dependencies to install for tests.
+No dependencies to install for tests. The IndexedDB adapter cannot run in Node; its 13 cases (`test-support/storage-contract.mjs`) also run against the memory adapter here, and have to be run in a browser to check IndexedDB itself.
 
 ## 2. Build the Lambda
 
@@ -144,8 +144,9 @@ aws s3 cp app/manifest.webmanifest "s3://$SITE_BUCKET/manifest.webmanifest" \
 aws cloudfront create-invalidation --distribution-id "$DIST_ID" --paths '/*'
 ```
 
-Then open `SiteUrl`, sign in, press **Send test event** and **Sync**.
-For the Phase A check, add the page to the iPhone home screen (Share, Add to Home Screen) and repeat from there. The **Last round trip** line shows the cold-start time.
+Then open `SiteUrl` and sign in. The page syncs on open.
+For the Phase B check, use two devices (say the desktop and the phone, ideally the installed home-screen app): press **Add test note** on one, and within a few seconds it shows on that device as uploaded; open the app on the other (or press **Sync now**) and the same note appears there. Turn on airplane mode, add a note, and it stays in **Waiting to upload** until you are back online. To install on the iPhone: Share, Add to Home Screen. **Last round trip** shows the cold-start time.
+The first start after this update discards the Phase A spike's `localStorage` copy of the events (it was only a cache) and downloads them again into IndexedDB.
 
 ## 8. Load Monday's workout (optional, once the API works)
 
@@ -160,6 +161,6 @@ The PIN prompt does not echo. After a successful post the script writes `<file>.
 
 ## Notes
 
-- Test events are real, permanent log entries (`session.notes` on an entity whose id starts with `spike_`; no session ever refers to it).
+- Test notes are real, permanent log entries (`session.notes` on an entity whose id starts with `spike_`; no session ever refers to it).
 - After a code-only change to the Lambda: `sam build` and the same `sam deploy` command as in step 5. After an app-only change: step 7.
 - Logs: `sam logs --stack-name "$STACK" --region "$AWS_REGION" --tail`. They never contain request bodies.
