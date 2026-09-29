@@ -101,6 +101,7 @@ export function createSync({
     do {
       again = false;
       status.syncing = true;
+      status.lastError = null; // a new attempt starts clean, so a stale "signed out" cannot bounce a fresh sign-in
       publish();
       try {
         last = await once();
