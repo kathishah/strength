@@ -135,16 +135,20 @@ index.html                # FROZEN v0.2 viewer, served by GitHub Pages (bug fixe
 app/                      # v1, deployed to S3 + CloudFront
   index.html, manifest.webmanifest, css/app.css, icons/     # sw.js arrives in Phase E
   js/
-    config.js auth.js api.js ids.js time.js main.js         # Phase A spike, as built (flat)
+    config.js ids.js time.js main.js    # shared: deployment values, ULIDs and the hybrid clock, Pacific time and ts ordering, page start-up
+    store/                # local event log and sync (Phase B, built)
+      auth.js api.js                    # Cognito sign-in; POST/GET /events client
+      open.js idb.js memory.js merge.js # storage interface, IndexedDB, in-memory (tests, fallback), merge rule
+      events.js replay.js               # event store (append, ingest, outbox mirror) and replay (field-level reducers)
+      outbox.js sync.js                 # push with quarantine, pull, single-flight, triggers, backoff
+    seed/                 # catalog.js program.js: the v0.2 data, copied verbatim (Phase B, built)
+    ui/                   # auth-screen.js sync-panel.js format.js for now; home, session, history, settings, recovery later
     engine/               # pure progression functions (spec Section 5), no DOM       (planned)
-    store/                # events, outbox, replay, sync, auth                          (planned)
-    ui/                   # screens (home, session, history, settings, recovery)        (planned)
-    seed/                 # catalog, templates, recovery routine, ladder, alternatives  (planned)
 lambda/events/            # index.mjs (both endpoints), registry.mjs (types + validators),
                           # object-store.mjs (S3 interface + adapter), time.mjs (Pacific time)
 infra/template.yaml       # SAM template
 scripts/                  # build-events.mjs, post-events.mjs, prompt.mjs (see BUILD.md step 8)
-test/                     # node --test: lambda, registry, time, app modules, scripts
+test/                     # node --test: lambda, registry, time, seed, replay, storage, sync and two-device merge, app modules, scripts
 test-support/             # fake S3 and test builders (outside test/ so node --test does not run them)
 private/                  # git-ignored: personal workout data, create-user.sh (holds the PIN)
 BUILD.md                  # build and deploy commands
@@ -163,7 +167,7 @@ Tests run with Node's built-in runner (`node --test`), so there is still no bund
 
 Phase C can start in parallel with A and B, since the engine has no dependencies.
 
-**Status (2026-09-29):** Phase 0 and Phase A are built and deployed as `strength-prod` at `https://strength.logbook.me` (section 13). The owner confirmed a sign-in, a test event, and a sync round trip; cold-start timings and the installed home-screen check were not recorded. Phases B to E are not started.
+**Status (2026-09-29):** Phase 0 and Phase A are built and deployed as `strength-prod` at `https://strength.logbook.me` (section 13). The owner confirmed a sign-in, a test event, and a sync round trip; cold-start timings and the installed home-screen check were not recorded. Phase B is built and tested but not deployed (section 13a). Phases C to E are not started.
 
 ## 10. Risks and mitigations
 | Risk | Mitigation |
@@ -210,4 +214,28 @@ Deployment facts and behaviours the sections above left open. `BUILD.md` has the
 - Known gap: duplicates are detected only within the current month's file, so a retry after a lost acknowledgment that crosses Pacific midnight on the 1st can store an event twice. **Clients must de-duplicate by event `id`** (this plan already requires it), and replay is unaffected. Fix if wanted: also check the previous month's file on `POST`.
 - Order events by instant with `compareTs` (`registry.mjs`, and `tsMs` in `app/js/time.js`), never as strings (section 4, Time zone).
 
-**Client (Phase A spike).** Sign-in and refresh use `fetch` (`auth.js`); the refresh token is in `localStorage`, the ID token in memory. Sync saves the cursor only after the returned events are stored locally. The spike keeps events in `localStorage` as a cache; Phase B replaces that with IndexedDB and the outbox. `ids.js` makes ULIDs and hybrid-clock `ts` values that the server accepts.
+**Client (Phase A spike).** Sign-in and refresh use `fetch` (`auth.js`); the refresh token is in `localStorage`, the ID token in memory. Sync saves the cursor only after the returned events are stored locally. The spike kept events in `localStorage` as a cache; Phase B replaced that with IndexedDB and the outbox (13a). `ids.js` makes ULIDs and hybrid-clock `ts` values that the server accepts.
+
+## 13a. As built (Phase B, not yet deployed)
+Built on branch `v1-phase-b`; nothing here has been deployed, and the Lambda and `infra/` are unchanged. `test/merge.test.mjs` runs 2-3 devices (the real app store, outbox and sync) against the real Lambda handler over the fake S3.
+
+**Local store.** IndexedDB database `strength` (`events`, `outbox`, `meta`, `rejected`); one transaction per local write (event and outbox entry) and per pull (events and cursor), so the cursor never moves past events that were not stored. Without IndexedDB the app falls back to memory and says so on screen. The IndexedDB adapter cannot run under `node --test`; `test-support/storage-contract.mjs` is the same 13 cases for every adapter, run in Node against memory and in a browser against IndexedDB. The spike's `localStorage` cache is deleted on first start; the first sync refetches from the server.
+
+**Replay** (`store/replay.js`, pure). Order: instant, counter, device id, then event id. Duplicates by id collapse. Results: `sessions`, `sets`, `settings`, `swaps` (`"A:3"` to exercise id), `deloads` (by program week), `skipped` (unknown type or version, unusable ts). The result depends only on which events exist, checked over 300 shuffled orders.
+
+**Sync** (`store/sync.js`, `store/outbox.js`). Push, then pull; a failed push still lets the pull run. One sync at a time (a request during one adds one more pass). Triggers: app open, visible, online, and 2 s after any local write. Batches of at most 200 events and about 200 KB; a 413 halves the batch. Failures that can pass (network, 408, 429, 5xx) retry after 5, 15, 45, 120, then 300 s while the app is open; sign-in, 400/401/403 and storage errors do not retry.
+
+**Choices made where the plan was silent (confirm or change):**
+- *A patch beats the event that created its entity, whatever the ts.* Section 4 says last ts wins per field and that an early patch is held until its creating event appears; the two disagree only when a slow clock gave the patch an earlier ts than the creation. A patch is always made after the entity exists, so replay applies creating events first and patches over them.
+- *The hybrid clock observes remote events.* A device that has read another device's ts never writes an earlier one (ignoring ts more than 24 h ahead, which the server refuses anyway). Without this, an edit made on a slow clock after reading another device's edit would lose to it.
+- *Events the server refuses are set aside.* A 400 that names events removes them from the outbox and the local log, keeps them with the reason (`rejected`, shown on screen), and sends the rest; otherwise one bad event would block every later upload. A 400 that names no event (for example a bad device id) leaves the outbox alone and is shown as an error. There is no retry or discard control yet.
+- *Sets need their session.* Sets whose session is missing or deleted are left out of state, so deleting a session removes its sets.
+- *Sign-out keeps the local log and outbox,* and the sign-in screen says how many events are waiting.
+- *Sync runs after any local write* (debounced 2 s), since the store cannot tell a completed set from another write.
+- *`entity.deleted`* only affects sessions and sets; a tombstone for `settings` or an unknown id changes nothing.
+
+**Not settled by the plan or spec (needs a decision before the phase that uses it):**
+- `entityId` for `swap.*` and `deload.*` events (only the payload is used by replay today; tests use `swap_A_1`, `deload_12`).
+- What `deload.postponed` means for the original week. Replay stores raw records, `deloads[programWeek] = { programWeek, source?, postponedFromWeek? }`; the event carries no `source`, and spec 5.8 ("schedule restarts from it", "once per scheduled deload") needs the engine to say when a scheduled deload is written as an event at all.
+- The seed is the v0.2 display data. Spec section 8 wants numeric `repMin`, `repMax`, `loadIncrementLbs`, `startingWeightLbs`, `firstLoadedWeightLbs`, `startingLevel` and `loadsBack`; v0.2 has text (`sets: "3"`, `reps: "8–12"`, `start: "20 lbs per hand"`) and no increments or `loadsBack`. The pushup ladder and TRX level text are present. Phase C needs a structured catalog.
+- Two tabs of the app on one device do not see each other's writes until reload (no `BroadcastChannel`); both would upload, and the server de-duplicates.
