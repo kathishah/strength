@@ -1,6 +1,6 @@
 # Deployment & Implementation Plan (v1)
 
-Companion to `SPEC-strength.md` (v1.11). Covers how v1 is hosted, authenticated, stored, and built. The spec says *what* the app does; this says *how it runs*.
+Companion to `SPEC-strength.md` (v1.12). Covers how v1 is hosted, authenticated, stored, and built. The spec says *what* the app does; this says *how it runs*.
 
 ## 1. Goals and constraints
 - Keep the front end a **static site with plain HTML + JS (ES modules, no build step)**.
@@ -24,11 +24,12 @@ v1 on S3 + CloudFront (app/); GitHub Pages keeps the frozen v0.2 viewer
   - **GitHub Pages** keeps serving the root `index.html` (the v0.2 viewer), frozen: bug fixes only.
   - **v1** lives in `app/` and is deployed to a private S3 bucket behind CloudFront (Origin Access Control, HTTPS only). Deploy with `aws s3 sync app/ s3://<site-bucket> --delete` followed by a CloudFront invalidation.
   - Pages also publishes `app/` at `/strength/app/`, since it serves the whole repo. That is harmless (no data, and the Cognito pool id and API URL are not secrets), but if it bothers you, switch Pages to a workflow that publishes only `index.html`.
-  - Use a **custom domain** for v1 if you can (Route 53 + ACM). The installed PWA, `localStorage` (refresh token) and IndexedDB are tied to the origin, so changing the domain later means reinstalling and signing in again.
-- **Auth:** Cognito **User Pool only** (no Identity Pool; the browser never holds AWS credentials). Self-signup disabled, one user with a **single permanent password and no MFA** (for now). The page signs in with plain `fetch` to Cognito (`InitiateAuth` with `USER_PASSWORD_AUTH`, then `REFRESH_TOKEN_AUTH`), so there is no SDK and no redirect (avoids the iOS standalone-PWA redirect problem). The ID token is the bearer token.
+  - v1 is served at **https://strength.logbook.me** (a CloudFront alias). DNS is at GoDaddy, so a CNAME points the name at the CloudFront domain (no Route 53), and the ACM certificate lives in `us-east-1`. The installed PWA, `localStorage` (refresh token) and IndexedDB are tied to the origin, so changing the domain later means reinstalling and signing in again.
+- **Auth:** Cognito **User Pool only** (no Identity Pool; the browser never holds AWS credentials). Self-signup disabled, one user who signs in with email and a **single permanent 6-digit PIN**, no MFA (for now). The page signs in with plain `fetch` to Cognito (`InitiateAuth` with `USER_PASSWORD_AUTH`, then `REFRESH_TOKEN_AUTH`), so there is no SDK and no redirect (avoids the iOS standalone-PWA redirect problem). The ID token is the bearer token.
   - The app client must explicitly enable `ALLOW_USER_PASSWORD_AUTH` and `ALLOW_REFRESH_TOKEN_AUTH` (password auth is not in the defaults).
+  - The PIN is the Cognito "password". Cognito's password policy cannot go below 6 characters and has no maximum, so the policy is minimum length 6 with no character-class rules, and the sign-in form accepts exactly 6 digits (a 4-digit PIN is not possible). Cognito's built-in lockout after repeated wrong attempts is the main brute-force defence; a 6-digit PIN is much weaker than a password, which is acceptable for this single-user test app and should be revisited before wider use (see section 12).
   - The user is created with `admin-create-user` and then `admin-set-user-password --permanent`, so the account is never in the `NEW_PASSWORD_REQUIRED` state. The page therefore handles no auth challenges; if Cognito returns one, it shows "sign-in unavailable" instead.
-  - A forgotten password is reset by an admin with `admin-set-user-password` (no email-based reset flow).
+  - A forgotten PIN is reset by an admin with `admin-set-user-password` (no email-based reset flow).
   - Google/Apple sign-in is a possible later addition (redirect-based, riskier on iOS home-screen apps); see section 12.
 - **API:** one HTTP API with a JWT authorizer, so the Lambda contains no token-verification code. As defence in depth, the Lambda also checks the token's `sub` against an `OWNER_SUB` environment variable.
 - **Lambda:** one function, Node 22, arm64, esbuild single-file bundle, no VPC, no heavy SDK (use `@aws-sdk/client-s3` only).
@@ -36,7 +37,7 @@ v1 on S3 + CloudFront (app/); GitHub Pages keeps the frozen v0.2 viewer
 
 ## 3. The two endpoints
 
-Base path is the HTTP API URL. Both require `Authorization: Bearer <ID token>`. CORS allows only the v1 site origin (the CloudFront or custom domain), and the `Authorization` and `Content-Type` headers.
+Base path is the HTTP API URL. Both require `Authorization: Bearer <ID token>`. CORS allows only the v1 site origin (`https://strength.logbook.me`), and the `Authorization` and `Content-Type` headers.
 
 ### `POST /events` — append events
 Request:
@@ -58,9 +59,9 @@ Response `200`:
 ```
 Behavior:
 - **Idempotent by `id`:** an event that is already stored counts as a duplicate, not an error, so the client can safely retry the whole outbox.
-- The server stamps each stored event with `recvAt` (server time, for information only). Clients never set it. The response has no cursor: only `GET /events` moves the client's sync position, so a device can never skip events written by another device.
+- The server stamps each stored event with `recvAt` (server time in US Pacific with an explicit offset, for information only). Clients never set it. The response has no cursor: only `GET /events` moves the client's sync position, so a device can never skip events written by another device.
 - **Validation** (reject the whole batch with `400` and a per-event reason): max 200 events and 256 KB per request; known `type` and `v`; ULID `id`; required payload fields by type; ranges (weight 0–1000, reps 0–500, level 1–5, RIR 0–10, back pain 0–10); `ts` not more than 1 day in the future.
-- **Write path.** Events are stored in the file for the month they are **received** (server UTC), not the month in `ts`: `u/<sub>/events/<yyyy-mm>.json`, an append-only array. An offline workout from September uploaded in October therefore lands in October's file, where every device syncing from an October cursor will find it.
+- **Write path.** Events are stored in the file for the **Pacific-time** month in which they are **received**, not the month in `ts`: `u/<sub>/events/<yyyy-mm>.json`, an append-only array. An offline workout from September uploaded in October therefore lands in October's file, where every device syncing from an October cursor will find it. Months roll over at Pacific midnight (00:00 PDT or PST), not UTC midnight: an event received at 9 pm on September 30 Pacific is a September event even though UTC already says October 1.
   1. `GET` the current month file. If it exists, note its ETag; if not, the array is empty.
   2. Skip events whose `id` is already present (duplicates); append the rest in order.
   3. `PUT` with `If-None-Match: *` when the file did not exist, or `If-Match: <etag>` when it did.
@@ -85,9 +86,10 @@ Nothing else is exposed. There is no update or delete endpoint: edits are new ev
 
 ## 4. Data layout and event format
 ```
-s3://<data-bucket>/u/<cognito-sub>/events/2026-10.json     # append-only array, one file per RECEIVE month (UTC)
+s3://<data-bucket>/u/<cognito-sub>/events/2026-10.json     # append-only array, one file per RECEIVE month (Pacific time)
 ```
-- **Event envelope:** `{ id, ts, v, type, entityId, payload, recvAt }`. `ts` is a hybrid logical clock string (ISO time, counter, device id) so ordering is stable across devices with skewed clocks. `ts` decides replay order; the file/position decides only sync order.
+- **Event envelope:** `{ id, ts, v, type, entityId, payload, recvAt }`. `ts` is a hybrid logical clock string (ISO time, counter, device id) so ordering is stable across devices with skewed clocks, for example `2026-09-28T11:03:00.000-07:00-0004-d_7f3a`. `ts` decides replay order; the file/position decides only sync order.
+- **Time zone.** All dates and times use **US Pacific time** (`America/Los_Angeles`, which is PDT, UTC-7, in summer and PST, UTC-8, in winter), written with an explicit offset: `recvAt`, `ts`, `startedAt`, `finishedAt`, and the month of each event file. The validators also accept `Z` and other offsets. Because the offset changes at daylight saving, **timestamps must be ordered by instant, never as plain strings** (during the fall-back hour, `01:15-08:00` is later than `01:30-07:00`). The Lambda exports `compareTs` for this, and the app's own ordering does the same. Calendar concepts in the spec (days of the week, program weeks, the Tuesday/Thursday recovery day) are Pacific too.
 - **Event types (v1):** `session.started`, `session.finished`, `set.logged`, `set.edited`, `session.notes`, `setting.changed` (starting weight, increment, trap bar weight, program start date, scheduled-increase options), `swap.set` / `swap.cleared`, `deload.started`, `deload.postponed`, `entity.deleted` (tombstone).
 - **State** is `replay(events sorted by ts)` (ties broken by `id`). Sorting first means events that arrive out of order, for example a session uploaded a week late, still produce the same state on every device.
 - **Reducers are field-level, not whole-entity.** Every event carries a *patch* of the fields it sets, and replay merges patches per `entityId`, last `ts` winning **per field**:
@@ -106,11 +108,11 @@ s3://<data-bucket>/u/<cognito-sub>/events/2026-10.json     # append-only array, 
 - **Sync triggers:** app open, `visibilitychange` to visible, `online`, and after each completed set (debounced ~2 s). iOS has no Background Sync, so a session finished with no signal uploads next time the app opens.
 - **Draft safety:** the in-progress session is rebuilt from local events, so a refresh or app switch loses nothing. `session.finished` is just another event.
 - **Cold starts:** the first request after idle may take about 0.3–1 s. Nothing blocks on it, because reads use the local cache and writes go through the outbox. The sync that runs when the app opens doubles as the warm-up.
-- **Auth handling:** keep the refresh token in `localStorage`. If refresh fails (expired, or iOS cleared storage), show the password form and keep the outbox; nothing is lost.
+- **Auth handling:** keep the refresh token in `localStorage`. If refresh fails (expired, or iOS cleared storage), show the PIN form and keep the outbox; nothing is lost.
 - **Timers** use timestamps, not intervals, so they survive screen lock (spec Section 9).
 
 ## 6. Security
-- Cognito: self-signup disabled, long random password (password manager), no MFA at first (TOTP can be added later, but it needs challenge handling in the page). Token lifetimes: ID/access 1 h, refresh token 365 days so sign-in is rare.
+- Cognito: self-signup disabled, a 6-digit PIN (see section 2 for the policy and its limits), no MFA at first (TOTP can be added later, but it needs challenge handling in the page). Token lifetimes: ID/access 1 h, refresh token 365 days so sign-in is rare.
 - Bucket: block all public access, versioning on, lifecycle rule to expire old versions after 90 days.
 - IAM: the Lambda role can only `GetObject`, `PutObject`, `ListBucket` on this bucket.
 - HTTP API: throttle to a low rate (for example 10 requests per second, burst 20), CORS locked to the site origin.
@@ -118,14 +120,14 @@ s3://<data-bucket>/u/<cognito-sub>/events/2026-10.json     # append-only array, 
 - Nothing sensitive in URLs; only the opaque `since` cursor (a month and a position).
 
 ## 7. Infrastructure as code
-A single **AWS SAM** template (`infra/template.yaml`) creates: the site bucket and CloudFront distribution (OAC), the data bucket, the Lambda, the HTTP API with JWT authorizer, the Cognito User Pool and app client (password + refresh auth flows enabled, no client secret; no Identity Pool), and log retention (14 days). Commands:
+A single **AWS SAM** template (`infra/template.yaml`) creates: the site bucket and CloudFront distribution (OAC), the data bucket, the Lambda, the HTTP API with JWT authorizer, the Cognito User Pool and app client (password + refresh auth flows enabled, no client secret; no Identity Pool), and log retention (14 days). The data bucket and the user pool are `DeletionPolicy: Retain`, so deleting the stack never deletes workout data or the login (the user's `sub` is the key prefix). Parameters: `DomainName` (default `strength.logbook.me`), `CertificateArn` (looked up with `aws acm list-certificates --region us-east-1`, never committed), `OwnerSub`. Commands:
 ```
 sam build && sam deploy --guided        # first time
 sam deploy                              # afterwards
 aws cognito-idp admin-create-user …           # create the single user once
 aws cognito-idp admin-set-user-password … --permanent   # no first-login challenge
 ```
-Two stacks (`strength-dev`, `strength-prod`) from the same template. Estimated cost: a few cents a month; everything sits inside free tiers.
+There is one stack, **`strength-prod`**, in `us-west-2`; a dev stack is not needed while the app is unpublished and only being tested. Estimated cost: a few cents a month; everything sits inside free tiers.
 
 ## 8. Repo layout
 ```
@@ -159,7 +161,9 @@ Phase C can start in parallel with A and B, since the engine has no dependencies
 ## 10. Risks and mitigations
 | Risk | Mitigation |
 |---|---|
-| Login in an iOS standalone PWA | In-page password form, no redirects; Phase A tests it on the phone |
+| Login in an iOS standalone PWA | In-page PIN form, no redirects; Phase A tests it on the phone |
+| Offsets change at daylight saving, so string order of `ts` is wrong for about an hour each fall | Order by instant (`compareTs`); the offset is always explicit |
+| A 6-digit PIN is guessable | Cognito lockout; single-user test data; revisit before wider use (section 12) |
 | iOS evicts local storage | S3 is the source of truth; local is a cache; re-login restores everything |
 | Two devices write at once | `If-None-Match: *` to create, `If-Match` to update, retry on 412/409; idempotent event ids |
 | Offline events uploaded later are missed by other devices | Files are partitioned by receive time; the cursor is a file position |
@@ -172,9 +176,12 @@ Phase C can start in parallel with A and B, since the engine has no dependencies
 ## 11. Decisions made
 - Warm-up, post-lift cardio, and recovery-routine tracking are out of the app (spec v1.11).
 - The v0.2 viewer stays on GitHub Pages, frozen; v1 is built in `app/` on S3 + CloudFront.
-- Cognito User Pool only, one permanent password, no MFA, no Identity Pool.
+- Cognito User Pool only, one permanent 6-digit PIN, no MFA, no Identity Pool.
+- One stack (`strength-prod`); no dev stack for now.
+- The v1 site is served at `https://strength.logbook.me` (CloudFront alias, DNS at GoDaddy, ACM certificate in `us-east-1`).
+- All dates and times are US Pacific (`America/Los_Angeles`) with explicit offsets, including the month of each event file.
 - The exercise catalog is fixed; no custom exercise events.
 
 ## 12. Open decisions
-1. **Custom domain** for the v1 site (recommended) or the default CloudFront domain to start.
-2. **Google/Apple sign-in later:** only if the password form becomes a nuisance. It would need a hosted-UI redirect (test on the installed iPhone app first), a way to keep unknown Google accounts out, and a fixed data owner instead of one prefix per `sub`.
+1. **Stronger sign-in later:** replace the 6-digit PIN with a longer password or passkey before the app holds anything beyond personal test data or is shared with anyone else.
+2. **Google/Apple sign-in later:** only if the PIN form becomes a nuisance. It would need a hosted-UI redirect (test on the installed iPhone app first), a way to keep unknown Google accounts out, and a fixed data owner instead of one prefix per `sub`.
