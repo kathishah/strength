@@ -1,6 +1,6 @@
 // Event ids and timestamps that satisfy the server's validators (lambda/events/registry.mjs).
 
-import { pacificIso } from './time.js';
+import { pacificIso, parseTs } from './time.js';
 
 const CROCKFORD = '0123456789ABCDEFGHJKMNPQRSTVWXYZ';
 
@@ -14,22 +14,47 @@ export function ulid(nowMs = Date.now()) {
   return time + rand;
 }
 
-// Hybrid logical clock string: <Pacific ISO time with offset>-<4-digit counter>-<deviceId>,
+// Hybrid logical clock. Each ts is <Pacific ISO time with offset>-<4-digit counter>-<deviceId>,
 // e.g. 2026-09-29T12:30:00.123-07:00-0000-d_7f3a. The offset changes with daylight saving, so
-// order timestamps by instant (compareTs on the server side), not as strings.
-// Never goes backwards within this page load, even if the wall clock does.
-let lastMs = 0;
-let counter = 0;
-export function nextTs(deviceId, nowMs = Date.now()) {
-  if (nowMs > lastMs) {
-    lastMs = nowMs;
-    counter = 0;
-  } else if (++counter > 9999) {
-    lastMs += 1;
-    counter = 0;
-  }
-  return `${pacificIso(lastMs)}-${String(counter).padStart(4, '0')}-${deviceId}`;
+// order timestamps by instant (compareTs in time.js), not as strings.
+//
+// next() never goes backwards, even if the wall clock does. observe() pulls the clock up to the
+// newest ts seen from any device, so an event written after reading another device's events sorts
+// after them even when this device's wall clock runs behind. Without that, an edit made on a slow
+// clock would sort before the set it edits.
+const MAX_OBSERVE_AHEAD_MS = 24 * 60 * 60 * 1000; // the server rejects a ts further ahead than this
+
+export function createClock() {
+  let lastMs = 0;
+  let counter = 0;
+  return {
+    next(deviceId, nowMs = Date.now()) {
+      if (nowMs > lastMs) {
+        lastMs = nowMs;
+        counter = 0;
+      } else if (++counter > 9999) {
+        lastMs += 1;
+        counter = 0;
+      }
+      return `${pacificIso(lastMs)}-${String(counter).padStart(4, '0')}-${deviceId}`;
+    },
+    observe(ts, nowMs = Date.now()) {
+      const seen = parseTs(ts);
+      if (!seen || seen.ms > nowMs + MAX_OBSERVE_AHEAD_MS) return; // malformed, or one the server would refuse
+      const seenCounter = /^\d+$/.test(seen.counter) ? Number(seen.counter) : 0;
+      if (seen.ms > lastMs) {
+        lastMs = seen.ms;
+        counter = seenCounter;
+      } else if (seen.ms === lastMs && seenCounter > counter) {
+        counter = seenCounter;
+      }
+    },
+  };
 }
+
+// The page-wide clock.
+const pageClock = createClock();
+export const nextTs = (deviceId, nowMs) => pageClock.next(deviceId, nowMs);
 
 // A stable per-install id like "d_7f3a". Falls back to a fresh one if storage is unavailable.
 const DEVICE_KEY = 'strength.deviceId';

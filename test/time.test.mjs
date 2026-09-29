@@ -1,6 +1,7 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import { pacificIso, pacificMonth, TIME_ZONE } from '../lambda/events/time.mjs';
+import * as app from '../app/js/time.js';
 import { pacificIso as appPacificIso, tsMs } from '../app/js/time.js';
 import { compareTs, parseInstant, parseTs, validateEvent } from '../lambda/events/registry.mjs';
 import { makeEvent } from '../test-support/util.mjs';
@@ -87,5 +88,48 @@ describe('timestamps with offsets', () => {
     assert.equal(compareTs(`${t}-0001-d_a`, `${t}-0001-d_b`), -1);
     assert.equal(compareTs(`${t}-0001-d_a`, `${t}-0001-d_a`), 0);
     assert.equal(parseTs(`${t}-0001-d_a`).deviceId, 'd_a');
+  });
+});
+
+describe('the app parses and orders ts exactly like the server', () => {
+  const samples = [
+    '2026-09-29T12:30:00.000-07:00-0000-d_a',
+    '2026-09-29T12:30:00.000-07:00-0001-d_a',
+    '2026-09-29T12:30:00.000-07:00-0001-d_b',
+    '2026-09-29T12:30:00.000-07:00-0010-d_a',
+    '2026-09-29T19:30:00.000Z-0000-d_a', // the same instant written with Z
+    '2026-11-01T01:30:00.000-07:00-0000-d_1', // fall-back hour, PDT
+    '2026-11-01T01:15:00.000-08:00-0000-d_1', // later instant, earlier string
+    '2026-03-08T01:59:59.999-08:00-0000-d_1',
+    '2026-03-08T03:00:00.000-07:00-0000-d_1',
+    '2026-09-29T12:30:00.000-07:00-00a1-d_a', // counter with a letter (accepted by the server)
+    '2026-09-29T12:30:00.000-07:00-000000001-d_a', // 9 chars: too long
+    '2026-02-30T00:00:00.000-08:00-0000-d_a', // impossible date
+    '2026-09-29T12:30:00-07:00-0000-d_a', // no milliseconds in the hybrid clock
+    'nope',
+    '',
+  ];
+
+  test('parseTs agrees on every sample, valid or not', () => {
+    for (const ts of samples) assert.deepEqual(app.parseTs(ts), parseTs(ts), ts);
+  });
+
+  test('compareTs agrees on every valid pair, in both directions', () => {
+    const valid = samples.filter((ts) => parseTs(ts));
+    assert.ok(valid.length >= 9);
+    for (const a of valid) for (const b of valid) assert.equal(app.compareTs(a, b), compareTs(a, b), `${a} vs ${b}`);
+  });
+
+  test('parseInstant agrees, including impossible values', () => {
+    for (const s of ['2026-09-29T12:30:00.123-07:00', '2026-09-29T19:30:00Z', '2026-02-30T00:00:00.000-08:00', '2026-09-29T12:00:00', '2026-09-29T12:00:00+24:00', 7]) {
+      const a = app.parseInstant(s);
+      const b = parseInstant(s);
+      assert.ok(Object.is(a, b), String(s));
+    }
+  });
+
+  test('tsMs is NaN for a malformed ts', () => {
+    assert.ok(Number.isNaN(tsMs('nope')));
+    assert.ok(Number.isNaN(tsMs('2026-02-30T00:00:00.000-08:00-0000-d_a')));
   });
 });

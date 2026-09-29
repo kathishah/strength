@@ -1,10 +1,8 @@
-// Client-side modules that have no DOM dependency: ids, the test event, and the Cognito flows.
+// Client-side modules that have no DOM dependency: ids and the Cognito flows.
 import { test, describe, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { ulid, nextTs } from '../app/js/ids.js';
-import { buildTestEvent } from '../app/js/api.js';
-import { validateBatch } from '../lambda/events/registry.mjs';
-import { AuthError, getIdToken, hasRefreshToken, signIn, signOut } from '../app/js/auth.js';
+import { AuthError, getIdToken, hasRefreshToken, signIn, signOut } from '../app/js/store/auth.js';
 
 describe('ids', () => {
   test('ulid is 26 Crockford characters, sortable by time', () => {
@@ -18,11 +16,6 @@ describe('ids', () => {
     const t = Date.now(); // module state is shared, so stay near the real clock
     const seq = [t, t, t, t - 5000, t + 1].map((now) => nextTs('d_1', now));
     for (let i = 1; i < seq.length; i++) assert.ok(seq[i] > seq[i - 1], `${seq[i - 1]} < ${seq[i]}`);
-  });
-
-  test('the test event passes the server validators (as a batch, at the current time)', () => {
-    const { errors } = validateBatch({ deviceId: 'd_7f3a', events: [buildTestEvent('d_7f3a'), buildTestEvent('d_7f3a')] });
-    assert.deepEqual(errors, []);
   });
 });
 

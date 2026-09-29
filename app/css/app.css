@@ -115,8 +115,9 @@ input {
 
 .stats { margin: 16px 0 0; display: grid; grid-template-columns: max-content 1fr; gap: 4px 16px; }
 .stats dt { color: var(--muted); }
-.stats dd { margin: 0; }
-.stats dd#rtt-hint { grid-column: 1 / -1; }
+.stats dd { margin: 0; overflow-wrap: anywhere; }
+.stats dd[data-kind="error"] { color: var(--error-text); font-weight: 600; }
+.stats dd[data-kind="ok"] { color: var(--ok-text); }
 
 .muted { color: var(--muted); }
 .mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.9rem; }
