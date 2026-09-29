@@ -142,13 +142,16 @@ app/                      # v1, deployed to S3 + CloudFront
       events.js replay.js               # event store (append, ingest, outbox mirror) and replay (field-level reducers)
       outbox.js sync.js                 # push with quarantine, pull, single-flight, triggers, backoff
     seed/                 # catalog.js program.js: the v0.2 data, copied verbatim (Phase B, built)
+                          # rules.js: structured numbers per exercise, slot set counts, ladder, program constants (Phase C, built)
     ui/                   # auth-screen.js sync-panel.js format.js for now; home, session, history, settings, recovery later
-    engine/               # pure progression functions (spec Section 5), no DOM       (planned; section 14)
+    engine/               # pure progression functions (spec Section 5), no DOM (Phase C, built; section 14)
+                          # calendar config history load suggest rampup calibration stall pace session index
 lambda/events/            # index.mjs (both endpoints), registry.mjs (types + validators),
                           # object-store.mjs (S3 interface + adapter), time.mjs (Pacific time)
 infra/template.yaml       # SAM template
 scripts/                  # build-events.mjs, post-events.mjs, prompt.mjs (see BUILD.md step 8)
-test/                     # node --test: lambda, registry, time, seed, replay, storage, sync and two-device merge, app modules, scripts
+test/                     # node --test: lambda, registry, time, seed, rules, replay, storage, sync and two-device merge, app modules, scripts,
+                          # engine (calendar, history, suggest, parts, simulation), spec-examples + spec-coverage, engine-purity
 test-support/             # fake S3 and test builders (outside test/ so node --test does not run them)
 private/                  # git-ignored: personal workout data, create-user.sh (holds the PIN)
 BUILD.md                  # build and deploy commands
@@ -266,9 +269,12 @@ Spec Section 5 is the rulebook and wins over this section; this section fixes wh
     rampUp: [{ weightLbs, reps }],          // slots 1 and 3 only (5.5); [] otherwise
     isCalibration, calibrationSession,      // true and 1 or 2 during an exercise's first two sessions, else false and null
     hints: [{ code, text }],                // enter-weight, back-pain-gate, harder-variation, slower-lowering, trx-pair, ...
-    stalled, recentReductions,            // 5.10
+    stalled, recentReductions,              // 5.10
     lastIncreaseDate, nextScheduledDate,    // Pacific yyyy-mm-dd or null (nextScheduledDate null when scheduled increases do not apply)
-    pace }                                  // 5.11 group and text, or null
+    scheduledIncrease,                      // 'on' | 'off' | 'n/a' (ladder, bodyweight, holds), for the history screen (6.6)
+    firstLoadedWeightLbs,                   // effective first-loaded weight, for the steppers and calibrationPrefill
+    last,                                   // { date, sets: [{ weightLbs, reps, levelNumber, distanceM }] } of the last session, or null
+    pace }                                  // 5.11 { group, label, everyWeeks: { min, max }, text, note }, or null
 
   planSession(state, { today, templateCode, backPainBefore? }) ->
   { templateCode, today, calendar, banner, backPainBefore,
@@ -297,9 +303,38 @@ Spec Section 5 is the rulebook and wins over this section; this section fixes wh
 - A guard test fails if any file in `app/js/engine/` mentions `Date`, `document`, `window`, `localStorage`, `fetch` or `indexedDB`.
 - Done when: all of the above pass in `node --test`, and `sam validate --lint` / `sam build` still pass (nothing under `lambda/` or `infra/` changes).
 
-**Spec questions to raise, not decide** (add to this section when found; these are the ones seen so far):
-- Program week before `programStartDate` (spec is silent).
-- The "hold rules: completion only" for suspension holds (5.4 refers to them; no section defines them).
-- Rule 2 (5.2) when only one earlier session exists, or when the two sessions were at different loads.
-- How reductions interact with a manual override heavier than the suggestion.
-- Swapped-in alternatives with no seeded starting weight (5.6: no pre-fill) versus an existing `startingWeight:<id>` setting.
+**As built (Phase C).** Branch `v1-phase-c`; nothing under `lambda/` or `infra/` changed, nothing deployed. `node --test` runs everything (`sam validate --lint` and `sam build` also pass).
+- `app/js/seed/rules.js`: `RULES` per exercise id (type, progression kind, rep range, per side, increment, starting and first-loaded weights, starting level, loadsBack, carry distance, TRX hold seconds), `SLOT_SETS`, `PUSHUP_LADDER`, `PROGRAM` constants. `test/rules.test.mjs` reads the tables out of `SPEC-strength.md` (4.3, 4.5.1, 5.3, 5.6, 5.4 ladder, the 5.9 loadsBack list), so an edited spec fails it.
+- `app/js/time.js`: `pacificDate`, `pacificDateOf`, `dayNumber`, `daysBetween`, `addDays` (parity test against `lambda/events/time.mjs`). All day arithmetic lives here; the engine never touches a clock.
+- `app/js/engine/`: `calendar` (program week, phase, RIR, computed deloads with manual start and postponement), `config` (settings and slot inheritance), `history`, `load` (rounding, increase, reduction), `suggest` (5.2 to 5.4, 5.6, 5.8, 5.9, 5.12 precedence), `rampup`, `calibration`, `stall`, `pace`, `session` (`planSession`, `loggedDefaults`), `index`.
+- Tests: `spec-examples.test.mjs` (34 + 9 numbered tests, named `5.7 #n` and `5.12 #n`), `spec-coverage.test.mjs` (fails when the spec gains, loses or edits a bullet in either place, using a fingerprint of each bullet), `engine-purity.test.mjs`, `calendar`, `history`, `suggest` (the 5.12 precedence in all 24 combinations, random-history invariants, shuffled event order, duplicated events), `engine-parts`, `simulation` (a lifter following the plan for 26 weeks). `test-support/engine-log.mjs` builds logs from real events and runs each through the server validator.
+- Output shape: as above. Additions made after the first engine commit: `scheduledIncrease`, `firstLoadedWeightLbs`, `last`, and `recentReductions` (was named differently while writing).
+- **Blocked by the registry, not worked around:** the pushup ladder has a level 0 (incline pushup, spec 5.4), but `set.logged` accepts `levelNumber` and `suggestedLevel` only from 1 to 5, so a set at level 0 cannot be logged. The engine suggests level 0 when the spec says to drop back from level 1; Phase D cannot record it until the registry allows 0 for those two fields (a `lambda/events/registry.mjs` change, not made here). Until then a logged level-0 set would have to be stored with `levelNumber: null`, which the engine reads as level 1.
+
+**Spec questions to raise, not decide.** The engine follows the reading given after each; change it there if the spec says otherwise.
+The five seen when the section was written:
+1. *Program week before `programStartDate`.* Week 1, with `calendar.beforeStart = true`.
+2. *"Hold rules: completion only" (5.4, suspension holds).* No section defines them. The TRX plank and the weighted bird dog are completion only: sets from the slot, the seeded hold range (20-40 s for the plank), no suggestion, no progression.
+3. *Rule 2 (5.2) with one earlier session, or two at different loads.* It needs two completed sessions. Each is judged on the sets at its own heaviest weight; the reduction is taken from the latest session's base load.
+4. *A manual override heavier than the suggestion, and reductions.* Taken literally: the base load is the heaviest weight used, and only the sets at it are judged. So one heavy set of 5 reps at the end of a session makes that session "weak" at that load.
+5. *Swapped-in alternative with no seeded weight versus a `startingWeight:<id>` setting.* The setting wins; a setting cleared to null falls back to the seed; with neither there is no pre-fill and an `enter-weight` hint.
+
+Found while building:
+6. *Size of a reduction (5.2 rule 2, "~10% rounded to the available increment").* Rounding alone can give the same load (25 lb dumbbells: 22.5 rounds to 25; 5 lb: 4.5 rounds to 5, but 5.7 says 0). Reduction is 10% rounded, and at least one increment.
+7. *Rep range and set count of alternatives.* The spec gives ranges only for the slot exercises, the TRX table and (in the catalog) the pallof press. An alternative without its own range takes the range, per-side flag, carry distance and set count of the slot it is in. The pallof press is fixed at 10 per side (`repMin = repMax = 10`), so any 10 is "the top": is that intended?
+8. *Increments of alternatives* come from 5.3 by catalog type (landmine press, a barbell type, is +10; the leg press +10 although the plates are 25 per side).
+9. *`loadsBack` for alternatives.* Only the five exercises the spec names are flagged; box squat, suitcase carry, machine back extension and the like are not.
+10. *Calibration for carries and the loaded back extension.* "Too easy = 5+ reps more than the top" does not fit a distance. All load exercises calibrate for two sessions (no ramp-up, no scheduled increase), including the carry and the back extension.
+11. *Which suggestion applies in the second calibration session.* Double progression from the first session (earned or hold; no reduction is possible with one session, no scheduled increase). `source: "starting"` only in the first session; `"calibration"` marks a pre-fill changed by a rating.
+12. *Target reps* are not defined for a hold. After an increase or a reduction, and for a first session: the bottom of the range. For a hold or a gated hold: one more than the weakest set at the base load, inside the range.
+13. *A session with fewer sets than prescribed* counts as a full session; sets logged with `completed: false` or with nothing recorded are ignored.
+14. *A reduction that cannot lower anything* (load already 0, level already 1 or 0): the rule still fired, so `source` is `"reduction"` and it counts toward stall.
+15. *Stall (5.10).* Counts sessions logged with `suggestionSource: "reduction"` (plan decision 5) plus the suggestion being made now if it is one. "Within the last 9 weeks" is the 63 days before today, exclusive: a reduction 63 days ago has cleared.
+16. *Scheduled timer (5.12).* "Last increase" is the latest session at a higher base load (or level) than the session before it. With no increase yet: the day the second session was done (5.12's "last calibration session"); TRX has no calibration, so its first session.
+17. *When "Postpone 1 week" is offered.* Only in a scheduled deload week itself, not for a deload the user started and not for one already postponed.
+18. *Carries (5.2 rule 2).* Distance short of the target on a set in each of the last two sessions reduces the load by one increment.
+19. *Pushup level 5 (weighted).* Load in 5 lb steps from 0 by double progression on the level's 8-15 range; a reduction takes the load off before dropping the level.
+20. *The first-loaded rule in calibration.* "Too hard" from a load at or just above the first-loaded weight goes to 0 (as 5.4 says for reductions), not to a lighter but unusable load.
+21. *Back pain note (5.9)* is shown on every loadsBack exercise whenever back pain before is above 3, even when nothing was being held.
+22. *Expected pace (5.11)* for exercises the table does not name: machine chest and shoulder presses, reverse pec deck and machine row go with machine/cable upper body; box squat, split squats and step-ups with dumbbell exercises; machine back extension and suitcase carry with back extension and carries; pallof press, cable pull-through, landmine press, TRX and the ladder have none.
+23. *Registry:* pushup level 0 cannot be logged (see above).
