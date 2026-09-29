@@ -266,7 +266,7 @@ Spec Section 5 is the rulebook and wins over this section; this section fixes wh
     rampUp: [{ weightLbs, reps }],          // slots 1 and 3 only (5.5); [] otherwise
     isCalibration, calibrationSession,      // true and 1 or 2 during an exercise's first two sessions, else false and null
     hints: [{ code, text }],                // enter-weight, back-pain-gate, harder-variation, slower-lowering, trx-pair, ...
-    stalled, reductionsInWindow,            // 5.10
+    stalled, recentReductions,            // 5.10
     lastIncreaseDate, nextScheduledDate,    // Pacific yyyy-mm-dd or null (nextScheduledDate null when scheduled increases do not apply)
     pace }                                  // 5.11 group and text, or null
 
