@@ -2,8 +2,8 @@
 // a Cognito app client without a secret and an API URL only work together with a valid login.
 export const config = {
   region: 'us-west-2',
-  userPoolClientId: 'REPLACE_WITH_APP_CLIENT_ID', // stack output UserPoolClientId
-  apiUrl: 'REPLACE_WITH_API_URL', // stack output ApiUrl, https://<id>.execute-api.us-west-2.amazonaws.com
+  userPoolClientId: '2m5s02gvb1c0lckaaig9h0rdno', // stack output UserPoolClientId
+  apiUrl: 'https://133kwfn42a.execute-api.us-west-2.amazonaws.com', // stack output ApiUrl, https://<id>.execute-api.us-west-2.amazonaws.com
 };
 
 export const isConfigured = () =>
