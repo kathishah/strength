@@ -1,0 +1,8 @@
+{
+  "name": "strength",
+  "private": true,
+  "description": "Recomp Tracker. Tests use node --test and have no dependencies.",
+  "scripts": {
+    "test": "node --test"
+  }
+}
