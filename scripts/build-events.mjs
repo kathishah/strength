@@ -6,7 +6,16 @@ import { readFileSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
 import { pacificIso } from '../lambda/events/time.mjs';
 import { validateBatch } from '../lambda/events/registry.mjs';
+import { createHash } from 'node:crypto';
 import { ulid } from '../app/js/ids.js';
+
+// Same time prefix as a ULID, but the random part comes from a hash of `seed`, so rebuilding the
+// same workout gives the same ids and re-posting it is de-duplicated by the server.
+const CROCKFORD = '0123456789ABCDEFGHJKMNPQRSTVWXYZ';
+export function stableUlid(ms, seed) {
+  const hash = createHash('sha256').update(seed).digest();
+  return ulid(ms).slice(0, 10) + Array.from(hash.subarray(0, 16), (b) => CROCKFORD[b % 32]).join('');
+}
 
 // "2026-09-28" + "11:00" (Pacific) -> epoch ms, correct on either side of a daylight-saving change.
 export function pacificLocalToMs(date, time) {
@@ -29,9 +38,9 @@ export function buildEvents(spec) {
   const end = pacificLocalToMs(spec.date, spec.endTime);
   let counter = 0;
   const events = [];
-  const add = (ms, type, entityId, payload) => {
+  const add = (ms, type, entityId, payload, key) => {
     events.push({
-      id: ulid(ms),
+      id: stableUlid(ms, `${spec.deviceId}|${spec.date}|${key}`),
       ts: `${pacificIso(ms)}-${String(counter++).padStart(4, '0')}-${spec.deviceId}`,
       v: 1, type, entityId, payload,
     });
@@ -39,12 +48,12 @@ export function buildEvents(spec) {
   };
 
   if (spec.programStartDate) {
-    add(start - 5 * 60_000, 'setting.changed', 'settings', { key: 'programStartDate', value: spec.programStartDate });
+    add(start - 5 * 60_000, 'setting.changed', 'settings', { key: 'programStartDate', value: spec.programStartDate }, 'setting');
   }
-  const session = add(start, 'session.started', `sess_${ulid(start)}`, {
+  const session = add(start, 'session.started', `sess_${stableUlid(start, `${spec.deviceId}|${spec.date}|session`)}`, {
     templateCode: spec.templateCode, startedAt: pacificIso(start), programWeek: spec.programWeek,
     phase: spec.phase, isDeload: false,
-  });
+  }, 'session.started');
 
   const totalSets = spec.exercises.reduce((n, e) => n + e.reps.length, 0);
   const step = (end - start - 4 * 60_000) / totalSets; // spread sets over the session
@@ -52,14 +61,15 @@ export function buildEvents(spec) {
   for (const ex of spec.exercises) {
     ex.reps.forEach((reps, i) => {
       const ms = Math.round(start + 2 * 60_000 + step * n++);
-      add(ms, 'set.logged', `set_${ulid(ms)}`, {
+      const key = `set|${ex.exerciseId}|${i + 1}`;
+      add(ms, 'set.logged', `set_${stableUlid(ms, `${spec.deviceId}|${spec.date}|${key}`)}`, {
         sessionId: session.entityId, exerciseId: ex.exerciseId, setNumber: i + 1,
         isRampUp: false, isCalibration: true, weightLbs: ex.weightLbs, reps,
         suggestedWeightLbs: ex.suggestedWeightLbs, suggestionSource: 'starting', completed: true,
-      });
+      }, key);
     });
   }
-  add(end, 'session.finished', session.entityId, { finishedAt: pacificIso(end) });
+  add(end, 'session.finished', session.entityId, { finishedAt: pacificIso(end) }, 'session.finished');
 
   const body = { deviceId: spec.deviceId, events };
   const { errors } = validateBatch(body, Date.now());
