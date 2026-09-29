@@ -4,19 +4,162 @@
   <meta charset="UTF-8" />
   <title>Strength Program</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="color-scheme" content="light dark" />
+  <meta name="theme-color" media="(prefers-color-scheme: light)" content="#f8fafc" />
+  <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#050816" />
+  <script>
+    // Apply stored/system theme before first paint (no flash).
+    (function () {
+      var t = "system";
+      try { t = localStorage.getItem("strengthTheme") || "system"; } catch (e) {}
+      if (t === "system")
+        t = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+      document.documentElement.dataset.theme = t;
+    })();
+  </script>
   <style>
+    /* Theme variables: dark = original v0.1/v0.2 look, light added in v0.2.
+       data-theme is set on <html> by the inline head script (no flash). */
     :root {
-      --bg: #050816;
-      --bg-alt: #0b1020;
       --accent: #4f46e5;
-      --accent-soft: rgba(79, 70, 229, 0.18);
-      --text: #f9fafb;
-      --muted: #9ca3af;
-      --card: #111827;
-      --border: #1f2937;
       --radius-xl: 20px;
+    }
+
+    :root:not([data-theme]),
+    :root[data-theme="dark"] {
+      --page-bg: radial-gradient(circle at top, #111827 0, #020617 40%, #000 100%);
+      --text: #f9fafb;
+      --text-soft: #e5e7eb;
+      --muted: #9ca3af;
+      --border: #1f2937;
       --shadow-soft: 0 14px 40px rgba(0,0,0,0.6);
       --success: #22c55e;
+      --header-bg: linear-gradient(135deg, #0f172a, #1e3a8a);
+      --header-border: rgba(148,163,184,0.3);
+      --header-shadow: 0 10px 30px rgba(15,23,42,0.9);
+      --surface: rgba(15,23,42,0.9);
+      --surface-border: rgba(148,163,184,0.4);
+      --pill-active-bg: rgba(79,70,229,0.16);
+      --pill-active-text: #e5e7eb;
+      --dot-off: rgba(51,65,85,0.7);
+      --dot-pill: rgba(148,163,184,0.7);
+      --card-bg: radial-gradient(circle at top left, #111827 0, #020617 40%, #020617 100%);
+      --done-border: rgba(34,197,94,0.9);
+      --done-shadow: 0 0 0 1px rgba(34,197,94,0.45), 0 16px 40px rgba(22,163,74,0.4);
+      --done-flag-bg: rgba(22,163,74,0.18);
+      --done-flag-border: rgba(22,163,74,0.65);
+      --done-flag-text: #bbf7d0;
+      --link: #c7d2fe;
+      --swap: #fcd34d;
+      --tag-bg: rgba(15,23,42,0.9);
+      --tag-border: rgba(55,65,81,0.9);
+      --panel-bg: rgba(2,6,23,0.7);
+      --item-border: rgba(31,41,55,0.8);
+      --thumb-bg: #0b1020;
+      --alt-use-border: rgba(129,140,248,0.7);
+      --alt-use-bg: rgba(79,70,229,0.18);
+      --alt-use-text: #e5e7eb;
+      --check-border: rgba(148,163,184,0.7);
+      --check-bg: rgba(15,23,42,0.9);
+      --check-on-border: rgba(34,197,94,0.9);
+      --check-on-bg: rgba(22,163,74,0.1);
+      --btn-bg: rgba(15,23,42,0.95);
+      --btn-border: rgba(148,163,184,0.5);
+      --btn-text: #e5e7eb;
+      --bar-bg: rgba(2,6,23,0.92);
+      --rest-bg: radial-gradient(circle at top, #111827 0, #020617 60%);
+      --rest-border: rgba(148,163,184,0.6);
+      --toggle-bg: rgba(15,23,42,0.9);
+      --toggle-border: rgba(148,163,184,0.35);
+      --round-active-bg: rgba(79,70,229,0.35);
+      --round-active-border: rgba(129,140,248,0.8);
+      --round-active-text: #e5e7eb;
+      --startline: #c7d2fe;
+      --ramp: #fbbf24;
+      --pairing: #6ee7b7;
+      --ss1: #22c55e;
+      --ss2: #818cf8;
+      --ss3: #fbbf24;
+      --opt-text: #67e8f9;
+      --opt-border: rgba(34,211,238,0.5);
+      --opt-bg: rgba(34,211,238,0.10);
+      --opt-active-bg: rgba(34,211,238,0.25);
+      --opt-active-border: #22d3ee;
+      --opt-badge-bg: rgba(34,211,238,0.2);
+      --trx-text: #f0abfc;
+      --trx-border: rgba(232,121,249,0.5);
+      --trx-bg: rgba(232,121,249,0.10);
+      --trx-active-bg: rgba(232,121,249,0.25);
+      --trx-active-border: #e879f9;
+      --trx-badge-bg: rgba(232,121,249,0.2);
+    }
+
+    :root[data-theme="light"] {
+      --page-bg: radial-gradient(circle at top, #eef2ff 0, #f8fafc 55%, #f8fafc 100%);
+      --text: #0f172a;
+      --text-soft: #1e293b;
+      --muted: #475569;
+      --border: #e2e8f0;
+      --shadow-soft: 0 10px 30px rgba(15,23,42,0.12);
+      --success: #16a34a;
+      --header-bg: linear-gradient(135deg, #e0e7ff, #dbeafe);
+      --header-border: #c7d2fe;
+      --header-shadow: 0 10px 25px rgba(100,116,139,0.25);
+      --surface: #ffffff;
+      --surface-border: #cbd5e1;
+      --pill-active-bg: rgba(79,70,229,0.12);
+      --pill-active-text: #3730a3;
+      --dot-off: #cbd5e1;
+      --dot-pill: #94a3b8;
+      --card-bg: #ffffff;
+      --done-border: #16a34a;
+      --done-shadow: 0 0 0 1px rgba(22,163,74,0.35), 0 10px 25px rgba(22,163,74,0.15);
+      --done-flag-bg: #dcfce7;
+      --done-flag-border: #86efac;
+      --done-flag-text: #166534;
+      --link: #4338ca;
+      --swap: #b45309;
+      --tag-bg: #f1f5f9;
+      --tag-border: #cbd5e1;
+      --panel-bg: #f8fafc;
+      --item-border: #e2e8f0;
+      --thumb-bg: #eef2ff;
+      --alt-use-border: #6366f1;
+      --alt-use-bg: #e0e7ff;
+      --alt-use-text: #312e81;
+      --check-border: #94a3b8;
+      --check-bg: #ffffff;
+      --check-on-border: #16a34a;
+      --check-on-bg: #dcfce7;
+      --btn-bg: #ffffff;
+      --btn-border: #94a3b8;
+      --btn-text: #0f172a;
+      --bar-bg: rgba(248,250,252,0.92);
+      --rest-bg: #ffffff;
+      --rest-border: #cbd5e1;
+      --toggle-bg: #f1f5f9;
+      --toggle-border: #cbd5e1;
+      --round-active-bg: #e0e7ff;
+      --round-active-border: #6366f1;
+      --round-active-text: #312e81;
+      --startline: #4338ca;
+      --ramp: #b45309;
+      --pairing: #047857;
+      --ss1: #16a34a;
+      --ss2: #6366f1;
+      --ss3: #d97706;
+      --opt-text: #0e7490;
+      --opt-border: #67e8f9;
+      --opt-bg: #ecfeff;
+      --opt-active-bg: #cffafe;
+      --opt-active-border: #0891b2;
+      --opt-badge-bg: rgba(8,145,178,0.15);
+      --trx-text: #a21caf;
+      --trx-border: #f0abfc;
+      --trx-bg: #fdf4ff;
+      --trx-active-bg: #fae8ff;
+      --trx-active-border: #c026d3;
+      --trx-badge-bg: rgba(192,38,211,0.12);
     }
 
     * {
@@ -27,7 +170,7 @@
     body {
       margin: 0;
       font-family: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif;
-      background: radial-gradient(circle at top, #111827 0, #020617 40%, #000 100%);
+      background: var(--page-bg);
       color: var(--text);
       min-height: 100vh;
       display: flex;
@@ -49,9 +192,50 @@
       gap: 6px;
       padding: 10px 14px;
       border-radius: 16px;
-      background: linear-gradient(135deg, rgba(15,23,42,0.9), rgba(30,64,175,0.66));
-      box-shadow: 0 10px 30px rgba(15,23,42,0.9);
-      border: 1px solid rgba(148,163,184,0.2);
+      background: var(--header-bg);
+      box-shadow: var(--header-shadow);
+      border: 1px solid var(--header-border);
+      position: sticky;
+      top: 0;
+      z-index: 30;
+    }
+
+    .header-compact {
+      width: 100%;
+      min-height: 44px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      background: none;
+      color: var(--text-soft);
+      font-size: 0.85rem;
+      padding: 2px 0;
+      cursor: pointer;
+    }
+
+    .header-compact .chevron {
+      color: var(--muted);
+      transition: transform 0.2s ease;
+    }
+
+    header.expanded .header-compact .chevron {
+      transform: rotate(180deg);
+    }
+
+    #headerBody {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      overflow: hidden;
+      max-height: 0;
+      opacity: 0;
+      transition: max-height 0.22s ease, opacity 0.18s ease;
+    }
+
+    header.expanded #headerBody {
+      max-height: 560px;
+      opacity: 1;
     }
 
     .app-title {
@@ -59,7 +243,7 @@
       font-weight: 600;
       letter-spacing: 0.03em;
       text-transform: uppercase;
-      color: #e5e7eb;
+      color: var(--text-soft);
     }
 
     .app-subtitle {
@@ -75,12 +259,12 @@
     .chip {
       padding: 4px 8px;
       border-radius: 999px;
-      background: rgba(15,23,42,0.8);
-      border: 1px solid rgba(148,163,184,0.4);
+      background: var(--surface);
+      border: 1px solid var(--surface-border);
       font-size: 0.7rem;
       text-transform: uppercase;
       letter-spacing: 0.08em;
-      color: #e5e7eb;
+      color: var(--text-soft);
     }
 
     .day-selector {
@@ -99,8 +283,8 @@
       padding: 8px 12px;
       min-height: 44px;
       border-radius: 999px;
-      border: 1px solid rgba(148,163,184,0.3);
-      background: rgba(15,23,42,0.9);
+      border: 1px solid var(--surface-border);
+      background: var(--surface);
       color: var(--muted);
       flex: 0 0 auto;
       cursor: pointer;
@@ -113,13 +297,13 @@
       width: 6px;
       height: 6px;
       border-radius: 999px;
-      background: rgba(148,163,184,0.7);
+      background: var(--dot-pill);
     }
 
     .day-pill.active {
       border-color: var(--accent);
-      background: rgba(79,70,229,0.16);
-      color: #e5e7eb;
+      background: var(--pill-active-bg);
+      color: var(--pill-active-text);
     }
 
     .day-pill.active span.dot {
@@ -134,21 +318,43 @@
       background: var(--accent);
     }
 
+    .theme-toggle {
+      display: flex;
+      gap: 6px;
+      padding: 3px;
+      border-radius: 999px;
+      background: var(--toggle-bg);
+      border: 1px solid var(--toggle-border);
+      margin-top: 4px;
+    }
+
+    .theme-btn {
+      flex: 1;
+      min-height: 44px;
+      border-radius: 999px;
+      background: transparent;
+      color: var(--muted);
+      font-size: 0.82rem;
+      cursor: pointer;
+    }
+
+    .theme-btn.active {
+      background: var(--round-active-bg);
+      border: 1px solid var(--round-active-border);
+      color: var(--round-active-text);
+    }
+
     .phase-chip {
+      white-space: nowrap;
       padding: 5px 9px;
       border-radius: 999px;
-      background: rgba(15,23,42,0.9);
-      border: 1px solid rgba(148,163,184,0.4);
+      background: var(--surface);
+      border: 1px solid var(--surface-border);
       font-size: 0.75rem;
-      color: #e5e7eb;
+      color: var(--text-soft);
       display: inline-flex;
       align-items: center;
       gap: 6px;
-    }
-
-    .phase-chip small {
-      font-size: 0.72rem;
-      color: var(--muted);
     }
 
     .progress-header {
@@ -171,13 +377,98 @@
       width: 8px;
       height: 8px;
       border-radius: 999px;
-      background: rgba(51,65,85,0.7);
+      background: var(--dot-off);
       transition: transform 0.18s ease, background 0.18s ease;
+      border: none;
+      padding: 0;
+      cursor: pointer;
     }
 
     .dot-indicator.active {
       background: var(--accent);
       transform: scale(1.12);
+    }
+
+    .track {
+      display: flex;
+      gap: 10px;
+      overflow-x: auto;
+      scroll-snap-type: x mandatory;
+      scrollbar-width: none;
+      align-items: flex-start;
+      padding: 0 16px 76px; /* bottom pad: room for the sticky bar over tall cards */
+      margin: 0 -2px;
+      position: relative;
+    }
+
+    .track::-webkit-scrollbar { display: none; }
+
+    .track .exercise-card {
+      flex: 0 0 calc(100% - 32px);
+      width: auto;
+      scroll-snap-align: center;
+      scroll-snap-stop: always;
+      animation: none;
+    }
+
+    /* superset color coding on the card's left edge */
+    .track .exercise-card.ss1 { border-left: 3px solid var(--ss1); }
+    .track .exercise-card.ss2 { border-left: 3px solid var(--ss2); }
+    .track .exercise-card.ss3 { border-left: 3px solid var(--ss3); }
+
+    .alt-row {
+      display: flex;
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+    .alt-toggle {
+      min-height: 44px;
+      padding: 6px 14px;
+      border-radius: 999px;
+      font-size: 0.8rem;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .alt-toggle.opt {
+      color: var(--opt-text);
+      border: 1px solid var(--opt-border);
+      background: var(--opt-bg);
+    }
+
+    .alt-toggle.opt.active {
+      border-color: var(--opt-active-border);
+      background: var(--opt-active-bg);
+    }
+
+    .alt-toggle.opt .alt-badge {
+      background: var(--opt-badge-bg);
+      color: var(--opt-text);
+    }
+
+    .alt-toggle.trx {
+      color: var(--trx-text);
+      border: 1px solid var(--trx-border);
+      background: var(--trx-bg);
+    }
+
+    .alt-toggle.trx.active {
+      border-color: var(--trx-active-border);
+      background: var(--trx-active-bg);
+    }
+
+    .alt-toggle.trx .alt-badge {
+      background: var(--trx-badge-bg);
+      color: var(--trx-text);
+    }
+
+    .alt-badge {
+      font-size: 0.68rem;
+      padding: 1px 6px;
+      border-radius: 999px;
     }
 
     .card-container {
@@ -190,7 +481,7 @@
 
     .exercise-card {
       width: 100%;
-      background: radial-gradient(circle at top left, #111827 0, #020617 40%, #020617 100%);
+      background: var(--card-bg);
       border-radius: var(--radius-xl);
       box-shadow: var(--shadow-soft);
       border: 1px solid var(--border);
@@ -204,10 +495,8 @@
     }
 
     .exercise-card.done {
-      border-color: rgba(34,197,94,0.9);
-      box-shadow:
-        0 0 0 1px rgba(34,197,94,0.45),
-        0 16px 40px rgba(22,163,74,0.4);
+      border-color: var(--done-border);
+      box-shadow: var(--done-shadow);
     }
 
     .done-flag {
@@ -216,10 +505,10 @@
       right: 12px;
       padding: 3px 8px;
       border-radius: 999px;
-      background: rgba(22,163,74,0.18);
-      border: 1px solid rgba(22,163,74,0.65);
+      background: var(--done-flag-bg);
+      border: 1px solid var(--done-flag-border);
       font-size: 0.7rem;
-      color: #bbf7d0;
+      color: var(--done-flag-text);
       display: inline-flex;
       align-items: center;
       gap: 5px;
@@ -259,7 +548,7 @@
     .exercise-meta strong {
       display: block;
       font-size: 0.8rem;
-      color: #e5e7eb;
+      color: var(--text-soft);
     }
 
     .sets-hint {
@@ -328,7 +617,7 @@
     }
 
     .gif-attribution a {
-      color: #c7d2fe;
+      color: var(--link);
       text-decoration: none;
     }
 
@@ -338,14 +627,14 @@
 
     .exercise-body {
       font-size: 0.85rem;
-      color: #e5e7eb;
+      color: var(--text-soft);
       margin-top: 6px;
       line-height: 1.5;
     }
 
     .swap-note {
       font-size: 0.76rem;
-      color: #fcd34d;
+      color: var(--swap);
       margin-top: 4px;
     }
 
@@ -353,7 +642,7 @@
       background: none;
       border: none;
       padding: 0 4px;
-      color: #c7d2fe;
+      color: var(--link);
       font-size: 0.76rem;
       text-decoration: underline;
       cursor: pointer;
@@ -371,35 +660,21 @@
       font-size: 0.72rem;
       padding: 3px 8px;
       border-radius: 999px;
-      background: rgba(15,23,42,0.9);
-      border: 1px solid rgba(55,65,81,0.9);
-      color: #e5e7eb;
-    }
-
-    .alt-toggle {
-      width: 100%;
-      min-height: 44px;
-      margin-top: 8px;
-      padding: 8px 12px;
-      border-radius: 12px;
-      border: 1px solid rgba(148,163,184,0.4);
-      background: rgba(15,23,42,0.9);
-      color: #e5e7eb;
-      font-size: 0.82rem;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 6px;
+      background: var(--tag-bg);
+      border: 1px solid var(--tag-border);
+      color: var(--text-soft);
     }
 
     .alt-panel {
       margin-top: 8px;
       border: 1px solid var(--border);
       border-radius: 14px;
-      background: rgba(2,6,23,0.7);
+      background: var(--panel-bg);
       overflow: hidden;
     }
+
+    .alt-panel[data-group="alternatives"] { border-top: 2px solid var(--opt-active-border); }
+    .alt-panel[data-group="trxAlternatives"] { border-top: 2px solid var(--trx-active-border); }
 
     .alt-panel[hidden] { display: none; }
 
@@ -408,7 +683,7 @@
       align-items: center;
       gap: 10px;
       padding: 8px 10px;
-      border-top: 1px solid rgba(31,41,55,0.8);
+      border-top: 1px solid var(--item-border);
     }
 
     .alt-item:first-child { border-top: none; }
@@ -419,8 +694,8 @@
       flex: 0 0 auto;
       border-radius: 8px;
       overflow: hidden;
-      background: #0b1020;
-      border: 1px solid rgba(55,65,81,0.9);
+      background: var(--thumb-bg);
+      border: 1px solid var(--tag-border);
     }
 
     .alt-thumb img {
@@ -438,7 +713,7 @@
 
     .alt-name {
       font-weight: 500;
-      color: #e5e7eb;
+      color: var(--text-soft);
     }
 
     .alt-credit {
@@ -447,7 +722,7 @@
     }
 
     .alt-credit a {
-      color: #c7d2fe;
+      color: var(--link);
       text-decoration: none;
     }
 
@@ -456,9 +731,9 @@
       min-height: 44px;
       padding: 6px 12px;
       border-radius: 999px;
-      border: 1px solid rgba(129,140,248,0.7);
-      background: rgba(79,70,229,0.18);
-      color: #e5e7eb;
+      border: 1px solid var(--alt-use-border);
+      background: var(--alt-use-bg);
+      color: var(--alt-use-text);
       font-size: 0.78rem;
       cursor: pointer;
     }
@@ -493,8 +768,8 @@
       width: 18px;
       height: 18px;
       border-radius: 6px;
-      border: 1px solid rgba(148,163,184,0.7);
-      background: rgba(15,23,42,0.9);
+      border: 1px solid var(--check-border);
+      background: var(--check-bg);
       display: inline-flex;
       align-items: center;
       justify-content: center;
@@ -503,26 +778,34 @@
     }
 
     .done-toggle input:checked + .checkmark {
-      border-color: rgba(34,197,94,0.9);
-      background: rgba(22,163,74,0.1);
-      box-shadow: 0 0 0 1px rgba(34,197,94,0.4);
+      border-color: var(--check-on-border);
+      background: var(--check-on-bg);
+      box-shadow: 0 0 0 1px var(--check-on-border);
     }
 
     .done-toggle input:checked + .checkmark::before {
-      content: "✓";
-      color: #bbf7d0;
+      content: "\2713";
+      color: var(--done-flag-text);
     }
 
     .done-label-text {
-      color: #e5e7eb;
+      color: var(--text-soft);
     }
 
     .bottom-bar {
       margin-top: 10px;
+      padding-top: 6px;
+      padding-bottom: calc(8px + env(safe-area-inset-bottom));
       display: flex;
       align-items: center;
       justify-content: space-between;
       gap: 8px;
+      position: sticky;
+      bottom: 0;
+      z-index: 20;
+      background: var(--bar-bg);
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
     }
 
     .nav-buttons {
@@ -549,9 +832,9 @@
       align-items: center;
       justify-content: center;
       gap: 6px;
-      border: 1px solid rgba(148,163,184,0.5);
-      background: rgba(15,23,42,0.95);
-      color: #e5e7eb;
+      border: 1px solid var(--btn-border);
+      background: var(--btn-bg);
+      color: var(--btn-text);
       transition: background 0.15s ease, transform 0.08s ease, box-shadow 0.15s ease;
     }
 
@@ -565,6 +848,7 @@
       background: radial-gradient(circle at top left, #4f46e5, #1d4ed8);
       border-color: rgba(129,140,248,0.9);
       box-shadow: 0 10px 25px rgba(37,99,235,0.6);
+      color: #e5e7eb;
     }
 
     .btn:active {
@@ -589,8 +873,8 @@
       margin-top: 8px;
       padding: 16px 14px;
       border-radius: 16px;
-      background: radial-gradient(circle at top, #111827 0, #020617 60%);
-      border: 1px dashed rgba(148,163,184,0.6);
+      background: var(--rest-bg);
+      border: 1px dashed var(--rest-border);
       box-shadow: var(--shadow-soft);
       font-size: 0.9rem;
       line-height: 1.55;
@@ -611,7 +895,81 @@
     .rest-card .next-up {
       margin-top: 10px;
       font-size: 0.85rem;
-      color: #c7d2fe;
+      color: var(--link);
+    }
+
+    .round-bar {
+      margin-bottom: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .round-toggle {
+      display: flex;
+      gap: 6px;
+      padding: 3px;
+      border-radius: 999px;
+      background: var(--toggle-bg);
+      border: 1px solid var(--toggle-border);
+    }
+
+    .round-btn {
+      flex: 1;
+      min-height: 36px;
+      border-radius: 999px;
+      background: transparent;
+      color: var(--muted);
+      font-size: 0.82rem;
+      cursor: pointer;
+    }
+
+    .round-btn.active {
+      background: var(--round-active-bg);
+      border: 1px solid var(--round-active-border);
+      color: var(--round-active-text);
+    }
+
+    .equipment-note {
+      font-size: 0.75rem;
+      color: var(--muted);
+      padding-left: 4px;
+    }
+
+    .start-line {
+      margin-top: 6px;
+      font-size: 0.78rem;
+      color: var(--startline);
+    }
+
+    .ramp-hint {
+      margin-top: 6px;
+      font-size: 0.78rem;
+      color: var(--ramp);
+    }
+
+    .pairing-tip {
+      margin-top: 6px;
+      font-size: 0.78rem;
+      color: var(--pairing);
+    }
+
+    .ladder {
+      margin-top: 6px;
+      font-size: 0.78rem;
+      color: var(--muted);
+    }
+
+    .ladder summary {
+      cursor: pointer;
+      color: var(--startline);
+      min-height: 24px;
+    }
+
+    .ladder ul {
+      margin: 6px 0 0 16px;
+      padding: 0;
+      line-height: 1.5;
     }
 
     @media (max-width: 380px) {
@@ -623,19 +981,30 @@
 </head>
 <body>
 <div class="app">
-  <header>
-    <div class="app-title">Strength Program</div>
-    <div class="app-subtitle">
-      <div>
-        <span id="todayLabel"></span>
-        <div style="margin-top:2px;font-size:0.8rem;color:#cbd5f5;" id="workoutTitle"></div>
+  <header id="appHeader">
+    <button type="button" class="header-compact" id="headerToggle" aria-expanded="false" aria-controls="headerBody">
+      <span id="headerCompactText"></span>
+      <span class="chevron" aria-hidden="true">▾</span>
+    </button>
+    <div id="headerBody">
+      <div class="app-title">Strength Program</div>
+      <div class="app-subtitle">
+        <div>
+          <span id="todayLabel"></span>
+          <div style="margin-top:2px;font-size:0.8rem;color:var(--startline);" id="workoutTitle"></div>
+        </div>
+        <div class="chip">
+          <span id="phaseLabel">Rest / Recovery</span>
+        </div>
       </div>
-      <div class="chip">
-        <span id="phaseLabel">Rest / Recovery</span>
+      <div class="day-selector" id="daySelector"></div>
+      <div class="progress-header" id="progressSummary"></div>
+      <div class="theme-toggle" id="themeToggle" role="group" aria-label="Theme">
+        <button type="button" class="theme-btn" data-theme-opt="system">System</button>
+        <button type="button" class="theme-btn" data-theme-opt="light">Light</button>
+        <button type="button" class="theme-btn" data-theme-opt="dark">Dark</button>
       </div>
     </div>
-    <div class="day-selector" id="daySelector"></div>
-    <div class="progress-header" id="progressSummary"></div>
   </header>
 
   <div id="contentArea"></div>
@@ -659,259 +1028,507 @@
     );
 
   const EXERCISES = {
-    "cat-cow": {
-      name: "Cat-Cow",
-      gifUrl: "https://cdn.yogajournal.com/wp-content/uploads/2020/01/cat-cow-1.gif?width=600",
-      attribution: { label: "Yoga Journal", url: "https://www.yogajournal.com/poses/cat-pose/" },
-      notes: "Move slowly between rounding and arching; match the motion to your breath.",
-      tags: ["Spine", "Mobility"]
-    },
     "bird-dog": {
       name: "Bird Dog",
       gifUrl: "https://spotebi.com/wp-content/uploads/2014/10/bird-dogs-exercise-illustration.gif",
       attribution: { label: "Spotebi", url: "https://www.spotebi.com/exercise-guide/bird-dogs/" },
       notes: "Reach opposite arm and leg long while keeping hips level and back flat.",
-      tags: ["Core", "Glutes"]
+      tags: ["Core", "Glutes"],
+      type: "bodyweight"
     },
     "glute-bridge": {
       name: "Glute Bridge",
       gifUrl: "https://www.strengthlog.com/wp-content/uploads/2025/09/glutebridge.gif",
       attribution: { label: "StrengthLog", url: "https://www.strengthlog.com/glute-bridge/" },
       notes: "Drive through your heels and squeeze your glutes at the top without arching your low back.",
-      tags: ["Glutes", "Hamstrings"]
-    },
-    "bodyweight-squat": {
-      name: "Bodyweight Squat",
-      gifUrl: "https://www.strengthlog.com/wp-content/uploads/2020/02/Air-squat.gif",
-      attribution: { label: "StrengthLog", url: "https://www.strengthlog.com/air-squat/" },
-      notes: "Sit hips back and down, keep your chest up and knees tracking over your feet.",
-      tags: ["Quads", "Glutes"]
+      tags: ["Glutes", "Hamstrings"],
+      type: "bodyweight"
     },
     "goblet-squat": {
       name: "Goblet Squat",
       gifUrl: "https://www.strengthlog.com/wp-content/uploads/2020/02/Goblet-squat.gif",
       attribution: { label: "StrengthLog", url: "https://www.strengthlog.com/goblet-squat/" },
       notes: "Hold the dumbbell tall at your chest, squat between your heels, and keep your torso upright.",
-      tags: ["Quads", "Glutes", "Core"]
+      tags: ["Quads", "Glutes", "Core"],
+      type: "dumbbell",
+      start: "20 lbs — one dumbbell"
     },
     "db-bench-press": {
       name: "Dumbbell Bench Press",
       gifUrl: "https://www.strengthlog.com/wp-content/uploads/2020/03/Dumbbell-Chest-Press.gif",
       attribution: { label: "StrengthLog", url: "https://www.strengthlog.com/dumbbell-chest-press/" },
       notes: "Keep shoulder blades tucked into the bench and lower the dumbbells under control to chest level.",
-      tags: ["Chest", "Triceps", "Shoulders"]
+      tags: ["Chest", "Triceps", "Shoulders"],
+      type: "dumbbell",
+      start: "20 lbs per hand"
     },
     "db-romanian-deadlift": {
       name: "Dumbbell Romanian Deadlift",
       gifUrl: "https://www.strengthlog.com/wp-content/uploads/2022/09/romanian-deadlift-with-dumbbells.gif",
       attribution: { label: "StrengthLog", url: "https://www.strengthlog.com/dumbbell-romanian-deadlift/" },
       notes: "Soft knees, push hips back, and slide the dumbbells down your thighs with a flat back.",
-      tags: ["Hamstrings", "Glutes", "Lower back"]
+      tags: ["Hamstrings", "Glutes", "Lower back"],
+      type: "dumbbell",
+      start: "15 lbs per hand — learn the hinge first"
     },
     "chest-supported-row": {
       name: "Chest-Supported Row",
       gifUrl: "https://www.strengthlog.com/wp-content/uploads/2024/11/chest-supported-dumbbell-row.gif",
       attribution: { label: "StrengthLog", url: "https://www.strengthlog.com/chest-supported-dumbbell-row/" },
       notes: "Let the bench support your chest so your low back stays relaxed; pull elbows toward your hips.",
-      tags: ["Back", "Lats", "Biceps"]
+      tags: ["Back", "Lats", "Biceps"],
+      type: "dumbbell",
+      start: "20 lbs per hand"
     },
     "dead-bug": {
       name: "Dead Bug",
       gifUrl: "https://www.strengthlog.com/wp-content/uploads/2023/01/deadbug.gif",
       attribution: { label: "StrengthLog", url: "https://www.strengthlog.com/dead-bug/" },
       notes: "Press your low back gently into the floor and move opposite arm and leg slowly.",
-      tags: ["Core", "Spine-friendly"]
+      tags: ["Core", "Spine-friendly"],
+      type: "bodyweight",
+      start: "Bodyweight"
     },
     "leg-press": {
       name: "Leg Press",
       gifUrl: "https://www.strengthlog.com/wp-content/uploads/2025/11/leg-press.gif",
       attribution: { label: "StrengthLog", url: "https://www.strengthlog.com/leg-press/" },
       notes: "Keep your lower back on the pad and lower the sled only as far as your hips stay planted.",
-      tags: ["Quads", "Glutes"]
+      tags: ["Quads", "Glutes"],
+      type: "machine",
+      start: "Empty sled; next step one 25-lb plate per side",
+      startsAtZero: true
     },
     "lat-pulldown": {
       name: "Lat Pulldown",
       gifUrl: "https://www.strengthlog.com/wp-content/uploads/2020/03/lat-pulldown-with-pronated-grip.gif",
       attribution: { label: "StrengthLog", url: "https://www.strengthlog.com/lat-pulldown/" },
       notes: "Pull the bar to your upper chest and think elbows down, not behind your neck.",
-      tags: ["Lats", "Back", "Biceps"]
+      tags: ["Lats", "Back", "Biceps"],
+      type: "cable",
+      start: "60 lbs"
     },
     "hip-thrust": {
       name: "Hip Thrust",
       gifUrl: "https://www.strengthlog.com/wp-content/uploads/2020/02/Hip-thrust.gif",
       attribution: { label: "StrengthLog", url: "https://www.strengthlog.com/hip-thrust/" },
       notes: "Drive through your heels to full hip extension without over-arching your low back at the top.",
-      tags: ["Glutes", "Hamstrings"]
+      tags: ["Glutes", "Hamstrings"],
+      type: "barbell",
+      start: "Bodyweight first, then empty bar (45 lbs)",
+      startsAtZero: true
     },
     "seated-db-shoulder-press": {
       name: "Seated Dumbbell Shoulder Press",
       gifUrl: "https://www.strengthlog.com/wp-content/uploads/2020/11/Seated-dumbbell-shoulder-press.gif",
       attribution: { label: "StrengthLog", url: "https://www.strengthlog.com/seated-dumbbell-shoulder-press/" },
       notes: "Sit tall with back support, ribs down, and press the dumbbells up without shrugging.",
-      tags: ["Shoulders", "Triceps"]
+      tags: ["Shoulders", "Triceps"],
+      type: "dumbbell",
+      start: "15 lbs per hand"
     },
     "pallof-press": {
       name: "Pallof Press",
       gifUrl: "https://www.strengthlog.com/wp-content/uploads/2025/10/pallof-press.gif",
       attribution: { label: "StrengthLog", url: "https://www.strengthlog.com/pallof-press/" },
       notes: "Stand tall and resist the cable pulling you sideways as you press straight out from your chest.",
-      tags: ["Core", "Anti-rotation"]
+      tags: ["Core", "Anti-rotation"],
+      type: "cable",
+      start: "10 lbs",
+      reps: "10 / side"
     },
     "trap-bar-deadlift": {
       name: "Trap Bar Deadlift",
       gifUrl: "https://www.strengthlog.com/wp-content/uploads/2020/03/Trap-Bar-Deadlift-With-High-Handles.gif",
       attribution: { label: "StrengthLog", url: "https://www.strengthlog.com/trap-bar-deadlift/" },
       notes: "Use the high handles, push the floor away, and keep a long neutral spine.",
-      tags: ["Glutes", "Quads", "Back"]
+      tags: ["Glutes", "Quads", "Back"],
+      type: "barbell",
+      start: "Empty trap bar (45–65 lbs, set by the bar)"
     },
     "incline-db-press": {
       name: "Incline Dumbbell Press",
       gifUrl: "https://www.strengthlog.com/wp-content/uploads/2020/03/Dumbbell-Incline-Press.gif",
       attribution: { label: "StrengthLog", url: "https://www.strengthlog.com/dumbbell-incline-press/" },
       notes: "Set the bench low-to-moderate incline and press the dumbbells up and slightly together.",
-      tags: ["Chest", "Shoulders", "Triceps"]
+      tags: ["Chest", "Shoulders", "Triceps"],
+      type: "dumbbell",
+      start: "20 lbs per hand"
     },
     "reverse-lunge": {
       name: "Reverse Lunge",
       gifUrl: "https://www.strengthlog.com/wp-content/uploads/2025/01/reverse-dumbbell-lunge.gif",
       attribution: { label: "StrengthLog", url: "https://www.strengthlog.com/lunge/" },
       notes: "Step back softly, lower straight down, and drive through the front foot to stand.",
-      tags: ["Quads", "Glutes", "Balance"]
+      tags: ["Quads", "Glutes", "Balance"],
+      type: "dumbbell",
+      start: "Bodyweight first, then 10 lbs per hand",
+      startsAtZero: true
     },
     "seated-cable-row": {
       name: "Seated Cable Row",
       gifUrl: "https://www.strengthlog.com/wp-content/uploads/2023/03/cable-row-seated-narrow-grip.gif",
-      attribution: { label: "StrengthLog", url: "https://www.strengthlog.com/chest-supported-dumbbell-row/" },
+      attribution: { label: "StrengthLog", url: "https://www.strengthlog.com/cable-close-grip-seated-row/" },
       notes: "Sit tall, pull the handle to your ribs, and avoid rocking your torso back and forth.",
-      tags: ["Back", "Lats", "Biceps"]
+      tags: ["Back", "Lats", "Biceps"],
+      type: "cable",
+      start: "60 lbs"
     },
     "farmer-carry": {
       name: "Farmer Carry",
       gifUrl: "https://www.strengthlog.com/wp-content/uploads/2021/01/Farmers-walk.gif",
       attribution: { label: "StrengthLog", url: "https://www.strengthlog.com/farmers-walk/" },
       notes: "Walk tall with heavy dumbbells, shoulders down and core braced, with calm breathing.",
-      tags: ["Grip", "Core", "Traps"]
+      tags: ["Grip", "Core", "Traps"],
+      type: "carry",
+      start: "35 lbs per hand"
     },
     "box-squat": {
       name: "Box Squat",
       gifUrl: "https://www.strengthlog.com/wp-content/uploads/2020/10/Box-Squat.gif",
       attribution: { label: "StrengthLog", url: "https://www.strengthlog.com/box-squat/" },
       notes: "Sit back to lightly touch the box, keep tension, then drive up without rocking forward.",
-      tags: ["Quads", "Glutes"]
+      tags: ["Quads", "Glutes"],
+      type: "dumbbell"
     },
     "cable-pull-through": {
       name: "Cable Pull-Through",
       gifUrl: "https://www.strengthlog.com/wp-content/uploads/2020/04/cable-pull-through.gif",
       attribution: { label: "StrengthLog", url: "https://www.strengthlog.com/cable-pull-through/" },
       notes: "Hinge at the hips with soft knees, then squeeze your glutes to pull the rope through.",
-      tags: ["Glutes", "Hamstrings"]
+      tags: ["Glutes", "Hamstrings"],
+      type: "cable"
     },
     "back-extension-45": {
-      name: "45° Back Extension (light)",
+      name: "45° Back Extension",
       gifUrl: "https://www.strengthlog.com/wp-content/uploads/2020/05/back-extension-frontloaded.gif",
       attribution: { label: "StrengthLog", url: "https://www.strengthlog.com/back-extension/" },
-      notes: "Hinge at the hips, keep the spine neutral, and rise only to a straight line — no hyperextension.",
-      tags: ["Lower back", "Glutes", "Hamstrings"]
+      notes: "Start bodyweight only. Move slowly, pause 1 s at the top. Go only as low as comfortable. Stop when the body forms a straight line; don't arch or swing.",
+      tags: ["Lower back", "Glutes", "Hamstrings"],
+      type: "bodyweight_loadable",
+      start: "Bodyweight"
     },
     "bulgarian-split-squat": {
       name: "Bulgarian Split Squat",
       gifUrl: "https://www.strengthlog.com/wp-content/uploads/2020/02/Bulgarian-split-squat.gif",
       attribution: { label: "StrengthLog", url: "https://www.strengthlog.com/bulgarian-split-squat/" },
       notes: "Rest your back foot on a bench, stay tall, and lower straight down over the front foot.",
-      tags: ["Quads", "Glutes", "Balance"]
+      tags: ["Quads", "Glutes", "Balance"],
+      type: "dumbbell"
     },
     "split-squat": {
       name: "Split Squat",
       gifUrl: "https://spotebi.com/wp-content/uploads/2015/04/split-squat-exercise-illustration.gif",
       attribution: { label: "Spotebi", url: "https://www.spotebi.com/exercise-guide/split-squat/" },
       notes: "Hold a staggered stance and lower straight down, keeping most weight on the front leg.",
-      tags: ["Quads", "Glutes"]
+      tags: ["Quads", "Glutes"],
+      type: "dumbbell"
     },
     "step-up": {
       name: "Step-Up",
       gifUrl: "https://www.strengthlog.com/wp-content/uploads/2021/03/step-up-exercise.gif",
       attribution: { label: "StrengthLog", url: "https://www.strengthlog.com/step-up/" },
       notes: "Use a low box, drive through the whole top foot, and step down under control.",
-      tags: ["Quads", "Glutes", "Balance"]
+      tags: ["Quads", "Glutes", "Balance"],
+      type: "dumbbell"
     },
     "machine-row": {
       name: "Machine Row",
       gifUrl: "https://www.strengthlog.com/wp-content/uploads/2020/04/seated-machine-row.gif",
       attribution: { label: "StrengthLog", url: "https://www.strengthlog.com/seated-machine-row/" },
       notes: "Keep your chest on the pad, pull elbows back, and squeeze your shoulder blades together.",
-      tags: ["Back", "Lats", "Biceps"]
+      tags: ["Back", "Lats", "Biceps"],
+      type: "machine"
     },
     "machine-shoulder-press": {
       name: "Machine Shoulder Press",
       gifUrl: "https://www.strengthlog.com/wp-content/uploads/2020/03/machine-shoulder-press.gif",
       attribution: { label: "StrengthLog", url: "https://www.strengthlog.com/machine-shoulder-press/" },
       notes: "Set the seat so handles start at ear level and press up without arching your back.",
-      tags: ["Shoulders", "Triceps"]
+      tags: ["Shoulders", "Triceps"],
+      type: "machine"
     },
     "landmine-press": {
       name: "Landmine Press",
       gifUrl: "https://www.strengthlog.com/wp-content/uploads/2025/03/landmine-press.gif",
       attribution: { label: "StrengthLog", url: "https://www.strengthlog.com/landmine-press/" },
       notes: "Press the bar up and slightly forward while staying tall and braced through your core.",
-      tags: ["Shoulders", "Chest", "Triceps"]
+      tags: ["Shoulders", "Chest", "Triceps"],
+      type: "barbell"
     },
     "suitcase-carry": {
       name: "Suitcase Carry (one side)",
       gifUrl: "",
       attribution: { label: "", url: "" },
       notes: "Carry a weight in one hand and resist leaning — walk tall like a moving side plank.",
-      tags: ["Core", "Obliques", "Grip"]
+      tags: ["Core", "Obliques", "Grip"],
+      type: "carry"
+    },
+    "face-pull": {
+      name: "Face Pull",
+      gifUrl: "https://www.strengthlog.com/wp-content/uploads/2020/05/face-pull.gif",
+      attribution: { label: "StrengthLog", url: "https://www.strengthlog.com/face-pull/" },
+      notes: "Rope at face height, pull toward forehead, elbows high, squeeze shoulder blades.",
+      tags: ["Rear delts", "Upper back"],
+      type: "cable",
+      start: "20 lbs — cable stacks vary by machine"
+    },
+    "pushup": {
+      name: "Pushup",
+      gifUrl: "https://www.strengthlog.com/wp-content/uploads/2020/02/Push-up.gif",
+      attribution: { label: "StrengthLog", url: "https://www.strengthlog.com/push-up/" },
+      notes: "Body in a straight line from head to heels, like a moving plank. Stop 2–3 reps short of failure.",
+      tags: ["Chest", "Triceps", "Core"],
+      type: "bodyweight_ladder",
+      start: "Level 1 (standard), 10 reps per set",
+      rationale: "Baseline was 15, 15, 10, 5 over 4 sets, so later sets reached failure. Starting at 10 reps with 2–3 in reserve keeps quality high and leaves room to progress. Pushups double as core (anti-extension) work, replacing the Pallof press; warm-up bird dogs cover anti-rotation.",
+      // SPEC §5.4 pushup ladder (levels 0–5)
+      ladder: [
+        { level: 0, variation: "Incline pushup (hands on bench)", reps: "10–20", cue: "Regression only; used if dropping back from level 1." },
+        { level: 1, variation: "Standard pushup (start here)",    reps: "10–20", cue: "" },
+        { level: 2, variation: "Tempo pushup",                    reps: "8–15",  cue: "3 s lowering, 1 s pause at the bottom." },
+        { level: 3, variation: "Feet-elevated pushup",            reps: "8–15",  cue: "Feet on a step or bench, 12–18 in." },
+        { level: 4, variation: "Deficit pushup",                  reps: "8–15",  cue: "Hands on pushup handles or dumbbells; chest below hand level." },
+        { level: 5, variation: "Weighted pushup",                 reps: "8–15",  cue: "Weight vest or loaded backpack; then progress load by +5 lbs." }
+      ]
+    },
+    "machine-chest-press": {
+      name: "Machine Chest Press",
+      gifUrl: "https://www.strengthlog.com/wp-content/uploads/2020/03/machine-chest-press.gif",
+      attribution: { label: "StrengthLog", url: "https://www.strengthlog.com/machine-chest-press/" },
+      notes: "Set the seat so the handles sit at mid-chest and press without flaring your ribs.",
+      tags: ["Chest", "Shoulders", "Triceps"],
+      type: "machine"
+    },
+    "reverse-pec-deck": {
+      name: "Reverse Pec Deck",
+      gifUrl: "https://www.strengthlog.com/wp-content/uploads/2025/11/reverse-machine-fly.gif",
+      attribution: { label: "StrengthLog", url: "https://www.strengthlog.com/reverse-machine-fly/" },
+      notes: "Face the machine, keep a soft elbow bend, and squeeze your shoulder blades together.",
+      tags: ["Rear delts", "Upper back"],
+      type: "machine"
+    },
+    "band-pull-apart": {
+      name: "Band Pull-Apart",
+      gifUrl: "https://www.strengthlog.com/wp-content/uploads/2020/04/Band-Pull-Apart.gif",
+      attribution: { label: "StrengthLog", url: "https://www.strengthlog.com/band-pull-apart/" },
+      notes: "Arms straight, pull the band apart until it touches your chest, and squeeze your shoulder blades.",
+      tags: ["Rear delts", "Upper back"],
+      type: "mobility"
+    },
+    "machine-back-extension": {
+      name: "Machine Back Extension",
+      gifUrl: "https://spotebi.com/wp-content/uploads/2014/10/back-extensions-exercise-illustration.gif",
+      attribution: { label: "Spotebi", url: "https://www.spotebi.com/exercise-guide/back-extensions/" },
+      notes: "Set the pad just below your hips, rise to a straight line, and lower slowly without rounding.",
+      tags: ["Lower back", "Glutes"],
+      type: "machine"
+    },
+    "bird-dog-weighted-hold": {
+      name: "Bird Dog (Weighted Hold)",
+      gifUrl: "https://spotebi.com/wp-content/uploads/2014/10/bird-dogs-exercise-illustration.gif",
+      attribution: { label: "Spotebi", url: "https://www.spotebi.com/exercise-guide/bird-dogs/" },
+      notes: "Hold a light plate or dumbbell in the reaching hand; keep hips level and the hold steady.",
+      tags: ["Core", "Lower back", "Glutes"],
+      type: "bodyweight_loadable"
+    },
+    "trx-squat": {
+      name: "TRX Squat",
+      gifUrl: "https://recreation.truman.edu/files/2019/03/squat.gif",
+      attribution: { label: "Truman State Campus Rec", url: "https://recreation.truman.edu/trx-suspension-trainer-lower-body-gifs/" },
+      notes: "Hold straps lightly; sit back and down. Use arms only as needed.",
+      tags: ["Quads", "Glutes"],
+      type: "suspension",
+      reps: "12–15",
+      trx: { levels: "Level 1: lean back, arms assist heavily. Level 5: minimal arm assist, full depth with 3 s lowering." }
+    },
+    "trx-bulgarian-split-squat": {
+      name: "TRX Bulgarian Split Squat (rear foot in strap)",
+      gifUrl: "https://recreation.truman.edu/files/2019/03/Foot-in-Band-Back-Lunge.gif",
+      attribution: { label: "Truman State Campus Rec", url: "https://recreation.truman.edu/trx-suspension-trainer-suspended-exercises-gifs/" },
+      notes: "Keep front knee tracking over toes; torso tall.",
+      tags: ["Quads", "Glutes", "Balance"],
+      type: "suspension",
+      reps: "8–12 per leg",
+      trx: { levels: "Level 1: shallow depth. Level 5: full depth with slow lowering." }
+    },
+    "trx-reverse-lunge": {
+      name: "TRX Reverse Lunge (hands on straps for balance)",
+      gifUrl: "https://recreation.truman.edu/files/2019/05/backwards-lunge.gif",
+      attribution: { label: "Truman State Campus Rec", url: "https://recreation.truman.edu/trx-suspension-trainer-lower-body-gifs/" },
+      notes: "Step back, lower straight down.",
+      tags: ["Quads", "Glutes"],
+      type: "suspension",
+      reps: "8–12 per leg",
+      trx: { levels: "Level 1: hands assist. Level 5: no assist, 3 s lowering." }
+    },
+    "trx-chest-press": {
+      name: "TRX Chest Press",
+      gifUrl: "https://recreation.truman.edu/files/2019/03/standing-push-up.gif",
+      attribution: { label: "Truman State Campus Rec", url: "https://recreation.truman.edu/trx-suspension-exercises-upper-body-gifs/" },
+      notes: "Straight line from head to heels; don't let hips sag.",
+      tags: ["Chest", "Triceps", "Core"],
+      type: "suspension",
+      reps: "10–15",
+      trx: { levels: "Level 1: nearly upright. Level 5: body angle close to 45°. Change by walking feet back." }
+    },
+    "trx-row": {
+      name: "TRX Row",
+      gifUrl: "https://recreation.truman.edu/files/2019/03/pull-to-chest.gif",
+      attribution: { label: "Truman State Campus Rec", url: "https://recreation.truman.edu/trx-suspension-exercises-upper-body-gifs/" },
+      notes: "Squeeze glutes and brace; pull handles to ribs. Less back support than the chest-supported row; use a more upright level on sore-back days.",
+      tags: ["Back", "Lats", "Biceps"],
+      type: "suspension",
+      reps: "10–15",
+      trx: { levels: "Level 1: nearly upright. Level 5: body close to horizontal. Change by walking feet forward." }
+    },
+    "trx-high-row": {
+      name: "TRX High Row",
+      gifUrl: "https://recreation.truman.edu/files/2019/03/pull-to-chest-wide.gif",
+      attribution: { label: "Truman State Campus Rec", url: "https://recreation.truman.edu/trx-suspension-exercises-upper-body-gifs/" },
+      notes: "Pull with elbows high toward face level.",
+      tags: ["Lats", "Upper back"],
+      type: "suspension",
+      reps: "10–15",
+      trx: { levels: "Level 1: nearly upright. Level 5: steep lean." }
+    },
+    "trx-face-pull": {
+      name: "TRX Face Pull (or TRX reverse fly)",
+      gifUrl: "",
+      attribution: { label: "", url: "" },
+      notes: "Elbows high; squeeze shoulder blades together.",
+      tags: ["Rear delts", "Upper back"],
+      type: "suspension",
+      reps: "12–15",
+      trx: { levels: "Level 1: nearly upright. Level 5: steep lean." }
+    },
+    "trx-hip-thrust": {
+      name: "TRX Hip Thrust (heels in straps)",
+      gifUrl: "",
+      attribution: { label: "", url: "" },
+      notes: "Drive hips up through heels; no lower-back arch at the top.",
+      tags: ["Glutes", "Hamstrings"],
+      type: "suspension",
+      reps: "10–15",
+      trx: { levels: "Level 1: two legs, partial range. Level 5: single leg, full range." }
+    },
+    "trx-hamstring-curl": {
+      name: "TRX Hamstring Curl (heels in straps)",
+      gifUrl: "",
+      attribution: { label: "", url: "" },
+      notes: "Keep hips up throughout if possible; slow return.",
+      tags: ["Hamstrings", "Glutes"],
+      type: "suspension",
+      reps: "8–12",
+      trx: { levels: "Level 1: hips stay down. Level 5: single leg with hips held up." }
+    },
+    "trx-plank": {
+      name: "TRX Plank (feet in straps)",
+      gifUrl: "https://recreation.truman.edu/files/2019/06/Plank-feet-in-straps.gif",
+      attribution: { label: "Truman State Campus Rec", url: "https://recreation.truman.edu/trx-suspension-trainer-suspended-exercises-gifs-2/" },
+      notes: "Body straight; don't let hips sag or pike.",
+      tags: ["Core"],
+      type: "suspension",
+      reps: "20–40 s hold",
+      trx: { hold: true }
+    },
+    "hip-flexor-stretch": {
+      name: "Half-Kneeling Hip Flexor Stretch",
+      gifUrl: "https://spotebi.com/wp-content/uploads/2015/03/hip-flexor-stretch-exercise-illustration.gif",
+      attribution: { label: "Spotebi", url: "https://www.spotebi.com/exercise-guide/hip-flexor-stretch/" },
+      notes: "Squeeze the glute of the back leg.",
+      tags: ["Hip flexors", "Mobility"],
+      type: "mobility"
+    },
+    "mcgill-curl-up": {
+      name: "McGill Curl-Up",
+      gifUrl: "",
+      attribution: { label: "", url: "" },
+      notes: "One knee bent, hands under lower back; lift head and shoulders only slightly.",
+      tags: ["Core", "Spine-friendly"],
+      type: "mobility"
+    },
+    "side-plank": {
+      name: "Side Plank",
+      gifUrl: "https://spotebi.com/wp-content/uploads/2014/10/side-plank-exercise-illustration.gif",
+      attribution: { label: "Spotebi", url: "https://www.spotebi.com/exercise-guide/side-plank/" },
+      notes: "From knees if needed.",
+      tags: ["Core", "Obliques"],
+      type: "hold"
+    },
+    "open-book": {
+      name: "Open Book Thoracic Rotation",
+      gifUrl: "",
+      attribution: { label: "", url: "" },
+      notes: "Lying on side, rotate top arm open.",
+      tags: ["Thoracic spine", "Mobility"],
+      type: "mobility"
+    },
+    "dowel-hip-hinge": {
+      name: "Dowel Hip Hinge",
+      gifUrl: "",
+      attribution: { label: "", url: "" },
+      notes: "Dowel touches head, upper back, and tailbone throughout.",
+      tags: ["Hinge pattern", "Mobility"],
+      type: "mobility"
     }
   };
 
   // === PROGRAM CONFIG ===============================================
-  // SPEC §4.2 mobility circuit (on Tue/Thu only) + §4.3 workouts
-  // (Phase 2 set counts; weeks 1–4 use 2 sets).
+  // SPEC §4.6 sitting recovery routine (on Tue/Thu, 2 rounds) + §4.3
+  // workouts (Phase 2 set counts; weeks 1–4 use 2 sets).
+  // Alternatives per SPEC §4.5, TRX alternatives per §4.5.1.
 
-  const MOBILITY = [
-    { exercise: "cat-cow",           sets: "1", reps: "8–10" },
-    { exercise: "bird-dog",          sets: "1", reps: "6 / side" },
-    { exercise: "glute-bridge",      sets: "1", reps: "10" },
-    { exercise: "bodyweight-squat",  sets: "1", reps: "10" }
+  const RECOVERY = [
+    { exercise: "hip-flexor-stretch", prescription: "30 s per side" },
+    { exercise: "glute-bridge",       prescription: "12 reps" },
+    { exercise: "mcgill-curl-up",     prescription: "5 holds × 8–10 s" },
+    { exercise: "side-plank",         prescription: "15–20 s per side" },
+    { exercise: "bird-dog",           prescription: "5 per side, 8–10 s hold" },
+    { exercise: "open-book",          prescription: "5 per side" },
+    { exercise: "band-pull-apart",    prescription: "15 reps" },
+    { exercise: "dowel-hip-hinge",    prescription: "5 reps" }
   ];
 
   const WORKOUTS = {
     A: {
       label: "Workout A – Full body",
       slots: [
-        { slot: 1, exercise: "goblet-squat",        sets: "3", reps: "8–12",    alternatives: ["leg-press", "box-squat"] },
-        { slot: 2, exercise: "db-bench-press",      sets: "3", reps: "8–12",    alternatives: [] },
-        { slot: 3, exercise: "db-romanian-deadlift",sets: "3", reps: "8–10",    alternatives: ["hip-thrust", "cable-pull-through", "back-extension-45"] },
-        { slot: 4, exercise: "chest-supported-row", sets: "3", reps: "10–12",   alternatives: ["seated-cable-row", "machine-row"] },
-        { slot: 5, exercise: "dead-bug",            sets: "2", reps: "8 / side", alternatives: [] }
+        { slot: 1, superset: 1, exercise: "goblet-squat",         sets: "3", reps: "8–12",     alternatives: ["leg-press", "box-squat"],            trxAlternatives: ["trx-squat"] },
+        { slot: 2, superset: 1, exercise: "db-bench-press",       sets: "3", reps: "8–12",     alternatives: [],                                   trxAlternatives: ["trx-chest-press"] },
+        { slot: 3, superset: 2, exercise: "db-romanian-deadlift", sets: "3", reps: "8–10",     alternatives: ["hip-thrust", "cable-pull-through"], trxAlternatives: ["trx-hamstring-curl"] },
+        { slot: 4, superset: 2, exercise: "chest-supported-row",  sets: "3", reps: "10–12",    alternatives: ["seated-cable-row", "machine-row"],  trxAlternatives: ["trx-row"] },
+        { slot: 5, superset: 3, exercise: "dead-bug",             sets: "2", reps: "8 / side", alternatives: [],                                   trxAlternatives: ["trx-plank"] },
+        { slot: 6, superset: 3, exercise: "face-pull",            sets: "2", reps: "12–15",    alternatives: ["reverse-pec-deck", "band-pull-apart"], trxAlternatives: ["trx-face-pull"] }
       ]
     },
     B: {
       label: "Workout B – Full body",
       slots: [
-        { slot: 1, exercise: "leg-press",                sets: "3", reps: "10–12",   alternatives: [] },
-        { slot: 2, exercise: "lat-pulldown",             sets: "3", reps: "10–12",   alternatives: [] },
-        { slot: 3, exercise: "hip-thrust",               sets: "3", reps: "10–12",   alternatives: [] },
-        { slot: 4, exercise: "seated-db-shoulder-press", sets: "3", reps: "8–12",    alternatives: ["machine-shoulder-press", "landmine-press"] },
-        { slot: 5, exercise: "pallof-press",             sets: "2", reps: "10 / side", alternatives: [] }
+        { slot: 1, superset: 1, exercise: "leg-press",                sets: "3", reps: "10–12",  alternatives: [],                                            trxAlternatives: ["trx-bulgarian-split-squat"] },
+        { slot: 2, superset: 1, exercise: "lat-pulldown",             sets: "3", reps: "10–12",  alternatives: [],                                            trxAlternatives: ["trx-high-row"] },
+        { slot: 3, superset: 2, exercise: "hip-thrust",               sets: "3", reps: "10–12",  alternatives: [],                                            trxAlternatives: ["trx-hip-thrust"] },
+        { slot: 4, superset: 2, exercise: "seated-db-shoulder-press", sets: "3", reps: "8–12",   alternatives: ["machine-shoulder-press", "landmine-press"],  trxAlternatives: [] },
+        { slot: 5, superset: 3, exercise: "pushup",                   sets: "3", reps: "10–20",  alternatives: ["machine-chest-press", "pallof-press"],       trxAlternatives: ["trx-chest-press"] },
+        { slot: 6, superset: 3, exercise: "back-extension-45",        sets: "2", reps: "10–15",  alternatives: ["machine-back-extension", "bird-dog-weighted-hold"], trxAlternatives: [] }
       ]
     },
     C: {
       label: "Workout C – Full body",
       slots: [
-        { slot: 1, exercise: "trap-bar-deadlift", sets: "3", reps: "6–10",   alternatives: ["bulgarian-split-squat", "leg-press"] },
-        { slot: 2, exercise: "incline-db-press",  sets: "3", reps: "8–12",   alternatives: [] },
-        { slot: 3, exercise: "reverse-lunge",     sets: "2", reps: "8 / leg", alternatives: ["split-squat", "step-up"] },
-        { slot: 4, exercise: "seated-cable-row",  sets: "3", reps: "10–12",  alternatives: [] },
-        { slot: 5, exercise: "farmer-carry",      sets: "3", reps: "40 m",   alternatives: ["suitcase-carry"] }
+        { slot: 1, superset: 1,    exercise: "trap-bar-deadlift", sets: "3", reps: "6–10",    alternatives: ["bulgarian-split-squat", "leg-press"], trxAlternatives: [] },
+        { slot: 2, superset: 1,    exercise: "incline-db-press",  sets: "3", reps: "8–12",    alternatives: [],                                   trxAlternatives: ["trx-chest-press"] },
+        { slot: 3, superset: 2,    exercise: "reverse-lunge",     sets: "2", reps: "8 / leg", alternatives: ["split-squat", "step-up"],           trxAlternatives: ["trx-reverse-lunge"] },
+        { slot: 4, superset: 2,    exercise: "seated-cable-row",  sets: "3", reps: "10–12",   alternatives: [],                                   trxAlternatives: ["trx-row"] },
+        { slot: 5, superset: null, exercise: "farmer-carry",      sets: "3", reps: "40 m",    alternatives: ["suitcase-carry"],                   trxAlternatives: [] }
       ]
     }
   };
 
-  const MOBILITY_LABEL = "Mobility – back-friendly";
+  const RECOVERY_LABEL = "Sitting recovery · ~10 min, 2 rounds";
 
   // Fixed weekday mapping for this viewer: "A"/"B"/"C" = gym workout,
-  // "M" = mobility day, null = pure rest.
+  // "M" = recovery day (session keys "M1"/"M2"), null = pure rest.
   const DAY_PLAN = {
     Monday:    "A",
     Tuesday:   "M",
@@ -925,13 +1542,17 @@
 
   // === STATE & STORAGE ==============================================
   let currentDayName = null;
-  let currentSessionKey = null; // "A" | "B" | "C" | "M" | null
+  let currentSessionKey = null; // "A" | "B" | "C" | "M1" | "M2" | null
+  let currentRound = 1;         // recovery day round (1 | 2)
   let flatExercises = [];   // { phaseName, phaseKind, exercise (resolved), slot }
   let currentIndex = 0;
 
-  const PROGRESS_KEY = "strengthV01Progress";
+  const PROGRESS_KEY = "strengthV02Progress";
   const SWAPS_KEY = "strengthV01Swaps";
 
+  const appHeaderEl = document.getElementById("appHeader");
+  const headerToggleEl = document.getElementById("headerToggle");
+  const headerCompactTextEl = document.getElementById("headerCompactText");
   const todayLabelEl = document.getElementById("todayLabel");
   const workoutTitleEl = document.getElementById("workoutTitle");
   const phaseLabelEl = document.getElementById("phaseLabel");
@@ -944,7 +1565,9 @@
   }
 
   function getTodayKey() {
-    return new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+    // Local date (not toISOString — that can roll into the next UTC day)
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
   }
 
   function loadJson(key) {
@@ -990,7 +1613,12 @@
   function getSwap(letter, slot) {
     const swaps = getSwaps();
     const id = swaps[`${letter}-${slot}`];
-    return id && EXERCISES[id] ? id : null;
+    if (!id || !EXERCISES[id]) return null;
+    // Ignore stale swaps: id must be in this slot's current alternative groups
+    const slotData = WORKOUTS[letter] && WORKOUTS[letter].slots.find(s => s.slot === slot);
+    if (!slotData) return null;
+    const valid = slotData.alternatives.concat(slotData.trxAlternatives);
+    return valid.includes(id) ? id : null;
   }
 
   function setSwap(letter, slot, exerciseId) {
@@ -1017,14 +1645,16 @@
   }
 
   // === RENDER HELPERS ===============================================
-  function buildMobilityExercises() {
-    return MOBILITY.map(w => ({
-      phaseName: "Mobility (~5–10 min)",
+  function buildRecoveryExercises() {
+    return RECOVERY.map(w => ({
+      phaseName: `Recovery · Round ${currentRound}`,
+      chipText: `Recovery · Round ${currentRound}`,
+      ssClass: "",
       phaseKind: "mobility",
       slot: null,
-      sets: w.sets,
-      reps: w.reps,
+      prescription: w.prescription,
       alternatives: [],
+      trxAlternatives: [],
       exercise: EXERCISES[w.exercise]
     }));
   }
@@ -1032,19 +1662,28 @@
   function buildGymExercises(letter) {
     const result = [];
     const slots = WORKOUTS[letter].slots;
-    slots.forEach((s, i) => {
-      const phaseName = i < 2 ? "Superset 1" : i < 4 ? "Superset 2" : "Finisher";
+    // ramp-up hint goes on the first slot of Supersets 1 and 2 (SPEC §5.5)
+    const rampSlots = [1, 2].map(n =>
+      slots.find(s => s.superset === n)).map(s => s && s.slot);
+    slots.forEach((s) => {
+      const phaseName = s.superset ? `Superset ${s.superset}` : "Finisher";
       // partner = the other slot in the same superset (name resolved at render so swaps show)
-      const partnerSlot = i < 4 ? slots[i % 2 === 0 ? i + 1 : i - 1] : null;
+      const partnerSlot = slots.find(o => o !== s && o.superset === s.superset) || null;
+      const ssGroup = s.superset ? slots.filter(o => o.superset === s.superset) : [s];
       result.push({
         phaseName,
         phaseKind: "work",
+        ssClass: s.superset ? `ss${s.superset}` : "",
+        chipText: s.superset
+          ? `Superset ${s.superset} · ${ssGroup.indexOf(s) + 1} of ${ssGroup.length}`
+          : "Finisher",
         slot: s.slot,
         slotData: s,
         sets: s.sets,
-        reps: s.reps,
         alternatives: s.alternatives,
+        trxAlternatives: s.trxAlternatives,
         partnerSlot,
+        rampSlot: rampSlots.includes(s.slot),
         exercise: resolveExercise(letter, s)
       });
     });
@@ -1077,7 +1716,7 @@
       btn.type = "button";
       btn.dataset.day = dayName;
       btn.setAttribute("aria-label", dayName +
-        (gym ? ` – Workout ${plan}` : mobility ? " – Mobility" : " – Rest day"));
+        (gym ? ` – Workout ${plan}` : mobility ? " – Recovery" : " – Rest day"));
       btn.innerHTML = `<span class="dot"></span>${dayName.slice(0,3)}`;
       btn.addEventListener("click", () => loadDay(dayName));
       daySelectorEl.appendChild(btn);
@@ -1095,22 +1734,48 @@
   function renderDots() {
     if (!flatExercises.length) return "";
     return flatExercises
-      .map((_, idx) => `<span class="dot-indicator ${idx === currentIndex ? "active" : ""}"></span>`)
+      .map((_, idx) =>
+        `<button type="button" class="dot-indicator ${idx === currentIndex ? "active" : ""}" data-idx="${idx}" aria-label="Go to exercise ${idx + 1}"></button>`)
       .join("");
+  }
+
+  function sessionShortLabel() {
+    if (currentSessionKey === "M1" || currentSessionKey === "M2")
+      return `Recovery · Round ${currentRound}`;
+    if (WORKOUTS[currentSessionKey]) return `Workout ${currentSessionKey}`;
+    return "Rest day";
+  }
+
+  function updateHeaderCompact() {
+    if (!headerCompactTextEl) return;
+    let text = `${currentDayName.slice(0, 3)} · ${sessionShortLabel()}`;
+    if (flatExercises.length) {
+      const { completedCount, total } = computeSessionCompletion();
+      text += ` · ${completedCount}/${total}` +
+        (currentSessionKey.startsWith("M") ? "" : " done");
+    }
+    headerCompactTextEl.textContent = text;
   }
 
   function updateProgressSummary() {
     if (!progressSummaryEl) return;
     if (!flatExercises.length) {
       progressSummaryEl.textContent = "Rest day – no gym session today.";
+      updateHeaderCompact();
       return;
     }
     const { completedCount, total } = computeSessionCompletion();
-    const sessionLabel = currentSessionKey === "M" ? "Mobility" : `Workout ${currentSessionKey}`;
+    const sessionLabel = sessionShortLabel();
     progressSummaryEl.innerHTML = `
-      <span>${sessionLabel}: ${completedCount}/${total} exercises done</span>
+      <span>${sessionLabel}: ${completedCount}/${total} ${currentSessionKey.startsWith("M") ? "done" : "exercises done"}</span>
       <span class="dots">${renderDots()}</span>
     `;
+    updateHeaderCompact();
+  }
+
+  function collapseHeader() {
+    appHeaderEl.classList.remove("expanded");
+    headerToggleEl.setAttribute("aria-expanded", "false");
   }
 
   function imgTag(src, alt, cls) {
@@ -1129,19 +1794,21 @@
         <li>Bollyx dance class</li>
         <li>A longer hike</li>
         <li>8,000–10,000 steps at an easy pace</li>
+        <li>Take at least one full rest day this week (an easy walk is fine).</li>
       </ul>
       ${next ? `<div class="next-up">Next: ${next.dayName} – Workout ${next.letter}</div>` : ""}
     `;
     contentAreaEl.appendChild(restDiv);
   }
 
-  function renderAlternativesPanel(item, currentId) {
+  function renderAlternativesPanel(item, currentId, group) {
     const originalId = item.slotData.exercise;
-    const currentIsOriginal = currentId === originalId;
-    // List alternatives; when swapped, also list the original to switch back.
-    const ids = currentIsOriginal
-      ? item.alternatives
-      : [originalId, ...item.alternatives];
+    const groupIds = item[group] || [];
+    // When swapped, prepend the original to the group the swap came from
+    // so it stays reachable from the list it was swapped from.
+    const ids = groupIds.includes(currentId)
+      ? [originalId, ...groupIds]
+      : groupIds;
 
     return ids.map(id => {
       const ex = EXERCISES[id];
@@ -1163,48 +1830,73 @@
     }).join("");
   }
 
-  function renderExerciseOrRestCard() {
-    contentAreaEl.innerHTML = "";
+  // === CARD + CAROUSEL ==============================================
+  // All cards of the day live in one horizontal scroll-snap track.
 
-    if (!currentSessionKey || !flatExercises.length) {
-      renderRestCard();
-      updatePhaseChip();
-      updateProgressSummary();
-      return;
-    }
-
-    const item = flatExercises[currentIndex];
+  function buildCard(item, idx) {
     const slotData = item.slotData || null;
     const exercise = slotData ? resolveExercise(currentSessionKey, slotData) : item.exercise;
     const currentId = slotData ? (getSwap(currentSessionKey, slotData.slot) || slotData.exercise) : null;
-    const total = flatExercises.length;
-    const done = isExerciseDone(currentIndex);
+    const done = isExerciseDone(idx);
     const swapped = slotData && currentId !== slotData.exercise;
 
-    const supersetNote = item.partnerSlot
-      ? ` Alternate with ${resolveExercise(currentSessionKey, item.partnerSlot).name}; rest 60–90 s between rounds.`
+    const partner = slotData && item.partnerSlot
+      ? resolveExercise(currentSessionKey, item.partnerSlot)
+      : null;
+    const supersetNote = partner
+      ? ` Alternate with ${partner.name}; rest 60–90 s between rounds.`
       : "";
-    const setsHint = item.phaseKind === "work"
+    // SPEC §4.5.1: tip when both exercises in a superset resolved to TRX
+    const trxPairTip = partner && exercise.type === "suspension" && partner.type === "suspension"
+      ? `<div class="pairing-tip">Both use the TRX; if the station is shared, alternate with the dumbbell version.</div>`
+      : "";
+    const setsHint = item.phaseKind === "work" && Number(item.sets) > 2
       ? `<span class="sets-hint">(2 sets in weeks 1–4)</span>`
       : "";
+    const metaHtml = item.prescription
+      ? `<strong>${item.prescription}</strong><span>Per round</span>`
+      : `<strong>${item.sets} × ${exercise.reps ?? (slotData ? slotData.reps : "")}</strong><span>Sets × Reps</span>${setsHint}`;
+
+    const RAMP_TYPES = ["dumbbell", "barbell", "machine", "cable"];
+    const rampHint = item.rampSlot && RAMP_TYPES.includes(exercise.type)
+      ? `<div class="ramp-hint">${exercise.startsAtZero ? "Once loaded: " : ""}Before your first set: ~50% × 8, then ~75% × 4 of your working weight.</div>`
+      : "";
+    const startLine = exercise.start
+      ? `<div class="start-line">New to this? Start: ${exercise.start}</div>`
+      : "";
+    const trxLine = exercise.trx
+      ? `<div class="start-line">${exercise.trx.hold
+          ? "Hold; no levels."
+          : `Level: start at 2 of 5 — ${exercise.trx.levels}`}</div>`
+      : "";
+    const ladderHtml = exercise.ladder
+      ? `<div class="start-line">${exercise.rationale}</div>
+         <details class="ladder"><summary>Pushup ladder</summary>
+           <ul>${exercise.ladder.map(l =>
+             `<li><strong>L${l.level}</strong> ${l.variation} — ${l.reps}${l.cue ? ` · ${l.cue}` : ""}</li>`).join("")}</ul>
+         </details>`
+      : "";
+
+    const altButtons = [];
+    if (item.alternatives && item.alternatives.length)
+      altButtons.push(`<button class="alt-toggle opt" type="button" data-group="alternatives" aria-expanded="false">Options <span class="alt-badge">${item.alternatives.length}</span></button>`);
+    if (item.trxAlternatives && item.trxAlternatives.length)
+      altButtons.push(`<button class="alt-toggle trx" type="button" data-group="trxAlternatives" aria-expanded="false">TRX <span class="alt-badge">${item.trxAlternatives.length}</span></button>`);
 
     const card = document.createElement("div");
-    card.className = "exercise-card" + (done ? " done" : "");
-    card.setAttribute("data-card", "exercise");
+    card.className = "exercise-card" + (item.ssClass ? ` ${item.ssClass}` : "") + (done ? " done" : "");
+    card.dataset.index = idx;
     card.innerHTML = `
       ${done ? `<div class="done-flag"><span></span>Done</div>` : ""}
       <div class="exercise-header">
         <div>
           <div class="exercise-title">${exercise.name}</div>
           <div class="phase-chip">
-            ${item.phaseName}
-            <small>• #${currentIndex + 1} of ${total}</small>
+            ${item.chipText || item.phaseName}
           </div>
         </div>
         <div class="exercise-meta">
-          <strong>${item.sets} × ${item.reps}</strong>
-          <span>Sets × Reps</span>
-          ${setsHint}
+          ${metaHtml}
         </div>
       </div>
 
@@ -1223,150 +1915,218 @@
 
       <div class="exercise-body">
         ${(exercise.notes || "") + supersetNote}
+        ${rampHint}
+        ${startLine}
+        ${trxLine}
+        ${trxPairTip}
+        ${ladderHtml}
         ${exercise.tags && exercise.tags.length
           ? `<div class="tags">${exercise.tags.map(t => `<span class="tag">${t}</span>`).join("")}</div>`
           : ""}
         ${swapped
-          ? `<div class="swap-note">Swapped from ${EXERCISES[slotData.exercise].name} · <button type="button" id="revertBtn">Revert</button></div>`
+          ? `<div class="swap-note">Swapped from ${EXERCISES[slotData.exercise].name} · <button type="button" class="revert-btn">Revert</button></div>`
           : ""}
       </div>
 
-      ${item.alternatives.length
-        ? `<button class="alt-toggle" type="button" id="altToggle" aria-expanded="false" aria-controls="altPanel">
-             Alternatives (${item.alternatives.length}) <span aria-hidden="true">▾</span>
-           </button>
-           <div class="alt-panel" id="altPanel" hidden>${renderAlternativesPanel(item, currentId)}</div>`
-        : ""}
+      ${altButtons.length ? `<div class="alt-row">${altButtons.join("")}</div>` : ""}
+      ${item.alternatives && item.alternatives.length
+        ? `<div class="alt-panel" data-group="alternatives" hidden>${renderAlternativesPanel(item, currentId, "alternatives")}</div>` : ""}
+      ${item.trxAlternatives && item.trxAlternatives.length
+        ? `<div class="alt-panel" data-group="trxAlternatives" hidden>${renderAlternativesPanel(item, currentId, "trxAlternatives")}</div>` : ""}
 
       <div class="done-row">
         <label class="done-toggle">
-          <input type="checkbox" id="doneCheckbox" ${done ? "checked" : ""} />
+          <input type="checkbox" class="done-checkbox" ${done ? "checked" : ""} />
           <span class="checkmark"></span>
           <span class="done-label-text">Mark this exercise as done</span>
         </label>
       </div>
-
-      <div class="bottom-bar">
-        <div class="nav-buttons">
-          <button class="btn" id="prevBtn" type="button" aria-label="Previous exercise">
-            <span class="icon">⟵</span> Prev
-          </button>
-          <button class="btn btn-primary" id="nextBtn" type="button" aria-label="Next exercise">
-            Next <span class="icon">⟶</span>
-          </button>
-        </div>
-        <div class="status">
-          <div class="dots">${renderDots()}</div>
-          <div style="margin-top:3px;">Exercise ${currentIndex + 1}/${total}</div>
-        </div>
-      </div>
     `;
-
-    contentAreaEl.appendChild(card);
-    updatePhaseChip();
-    updateProgressSummary();
-    hookInteractions(card);
+    return card;
   }
 
-  function hookInteractions(card) {
-    if (!flatExercises.length) return;
+  function renderTrack() {
+    contentAreaEl.innerHTML = "";
 
-    const prevBtn = card.querySelector("#prevBtn");
-    const nextBtn = card.querySelector("#nextBtn");
-    const doneCheckbox = card.querySelector("#doneCheckbox");
-    const altToggle = card.querySelector("#altToggle");
-    const altPanel = card.querySelector("#altPanel");
-    const revertBtn = card.querySelector("#revertBtn");
+    if (!currentSessionKey || !flatExercises.length) {
+      renderRestCard();
+      updatePhaseChip();
+      updateProgressSummary();
+      return;
+    }
 
-    prevBtn.disabled = currentIndex === 0;
-    nextBtn.disabled = currentIndex === flatExercises.length - 1;
+    const isRecovery = currentSessionKey === "M1" || currentSessionKey === "M2";
+    if (isRecovery) {
+      const roundBar = document.createElement("div");
+      roundBar.className = "round-bar";
+      roundBar.innerHTML = `
+        <div class="round-toggle" role="group" aria-label="Recovery round">
+          <button type="button" class="round-btn ${currentRound === 1 ? "active" : ""}" data-round="1">Round 1</button>
+          <button type="button" class="round-btn ${currentRound === 2 ? "active" : ""}" data-round="2">Round 2</button>
+        </div>
+        <div class="equipment-note">You'll need: resistance band, mat, dowel/broomstick</div>`;
+      contentAreaEl.appendChild(roundBar);
+      roundBar.addEventListener("click", (e) => {
+        const btn = e.target.closest(".round-btn");
+        if (!btn) return;
+        const round = Number(btn.dataset.round);
+        if (round === currentRound) return;
+        currentRound = round;
+        currentSessionKey = `M${round}`;
+        flatExercises = buildRecoveryExercises();
+        renderTrack(); // keeps currentIndex
+      });
+    }
 
-    prevBtn.addEventListener("click", () => goToExercise(currentIndex - 1));
-    nextBtn.addEventListener("click", () => goToExercise(currentIndex + 1));
+    const track = document.createElement("div");
+    track.className = "track";
+    flatExercises.forEach((item, idx) => track.appendChild(buildCard(item, idx)));
+    contentAreaEl.appendChild(track);
 
-    if (doneCheckbox) {
-      doneCheckbox.addEventListener("change", (e) => {
-        const isDone = e.target.checked;
-        setExerciseDone(currentIndex, isDone);
-        if (isDone) {
-          card.classList.add("done");
-          if (!card.querySelector(".done-flag")) {
-            const flag = document.createElement("div");
-            flag.className = "done-flag";
-            flag.innerHTML = `<span></span>Done`;
-            card.appendChild(flag);
-          }
-        } else {
-          card.classList.remove("done");
-          const flag = card.querySelector(".done-flag");
-          if (flag) flag.remove();
+    const bottomBar = document.createElement("div");
+    bottomBar.className = "bottom-bar";
+    bottomBar.innerHTML = `
+      <div class="nav-buttons">
+        <button class="btn" id="prevBtn" type="button" aria-label="Previous exercise">
+          <span class="icon">⟵</span> Prev
+        </button>
+        <button class="btn btn-primary" id="nextBtn" type="button" aria-label="Next exercise">
+          Next <span class="icon">⟶</span>
+        </button>
+      </div>
+      <div class="status">
+        <div class="dots" id="bottomDots">${renderDots()}</div>
+        <div style="margin-top:3px;" id="bottomStatus"></div>
+      </div>`;
+    contentAreaEl.appendChild(bottomBar);
+
+    wireTrack(track);
+    bottomBar.querySelector("#prevBtn").addEventListener("click", () => goToExercise(currentIndex - 1));
+    bottomBar.querySelector("#nextBtn").addEventListener("click", () => goToExercise(currentIndex + 1));
+    bottomBar.querySelector("#bottomDots").addEventListener("click", (e) => {
+      const dot = e.target.closest(".dot-indicator");
+      if (dot) goToExercise(Number(dot.dataset.idx));
+    });
+
+    updatePhaseChip();
+    updateProgressSummary();
+    updateCarouselNav();
+    // restore position to the same card without animation
+    requestAnimationFrame(() => scrollToIndex(currentIndex, false));
+  }
+
+  function wireTrack(track) {
+    let scrollRaf = null;
+    track.addEventListener("scroll", () => {
+      if (scrollRaf) return;
+      scrollRaf = requestAnimationFrame(() => {
+        scrollRaf = null;
+        const idx = indexFromScroll(track);
+        if (idx !== currentIndex) {
+          currentIndex = idx;
+          updatePhaseChip();
+          updateCarouselNav();
         }
       });
-    }
-
-    if (altToggle && altPanel) {
-      altToggle.addEventListener("click", () => {
-        const opening = altPanel.hidden;
-        altPanel.hidden = !opening;
-        altToggle.setAttribute("aria-expanded", String(opening));
-      });
-      altPanel.addEventListener("click", (e) => {
-        const btn = e.target.closest(".alt-use");
-        if (!btn || btn.disabled) return;
-        const item = flatExercises[currentIndex];
-        const newId = btn.dataset.exerciseId;
-        const original = WORKOUTS[currentSessionKey].slots.find(s => s.slot === item.slot);
-        setSwap(currentSessionKey, item.slot,
-          newId === original.exercise ? null : newId);
-        renderExerciseOrRestCard();
-      });
-    }
-
-    if (revertBtn) {
-      revertBtn.addEventListener("click", () => {
-        const item = flatExercises[currentIndex];
-        setSwap(currentSessionKey, item.slot, null);
-        renderExerciseOrRestCard();
-      });
-    }
-
-    // Swipe handling
-    let touchStartX = 0;
-    let touchStartY = 0;
-    let isSwiping = false;
-
-    card.addEventListener("touchstart", (e) => {
-      if (!e.touches || e.touches.length === 0) return;
-      const touch = e.touches[0];
-      touchStartX = touch.clientX;
-      touchStartY = touch.clientY;
-      isSwiping = true;
     }, { passive: true });
 
-    card.addEventListener("touchend", (e) => {
-      if (!isSwiping) return;
-      isSwiping = false;
+    track.addEventListener("click", (e) => {
+      const card = e.target.closest(".exercise-card");
+      if (!card) return;
+      const idx = Number(card.dataset.index);
+      const item = flatExercises[idx];
 
-      const touch = e.changedTouches[0];
-      const dx = touch.clientX - touchStartX;
-      const dy = touch.clientY - touchStartY;
-      const absDx = Math.abs(dx);
-      const absDy = Math.abs(dy);
-
-      if (absDx > 40 && absDx > absDy) {
-        if (dx < 0 && currentIndex < flatExercises.length - 1) {
-          goToExercise(currentIndex + 1);
-        } else if (dx > 0 && currentIndex > 0) {
-          goToExercise(currentIndex - 1);
+      const toggle = e.target.closest(".alt-toggle");
+      if (toggle) {
+        const group = toggle.dataset.group;
+        const panel = card.querySelector(`.alt-panel[data-group="${group}"]`);
+        const opening = panel && panel.hidden;
+        // opening one panel closes the other (and resets button states)
+        card.querySelectorAll(".alt-panel").forEach(p => p.hidden = true);
+        card.querySelectorAll(".alt-toggle").forEach(t => {
+          t.classList.remove("active");
+          t.setAttribute("aria-expanded", "false");
+        });
+        if (opening) {
+          panel.hidden = false;
+          toggle.classList.add("active");
+          toggle.setAttribute("aria-expanded", "true");
         }
+        return;
       }
-    }, { passive: true });
+
+      const useBtn = e.target.closest(".alt-use");
+      if (useBtn && !useBtn.disabled && item.slotData) {
+        const newId = useBtn.dataset.exerciseId;
+        setSwap(currentSessionKey, item.slotData.slot,
+          newId === item.slotData.exercise ? null : newId);
+        renderTrack(); // partner text + pairing tip live on other cards too
+        return;
+      }
+
+      if (e.target.closest(".revert-btn") && item.slotData) {
+        setSwap(currentSessionKey, item.slotData.slot, null);
+        renderTrack();
+      }
+    });
+
+    track.addEventListener("change", (e) => {
+      const card = e.target.closest(".exercise-card");
+      if (!card || !e.target.matches(".done-checkbox")) return;
+      const idx = Number(card.dataset.index);
+      const isDone = e.target.checked;
+      setExerciseDone(idx, isDone); // writes its own card's index
+      card.classList.toggle("done", isDone);
+      let flag = card.querySelector(".done-flag");
+      if (isDone && !flag) {
+        flag = document.createElement("div");
+        flag.className = "done-flag";
+        flag.innerHTML = `<span></span>Done`;
+        card.appendChild(flag);
+      } else if (!isDone && flag) {
+        flag.remove();
+      }
+    });
+  }
+
+  function indexFromScroll(track) {
+    const center = track.scrollLeft + track.clientWidth / 2;
+    let best = 0, bestDist = Infinity;
+    Array.from(track.children).forEach((c, i) => {
+      const cCenter = c.offsetLeft + c.offsetWidth / 2;
+      const d = Math.abs(cCenter - center);
+      if (d < bestDist) { bestDist = d; best = i; }
+    });
+    return best;
+  }
+
+  function scrollToIndex(idx, smooth = true) {
+    const track = contentAreaEl.querySelector(".track");
+    if (!track || !track.children[idx]) return;
+    const card = track.children[idx];
+    const left = card.offsetLeft - (track.clientWidth - card.offsetWidth) / 2;
+    track.scrollTo({ left, behavior: smooth ? "smooth" : "auto" });
+  }
+
+  function updateCarouselNav() {
+    const total = flatExercises.length;
+    const prevBtn = contentAreaEl.querySelector("#prevBtn");
+    const nextBtn = contentAreaEl.querySelector("#nextBtn");
+    const status = contentAreaEl.querySelector("#bottomStatus");
+    if (prevBtn) prevBtn.disabled = currentIndex === 0;
+    if (nextBtn) nextBtn.disabled = currentIndex === total - 1;
+    if (status) status.textContent = `Exercise ${currentIndex + 1}/${total}`;
+    document.querySelectorAll(".dot-indicator").forEach(d => {
+      d.classList.toggle("active", Number(d.dataset.idx) === currentIndex);
+    });
   }
 
   function goToExercise(idx) {
     if (idx < 0 || idx >= flatExercises.length) return;
     currentIndex = idx;
-    renderExerciseOrRestCard();
+    updatePhaseChip();
+    updateCarouselNav();
+    scrollToIndex(idx, true);
   }
 
   function loadDay(dayName) {
@@ -1380,9 +2140,11 @@
       flatExercises = buildGymExercises(currentSessionKey);
     } else if (currentSessionKey === "M") {
       const next = nextGymDay(dayName);
-      workoutTitleEl.textContent = MOBILITY_LABEL +
+      currentRound = 1;
+      currentSessionKey = "M1";
+      workoutTitleEl.textContent = RECOVERY_LABEL +
         (next ? ` · Next: ${next.dayName} – Workout ${next.letter}` : "");
-      flatExercises = buildMobilityExercises();
+      flatExercises = buildRecoveryExercises();
     } else {
       workoutTitleEl.textContent = "Rest / activity day";
       flatExercises = [];
@@ -1392,7 +2154,8 @@
       btn.classList.toggle("active", btn.dataset.day === currentDayName);
     });
 
-    renderExerciseOrRestCard();
+    collapseHeader(); // picking a day collapses the header
+    renderTrack();
   }
 
   // === INIT =========================================================
@@ -1402,6 +2165,39 @@
     todayLabelEl.textContent = formatTodayLabel();
     buildDaySelector(startDay);
     loadDay(startDay);
+
+    // Collapsible header: compact row toggles; page scroll auto-collapses.
+    headerToggleEl.addEventListener("click", () => {
+      const expanding = !appHeaderEl.classList.contains("expanded");
+      appHeaderEl.classList.toggle("expanded", expanding);
+      headerToggleEl.setAttribute("aria-expanded", String(expanding));
+    });
+    window.addEventListener("scroll", () => {
+      if (appHeaderEl.classList.contains("expanded") && window.scrollY > 40) {
+        collapseHeader();
+      }
+    }, { passive: true });
+
+    // Theme: "system" | "light" | "dark", persisted in localStorage.
+    const THEME_KEY = "strengthTheme";
+    const themeBtns = Array.from(document.querySelectorAll(".theme-btn"));
+    const mql = window.matchMedia("(prefers-color-scheme: dark)");
+    function applyTheme() {
+      let pref = "system";
+      try { pref = localStorage.getItem(THEME_KEY) || "system"; } catch (e) {}
+      const resolved = pref === "system" ? (mql.matches ? "dark" : "light") : pref;
+      document.documentElement.dataset.theme = resolved;
+      themeBtns.forEach(b =>
+        b.classList.toggle("active", b.dataset.themeOpt === pref));
+    }
+    applyTheme();
+    mql.addEventListener("change", applyTheme);
+    document.getElementById("themeToggle").addEventListener("click", (e) => {
+      const btn = e.target.closest(".theme-btn");
+      if (!btn) return;
+      try { localStorage.setItem(THEME_KEY, btn.dataset.themeOpt); } catch (e) {}
+      applyTheme();
+    });
   })();
 </script>
 </body>
