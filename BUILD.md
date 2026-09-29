@@ -75,7 +75,7 @@ Add one record in the `logbook.me` zone:
 
 ## 5. Create the user, then set OwnerSub
 
-Self-signup is off, so create the single user yourself. The password is read from a prompt (no echo) into a shell variable, never a file.
+Self-signup is off, so create the single user yourself. `private/create-user.sh` (git-ignored; it holds the email and PIN, so keep it out of git) does all of this in one go. The commands below are the same steps done by hand, with the PIN read from a no-echo prompt.
 
 ```bash
 export POOL_ID=<UserPoolId output>
@@ -114,7 +114,7 @@ To reset a forgotten password later, run `admin-set-user-password ... --permanen
 
 ## 6. Fill in `app/js/config.js`
 
-Replace the two placeholders with the stack outputs:
+Already done for the deployed `strength-prod` stack (and the CSP pins its API host). Redo this only if the stack is recreated. Replace the two values with the stack outputs:
 
 ```js
 userPoolClientId: '<UserPoolClientId output>',
@@ -123,7 +123,7 @@ apiUrl: '<ApiUrl output>',        // https://<id>.execute-api.us-west-2.amazonaw
 
 Neither is a secret, so committing them is fine.
 
-Optional hardening: `app/index.html` allows `https://*.execute-api.us-west-2.amazonaws.com` in its Content-Security-Policy because the API id is unknown before the first deploy. Replace that wildcard with your exact API host.
+`app/index.html` pins the API host in its Content-Security-Policy; update it to the new `ApiUrl` host if the stack is recreated.
 
 Try the page locally first if you like. It only shows that the form loads: signing in works from `localhost`, but API calls are blocked by CORS, which allows only the site origin.
 

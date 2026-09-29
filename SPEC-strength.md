@@ -76,7 +76,7 @@ App release versions (v0.x) are separate from spec versions (v1.x in the Changel
 |---|---|---|
 | v0.1 | Shipped (commit `543d99b`) | Spec v1.0 program |
 | v0.2 | Shipped; frozen (bug fixes only) | Spec v1.6 program (Section 4) |
-| v1 | Planned | Full app: logging, progression, history (Sections 5–6) |
+| v1 | In progress | Full app: logging, progression, history (Sections 5–6). Sync spike (milestone 1) is live at https://strength.logbook.me; see DEPLOYMENT-PLAN.md section 13 |
 
 ### 0.C Hosting of v0.x and v1
 - **v0.2 viewer:** the single `index.html` at the repo root stays on GitHub Pages, frozen. Only bug fixes go in; no new features.
