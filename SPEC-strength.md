@@ -1,8 +1,13 @@
-# Recomp Tracker — Product Spec (v1.11)
+# Recomp Tracker — Product Spec (v1.12)
 
 A personal, mobile-first web app for logging gym workouts in a body recomposition program (build lean mass, reduce visceral fat, strengthen the back) and telling the user what to lift next. Used at the gym on a phone and at home on a desktop, with data synced across devices. Activity tracking (steps, Bollyx, hikes, mobility) and body metrics (DEXA, waist, weight) are out of scope: activity is tracked on an Apple Watch, and body metrics are not tracked in this app.
 
 ## Changelog
+- **v1.12**
+  - Time zone: all dates and times use US Pacific time (`America/Los_Angeles`, PDT/PST), including days of the week, program weeks, and the monthly event-file boundary (Section 9, DEPLOYMENT-PLAN.md).
+  - Sign-in is email plus a single permanent 6-digit PIN (Section 6.1).
+  - Hosting: v1 is served at https://strength.logbook.me from a single stack (`strength-prod`); no dev stack (Section 0.C).
+  - Program start date is seeded as 2026-09-28, the day of the first Workout A (Sections 5.1, 6.7, 8).
 - **v1.11**
   - Gym warm-up (4.2) and post-lift cardio (4.4) dropped from the app: not shown, not logged. Their session fields and settings are removed.
   - Recovery routine (4.6) is guidance only: exercise cards with prescription and cues, no done state, no logging, no sync.
@@ -71,11 +76,12 @@ App release versions (v0.x) are separate from spec versions (v1.x in the Changel
 |---|---|---|
 | v0.1 | Shipped (commit `543d99b`) | Spec v1.0 program |
 | v0.2 | Shipped; frozen (bug fixes only) | Spec v1.6 program (Section 4) |
-| v1 | Planned | Full app: logging, progression, history (Sections 5–6) |
+| v1 | In progress | Full app: logging, progression, history (Sections 5–6). Sync spike (milestone 1) is live at https://strength.logbook.me; see DEPLOYMENT-PLAN.md section 13 |
 
 ### 0.C Hosting of v0.x and v1
 - **v0.2 viewer:** the single `index.html` at the repo root stays on GitHub Pages, frozen. Only bug fixes go in; no new features.
 - **v1:** built in `app/` in the same repo (separate `index.html`, JS modules, PWA files) and deployed to S3 + CloudFront with the backend in DEPLOYMENT-PLAN.md. v1 starts from the v0.2 catalog data (copied into `app/js/seed/`) and then diverges.
+- **v1 address:** https://strength.logbook.me (CloudFront alias; DNS is a CNAME at GoDaddy). One stack, `strength-prod`, while the app is unpublished and being tested.
 - When v1 meets the acceptance criteria (Section 11), it replaces the viewer as the daily-use app; the viewer can stay up as a read-only guide.
 
 ### 0.A App v0.1 — Static program viewer (shipped)
@@ -399,7 +405,7 @@ Implement as **pure functions** with unit tests. These rules drive the "suggeste
 ### 5.1 Phases
 - **Phase 1 (program weeks 1–4):** 2 working sets per exercise. Target effort: stop with ~3 reps in reserve (RIR 3).
 - **Phase 2 (week 5 onward):** full set counts from Section 4.3. Target effort: RIR 1–2.
-- Program week = weeks elapsed since `programStartDate` (stored on UserProfile; user-editable).
+- Program week = weeks elapsed since `programStartDate` (stored on UserProfile; user-editable), counted in Pacific-time calendar days. Initial value: **2026-09-28** (a Monday, the first Workout A), so that day is program week 1, Phase 1.
 - Display the current phase and target RIR on the session screen.
 
 ### 5.2 Double progression (weighted exercises)
@@ -580,7 +586,7 @@ Test cases:
 ## 6. Features (v1 scope)
 
 ### 6.1 Authentication and sync
-- Sign-in required (single user today, but data model is per-user).
+- Sign-in required (single user today, but data model is per-user). The user signs in with an email address and a single permanent **6-digit PIN** (Cognito's minimum password length is 6, so a shorter PIN is not possible).
 - Data syncs across phone and desktop via the backend.
 
 ### 6.2 Home / Today screen
@@ -614,7 +620,7 @@ DEXA, waist, and body weight are not tracked in this app.
 - Shows date of last increase, next scheduled increase date (or "off"), and marks each increase on the chart as earned or scheduled.
 
 ### 6.7 Settings
-- Program start date, rest timer default, recovery days (default Tue/Thu), units display (lbs fixed for v1).
+- Program start date (initially 2026-09-28), rest timer default, recovery days (default Tue/Thu), units display (lbs fixed for v1).
 - Per exercise: starting weight, first-loaded weight, load increment.
 - Trap bar weight (default 45 lbs).
 - Deload: show next scheduled deload week; Start deload week now; Postpone 1 week.
@@ -637,7 +643,7 @@ DEXA, waist, and body weight are not tracked in this app.
 
 All records belong to an owner (the signed-in user). Storage is an append-only event log (one event per change, edits are later events on the same entity, state is derived by replaying events); see DEPLOYMENT-PLAN.md. The static seed data below ships with the app code; only user-generated records (sessions, set logs, settings, swaps, deloads) are stored as events.
 
-- **UserProfile**: programStartDate, restTimerDefaultSec, recoveryDays (default [Tue, Thu]), trapBarWeightLbs (default 45), scheduledIncreasesEnabled (default true), scheduledIncreaseDays (default 21)
+- **UserProfile**: programStartDate (initial value 2026-09-28), restTimerDefaultSec, recoveryDays (default [Tue, Thu]), trapBarWeightLbs (default 45), scheduledIncreasesEnabled (default true), scheduledIncreaseDays (default 21)
 - **Exercise**: name, type (dumbbell | barbell | machine | cable | bodyweight | bodyweight_loadable | bodyweight_ladder | suspension | carry | hold | mobility), repMin, repMax, perSide (bool), holdSeconds (nullable), loadIncrementLbs, startingWeightLbs (nullable), firstLoadedWeightLbs (nullable), startingNote (nullable), startingLevel (nullable; suspension, default 2), levelDescription (nullable; suspension), loadsBack (bool), scheduledIncreasesEnabled (default true), cues (optional text)
 - **WorkoutTemplate**: code (A | B | C), name
 - **TemplateSlot**: templateId, slotNumber (1–6), supersetGroup (1 | 2 | 3 | null), exerciseId, phase2Sets, alternativeExerciseIds[]
@@ -655,6 +661,7 @@ Seed data: exercise catalog with cues, starting weights, first-loaded weights, a
 
 ## 9. Non-functional requirements
 - Mobile-first responsive UI; fully usable one-handed on a phone. Works well on desktop too.
+- **Time zone:** all dates and times are US Pacific (`America/Los_Angeles`), stored with an explicit UTC offset (for example `2026-09-28T11:00:00.000-07:00`). Weekdays, the Tuesday/Thursday recovery day, program weeks, and the "date" of a session are Pacific. Timestamps are compared by instant, not as strings, because the offset changes at daylight saving.
 - Installable as a PWA (home screen icon, standalone display).
 - Light and dark mode.
 - Fast: session screen interactive in under 2 seconds on a phone over mobile data.
