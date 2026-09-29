@@ -76,8 +76,11 @@ function wrap(db) {
       const events = tx.objectStore('events');
       const outbox = tx.objectStore('outbox');
       let added = 0;
-      for (const ev of incoming) {
-        if (!isEventLike(ev)) continue;
+      // Fold repeats within the batch first: the reads below all run before any write, so two copies of
+      // one id would both look new.
+      const batch = new Map();
+      for (const ev of incoming) if (isEventLike(ev)) batch.set(ev.id, mergeEvent(batch.get(ev.id), ev));
+      for (const ev of batch.values()) {
         const get = events.get(ev.id);
         get.onsuccess = () => {
           const existing = get.result;
