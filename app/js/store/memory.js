@@ -31,8 +31,9 @@ export function createMemoryStorage({ persistent = false } = {}) {
     // (gaining recvAt if they lacked it); ones we sent are no longer outstanding. Returns how many were new.
     async ingest(incoming, nextCursor) {
       let added = 0;
-      for (const ev of incoming) {
-        if (!isEventLike(ev)) continue;
+      const batch = new Map(); // same folding as idb.js
+      for (const ev of incoming) if (isEventLike(ev)) batch.set(ev.id, mergeEvent(batch.get(ev.id), ev));
+      for (const ev of batch.values()) {
         const existing = events.get(ev.id);
         if (!existing) added++;
         events.set(ev.id, structuredClone(mergeEvent(existing, ev)));
