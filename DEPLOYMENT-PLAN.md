@@ -249,7 +249,36 @@ Spec Section 5 is the rulebook and wins over this section; this section fixes wh
 
 **Inputs and outputs.**
 - Input: `replay(events)` state (`sessions`, `sets`, `settings`, `swaps`, `deloads`), the seed, `today`. Setting keys are in the registry: `programStartDate`, `trapBarWeightLbs`, `scheduledIncreasesEnabled`, `scheduledIncreaseDays`, and per exercise `startingWeight:<id>`, `firstLoadedWeight:<id>`, `loadIncrement:<id>`, `scheduledIncrease:<id>`.
-- Output per exercise: `{ exerciseId, sets, repMin, repMax, perSide, weightLbs | null, level | null, targetReps, source, fromWeightLbs | fromLevel, rampUp: [{ weightLbs, reps }], hints, stalled }`. `source` is the `suggestionSource` vocabulary of the registry (`starting`, `calibration`, `hold`, `earned`, `scheduled`, `reduction`, `deload`, `gated`, or null), because Phase D stores it on `set.logged`. The exact shape is settled in the first engine commit and recorded here.
+- Output per exercise (the shape as built; `app/js/engine/index.js` exports the functions):
+  ```
+  suggestExercise(state, { exerciseId, templateCode, slot, today, backPainBefore? }) ->
+  { exerciseId, type, progression,          // progression: load | bodyweight | ladder | suspension | hold | none
+    sets, repMin, repMax, perSide,          // repMin/repMax null for holds and carries; perSide true = reps per side or leg
+    holdSeconds,                            // { min, max } for the TRX plank, else null
+    targetDistanceM,                        // carries only (40), else null
+    weightLbs, level,                       // the suggestion: weightLbs for loads (null: none, or nothing to pre-fill),
+                                            // level for suspension and the pushup ladder (pushup: 0-5, plus weightLbs at 5)
+    targetReps,                             // null for holds, carries and guidance
+    source,                                 // starting | calibration | hold | earned | scheduled | reduction | deload | gated | null
+    fromWeightLbs, fromLevel,               // the base load or level of the last completed session, null with no history
+    increased,                              // the suggestion is above fromWeightLbs / fromLevel (drives the "up" highlight)
+    incrementLbs,                           // effective load increment (setting or default), null when unloaded
+    rampUp: [{ weightLbs, reps }],          // slots 1 and 3 only (5.5); [] otherwise
+    isCalibration, calibrationSession,      // true and 1 or 2 during an exercise's first two sessions, else false and null
+    hints: [{ code, text }],                // enter-weight, back-pain-gate, harder-variation, slower-lowering, trx-pair, ...
+    stalled, reductionsInWindow,            // 5.10
+    lastIncreaseDate, nextScheduledDate,    // Pacific yyyy-mm-dd or null (nextScheduledDate null when scheduled increases do not apply)
+    pace }                                  // 5.11 group and text, or null
+
+  planSession(state, { today, templateCode, backPainBefore? }) ->
+  { templateCode, today, calendar, banner, backPainBefore,
+    exercises: [{ slot, superset, defaultExerciseId, swapped, ...suggestExercise result }] }
+  calendar = { programStartDate, programWeek, beforeStart, phase, isDeload, targetRir: { min, max },
+               nextDeloadWeek, canPostpone }
+  loggedDefaults(suggestion) -> { suggestedWeightLbs, suggestedLevel, suggestionSource, isCalibration }   // fields for set.logged
+  calibrationPrefill(suggestion, { weightLbs, feel }) -> { weightLbs, source: 'calibration' }           // next set's pre-fill
+  ```
+  `source` is the `suggestionSource` vocabulary of the registry, because Phase D stores it on `set.logged`. `weightLbs` is null and `source` null for unloaded types (dead bug, hold, guidance) and for a swapped-in exercise with no starting weight (the `enter-weight` hint asks for one). Deload weeks: `source: 'deload'`. The calendar helpers (`postponement`, `nextDeloadWeek`) give the payloads and dates for the Start deload / Postpone controls.
 - Suggested layout under `app/js/engine/`: program calendar (week, phase, deload weeks), history (what a session's base load and sets were), suggestion (5.2 to 5.4, 5.6, 5.8, 5.9, 5.12 precedence), ramp-up (5.5), calibration (5.6), stall (5.10), pace (5.11). Free to differ; keep the modules pure and small.
 
 **Decisions made for Phase C.**

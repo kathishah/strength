@@ -133,3 +133,56 @@ describe('the app parses and orders ts exactly like the server', () => {
     assert.ok(Number.isNaN(tsMs('2026-02-30T00:00:00.000-08:00-0000-d_a')));
   });
 });
+
+describe('pacificDate and calendar days', () => {
+  const { pacificDate, pacificDateOf, dayNumber, daysBetween, addDays } = app;
+
+  test('pacificDate agrees with the server formatter, including around midnight and daylight saving', () => {
+    const instants = [
+      '2026-09-29T19:30:00.123Z', '2026-10-01T06:59:59.999Z', '2026-10-01T07:00:00.000Z',
+      '2026-12-01T07:59:59.999Z', '2026-12-01T08:00:00.000Z', '2027-01-01T07:59:59.999Z', '2027-01-01T08:00:00.000Z',
+      '2026-03-08T09:59:59.999Z', '2026-03-08T10:00:00.000Z', '2026-11-01T08:59:59.999Z', '2026-11-01T09:00:00.000Z',
+      '2026-11-01T07:00:00.000Z', '2026-11-02T07:59:59.999Z', '2026-11-02T08:00:00.000Z', '2028-02-29T08:00:00.000Z',
+    ];
+    for (const iso of instants) assert.equal(pacificDate(at(iso)), pacificIso(at(iso)).slice(0, 10), iso);
+    // Every hour for 400 days: the two formatters never disagree.
+    for (let ms = at('2026-01-01T00:00:00Z'); ms < at('2027-02-05T00:00:00Z'); ms += 3600000) {
+      assert.equal(pacificDate(ms), pacificIso(ms).slice(0, 10));
+    }
+  });
+
+  test('the Pacific day is not the UTC day', () => {
+    assert.equal(pacificDate(at('2026-09-29T06:59:59.999Z')), '2026-09-28');
+    assert.equal(pacificDate(at('2026-09-29T07:00:00.000Z')), '2026-09-29');
+    assert.equal(pacificDate(at('2026-12-15T07:59:59.999Z')), '2026-12-14');
+  });
+
+  test('pacificDateOf takes the day of any offset in Pacific time', () => {
+    assert.equal(pacificDateOf('2026-09-28T11:03:00.000-07:00'), '2026-09-28');
+    assert.equal(pacificDateOf('2026-09-29T02:00:00.000Z'), '2026-09-28'); // 19:00 PDT the day before
+    assert.equal(pacificDateOf('2026-12-15T07:30:00.000Z'), '2026-12-14');
+    assert.equal(pacificDateOf('nope'), null);
+    assert.equal(pacificDateOf('2026-02-30T00:00:00.000-08:00'), null);
+  });
+
+  test('daysBetween and addDays count calendar days across daylight saving and leap days', () => {
+    assert.equal(daysBetween('2026-09-28', '2026-09-28'), 0);
+    assert.equal(daysBetween('2026-09-28', '2026-10-05'), 7);
+    assert.equal(daysBetween('2026-10-05', '2026-09-28'), -7);
+    assert.equal(daysBetween('2026-03-07', '2026-03-09'), 2); // spring forward in between
+    assert.equal(daysBetween('2026-10-31', '2026-11-02'), 2); // fall back in between
+    assert.equal(daysBetween('2028-02-28', '2028-03-01'), 2); // leap day
+    assert.equal(daysBetween('2026-01-01', '2027-01-01'), 365);
+    assert.equal(addDays('2026-09-28', 21), '2026-10-19');
+    assert.equal(addDays('2026-12-30', 3), '2027-01-02');
+    assert.equal(addDays('2026-10-19', -21), '2026-09-28');
+  });
+
+  test('malformed or impossible dates are rejected', () => {
+    for (const bad of ['2026-02-30', '2026-13-01', '2026-9-1', '', null, undefined, '2026-09-28T00:00:00Z']) {
+      assert.ok(Number.isNaN(dayNumber(bad)), String(bad));
+    }
+    assert.throws(() => daysBetween('2026-02-30', '2026-03-01'), RangeError);
+    assert.throws(() => addDays('nope', 1), RangeError);
+  });
+});
