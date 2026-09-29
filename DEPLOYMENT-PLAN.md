@@ -133,18 +133,23 @@ There is one stack, **`strength-prod`**, in `us-west-2`; a dev stack is not need
 ```
 index.html                # FROZEN v0.2 viewer, served by GitHub Pages (bug fixes only)
 app/                      # v1, deployed to S3 + CloudFront
-  index.html              # shell, loads js/main.js
-  manifest.webmanifest, sw.js
+  index.html, manifest.webmanifest, css/app.css, icons/     # sw.js arrives in Phase E
   js/
-    engine/               # pure progression functions (spec Section 5), no DOM
-    store/                # events, outbox, replay, sync, auth
-    ui/                   # screens (home, session, history, settings, recovery guidance)
-    seed/                 # catalog, templates, recovery routine, ladder, alternatives
-lambda/events/index.mjs   # both endpoints + validation
+    config.js auth.js api.js ids.js time.js main.js         # Phase A spike, as built (flat)
+    engine/               # pure progression functions (spec Section 5), no DOM       (planned)
+    store/                # events, outbox, replay, sync, auth                          (planned)
+    ui/                   # screens (home, session, history, settings, recovery)        (planned)
+    seed/                 # catalog, templates, recovery routine, ladder, alternatives  (planned)
+lambda/events/            # index.mjs (both endpoints), registry.mjs (types + validators),
+                          # object-store.mjs (S3 interface + adapter), time.mjs (Pacific time)
 infra/template.yaml       # SAM template
-test/                     # node --test (engine, replay, lambda validation)
+scripts/                  # build-events.mjs, post-events.mjs, prompt.mjs (see BUILD.md step 8)
+test/                     # node --test: lambda, registry, time, app modules, scripts
+test-support/             # fake S3 and test builders (outside test/ so node --test does not run them)
+private/                  # git-ignored: personal workout data, create-user.sh (holds the PIN)
+BUILD.md                  # build and deploy commands
 ```
-Tests run with Node's built-in runner (`node --test`), so there is still no bundler or dependency for the front end. `esbuild` is used only to bundle the Lambda.
+Tests run with Node's built-in runner (`node --test`), so there is still no bundler or dependency for the front end. `esbuild` is used only to bundle the Lambda (`sam build`).
 
 ## 9. Delivery phases (each ends deployable)
 | Phase | Spec milestone | Work | Done when |
@@ -157,6 +162,8 @@ Tests run with Node's built-in runner (`node --test`), so there is still no bund
 | E. History and polish | 5 | Exercise history, settings, export, deload controls, PWA manifest and service worker | Spec Section 11 acceptance criteria all pass |
 
 Phase C can start in parallel with A and B, since the engine has no dependencies.
+
+**Status (2026-09-29):** Phase 0 and Phase A are built and deployed as `strength-prod` at `https://strength.logbook.me` (section 13). The owner confirmed a sign-in, a test event, and a sync round trip; cold-start timings and the installed home-screen check were not recorded. Phases B to E are not started.
 
 ## 10. Risks and mitigations
 | Risk | Mitigation |
@@ -185,3 +192,22 @@ Phase C can start in parallel with A and B, since the engine has no dependencies
 ## 12. Open decisions
 1. **Stronger sign-in later:** replace the 6-digit PIN with a longer password or passkey before the app holds anything beyond personal test data or is shared with anyone else.
 2. **Google/Apple sign-in later:** only if the PIN form becomes a nuisance. It would need a hosted-UI redirect (test on the installed iPhone app first), a way to keep unknown Google accounts out, and a fixed data owner instead of one prefix per `sub`.
+
+## 13. As built (Phase 0 and A)
+Deployment facts and behaviours the sections above left open. `BUILD.md` has the commands; `lambda/events/registry.mjs` is the source of truth for event validation.
+
+**Deployed.** Stack `strength-prod` in `us-west-2`; site `https://strength.logbook.me`; the data bucket and user pool are retained on stack deletion. One owner (`OwnerSub` set); the Lambda answers 403 to anyone else and to everyone if it is unset. The stack outputs are the source for `app/js/config.js`, which the app ships with.
+
+**Event log.**
+- The event registry is strict: unknown payload fields are rejected, so adding a field or type is a registry change (and a new `v` if the meaning changes). Payload shapes follow spec Section 8 and 6.7; `setting.changed` accepts only the keys listed in the registry.
+- `entityId` is only pattern-checked by the server. Conventions in use: session events use the session id; `set.logged` and `set.edited` use the set id; `setting.changed` uses `settings` with payload `{ key, value }`.
+- `session.notes` events whose `entityId` starts with `spike_` are Phase A test events; no session refers to them and the engine should ignore them.
+- The log already holds real data: the program start date (`programStartDate` = 2026-09-28) and Workout A of 2026-09-28. Both were loaded with `scripts/`.
+
+**API details.**
+- `POST /events` with an empty `events` array is a 400. A batch whose events are all duplicates writes nothing. A `404` from an `If-Match` write is retried like `412` and `409`; "retry up to 5 times" means 1 try plus 5 retries, then `503` with `Retry-After`.
+- `GET /events` with no events and no `since` returns `cursor: null`; the client keeps no cursor and asks again from the start.
+- Known gap: duplicates are detected only within the current month's file, so a retry after a lost acknowledgment that crosses Pacific midnight on the 1st can store an event twice. **Clients must de-duplicate by event `id`** (this plan already requires it), and replay is unaffected. Fix if wanted: also check the previous month's file on `POST`.
+- Order events by instant with `compareTs` (`registry.mjs`, and `tsMs` in `app/js/time.js`), never as strings (section 4, Time zone).
+
+**Client (Phase A spike).** Sign-in and refresh use `fetch` (`auth.js`); the refresh token is in `localStorage`, the ID token in memory. Sync saves the cursor only after the returned events are stored locally. The spike keeps events in `localStorage` as a cache; Phase B replaces that with IndexedDB and the outbox. `ids.js` makes ULIDs and hybrid-clock `ts` values that the server accepts.
