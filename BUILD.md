@@ -38,7 +38,7 @@ sam build --template-file infra/template.yaml
 
 ## 3. First deploy
 
-`OwnerSub` is empty on purpose: until step 5 the Lambda answers 403 to everything.
+`OwnerSub` is left out on purpose (it defaults to empty): until step 5 the Lambda answers 403 to everything.
 
 ```bash
 sam deploy \
@@ -46,7 +46,7 @@ sam deploy \
   --stack-name "$STACK" --region "$AWS_REGION" \
   --capabilities CAPABILITY_IAM \
   --resolve-s3 --confirm-changeset \
-  --parameter-overrides DomainName="$DOMAIN" CertificateArn="$CERT_ARN" OwnerSub=""
+  --parameter-overrides DomainName="$DOMAIN" CertificateArn="$CERT_ARN"
 ```
 
 Read the outputs (you need them in the next steps):
