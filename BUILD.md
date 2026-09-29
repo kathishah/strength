@@ -1,0 +1,148 @@
+# Build and deploy (v1, Phase 0 + Phase A spike)
+
+Everything here is run by you, from the repo root. Nothing in this repo deploys itself.
+Stack region is `us-west-2`; the CloudFront certificate must be in `us-east-1` (it already is).
+
+Prerequisites: Node 22, [AWS SAM CLI](https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/install-sam-cli.html), AWS CLI v2 with credentials for the account (`export AWS_PROFILE=...` if you use profiles).
+
+Shell variables used below (set them once per terminal; nothing here is a secret):
+
+```bash
+export AWS_REGION=us-west-2
+export STACK=strength-prod                  # or strength-dev
+export DOMAIN=strength.logbook.me           # use "" for a dev stack (then it serves on *.cloudfront.net)
+export CERT_ARN='arn:aws:acm:us-east-1:<account-id>:certificate/<certificate-id>'   # "" for a dev stack
+```
+
+## 1. Test
+
+```bash
+node --test
+```
+
+No dependencies to install for tests.
+
+## 2. Build the Lambda
+
+```bash
+(cd lambda/events && npm ci)                # AWS SDK + esbuild, bundled by sam build
+sam validate --lint --template-file infra/template.yaml
+sam build --template-file infra/template.yaml
+```
+
+`sam build` bundles the Lambda into one file with esbuild and writes `.aws-sam/` (git-ignored).
+
+## 3. First deploy
+
+`OwnerSub` is empty on purpose: until step 5 the Lambda answers 403 to everything.
+
+```bash
+sam deploy \
+  --template-file .aws-sam/build/template.yaml \
+  --stack-name "$STACK" --region "$AWS_REGION" \
+  --capabilities CAPABILITY_IAM \
+  --resolve-s3 --confirm-changeset \
+  --parameter-overrides DomainName="$DOMAIN" CertificateArn="$CERT_ARN" OwnerSub=""
+```
+
+Read the outputs (you need them in the next steps):
+
+```bash
+aws cloudformation describe-stacks --stack-name "$STACK" --region "$AWS_REGION" \
+  --query 'Stacks[0].Outputs[].[OutputKey,OutputValue]' --output table
+```
+
+Outputs: `CloudFrontDomain`, `DistributionId`, `SiteUrl`, `ApiUrl`, `UserPoolId`, `UserPoolClientId`, `SiteBucketName`, `DataBucketName`.
+
+The data bucket and the user pool have `DeletionPolicy: Retain`: deleting the stack never deletes workout data or the login.
+The site bucket does not, and must be emptied before the stack can be deleted.
+
+## 4. DNS at GoDaddy
+
+Add one record in the `logbook.me` zone:
+
+| Type | Name | Value | TTL |
+|---|---|---|---|
+| CNAME | `strength` | the `CloudFrontDomain` output, e.g. `dxxxxxxxxxxxxx.cloudfront.net` | 1 hour |
+
+- Delete any existing record named `strength` first (GoDaddy's default parking A record, for instance). A CNAME cannot share a name with another record.
+- Keep the ACM validation CNAME (`_<hash>.strength.logbook.me`) that validated the certificate; ACM needs it to renew.
+- The site is reachable on the CloudFront domain immediately, and on `https://strength.logbook.me` once the CNAME propagates.
+
+## 5. Create the user, then set OwnerSub
+
+Self-signup is off, so create the single user yourself. The password is read from a prompt (no echo) into a shell variable, never a file.
+
+```bash
+export POOL_ID=<UserPoolId output>
+export EMAIL=you@example.com
+
+aws cognito-idp admin-create-user --region "$AWS_REGION" --user-pool-id "$POOL_ID" \
+  --username "$EMAIL" \
+  --user-attributes Name=email,Value="$EMAIL" Name=email_verified,Value=true \
+  --message-action SUPPRESS
+
+printf 'Password (12+ chars, upper, lower, digit, symbol): '; stty -echo; read -r PW; stty echo; printf '\n'
+aws cognito-idp admin-set-user-password --region "$AWS_REGION" --user-pool-id "$POOL_ID" \
+  --username "$EMAIL" --password "$PW" --permanent
+unset PW
+```
+
+`--permanent` means the account never enters the `NEW_PASSWORD_REQUIRED` state, so the page needs no challenge handling. While the command runs, the password is visible in the process list to other users on this machine; that is acceptable on a personal laptop.
+
+Get the user's `sub` and redeploy with it as `OwnerSub` (repeat every parameter; an omitted one reverts to its default):
+
+```bash
+export OWNER_SUB=$(aws cognito-idp admin-get-user --region "$AWS_REGION" --user-pool-id "$POOL_ID" \
+  --username "$EMAIL" --query "UserAttributes[?Name=='sub'].Value" --output text)
+echo "$OWNER_SUB"
+
+sam deploy \
+  --template-file .aws-sam/build/template.yaml \
+  --stack-name "$STACK" --region "$AWS_REGION" \
+  --capabilities CAPABILITY_IAM --resolve-s3 --confirm-changeset \
+  --parameter-overrides DomainName="$DOMAIN" CertificateArn="$CERT_ARN" OwnerSub="$OWNER_SUB"
+```
+
+To reset a forgotten password later, run `admin-set-user-password ... --permanent` again.
+
+## 6. Fill in `app/js/config.js`
+
+Replace the two placeholders with the stack outputs:
+
+```js
+userPoolClientId: '<UserPoolClientId output>',
+apiUrl: '<ApiUrl output>',        // https://<id>.execute-api.us-west-2.amazonaws.com
+```
+
+Neither is a secret, so committing them is fine.
+
+Optional hardening: `app/index.html` allows `https://*.execute-api.us-west-2.amazonaws.com` in its Content-Security-Policy because the API id is unknown before the first deploy. Replace that wildcard with your exact API host.
+
+Try the page locally first if you like. It only shows that the form loads: signing in works from `localhost`, but API calls are blocked by CORS, which allows only the site origin.
+
+```bash
+python3 -m http.server 4173 --directory app     # http://localhost:4173
+```
+
+## 7. Deploy the app
+
+```bash
+export SITE_BUCKET=<SiteBucketName output>
+export DIST_ID=<DistributionId output>
+
+aws s3 sync app/ "s3://$SITE_BUCKET" --delete --dryrun --exclude '.DS_Store'      # preview
+aws s3 sync app/ "s3://$SITE_BUCKET" --delete --exclude '.DS_Store' --cache-control no-cache
+aws s3 cp app/manifest.webmanifest "s3://$SITE_BUCKET/manifest.webmanifest" \
+  --content-type application/manifest+json --cache-control no-cache
+aws cloudfront create-invalidation --distribution-id "$DIST_ID" --paths '/*'
+```
+
+Then open `SiteUrl`, sign in, press **Send test event** and **Sync**.
+For the Phase A check, add the page to the iPhone home screen (Share, Add to Home Screen) and repeat from there. The **Last round trip** line shows the cold-start time.
+
+## Notes
+
+- Test events are real, permanent log entries (`session.notes` on an entity whose id starts with `spike_`; no session ever refers to it). Use a separate `strength-dev` stack (`DOMAIN=""`, `CERT_ARN=""`) for spike experiments if you want the production log to stay clean.
+- After a code-only change to the Lambda: `sam build` and the same `sam deploy` command as in step 5. After an app-only change: step 7.
+- Logs: `sam logs --stack-name "$STACK" --region "$AWS_REGION" --tail`. They never contain request bodies.

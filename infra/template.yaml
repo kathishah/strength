@@ -102,6 +102,11 @@ Resources:
 
   Distribution:
     Type: AWS::CloudFront::Distribution
+    Metadata:
+      cfn-lint:
+        config:
+          # CertificateArn is only '' when UseCustomDomain is false, and then it is not used.
+          ignore_checks: [W1030]
     Properties:
       DistributionConfig:
         Enabled: true
@@ -264,7 +269,7 @@ Resources:
         Target: es2022
         Sourcemap: false
         OutExtension:
-          - js=.mjs
+          - .js=.mjs
         EntryPoints:
           - index.mjs
         Banner:
