@@ -12,9 +12,11 @@ export const MAX_BODY_BYTES = 256 * 1024;
 export const MAX_FUTURE_MS = 24 * 60 * 60 * 1000;
 
 const ULID_RE = /^[0-7][0-9A-HJKMNP-TV-Z]{25}$/;
-// Hybrid logical clock: <ISO time, ms, Z>-<counter>-<deviceId>
+// Hybrid logical clock: <ISO time with Z or +/-hh:mm offset>-<counter>-<deviceId>.
+// The app writes US Pacific offsets ("...-07:00"). Because offsets change with daylight saving,
+// compare timestamps with compareTs() below, never as plain strings.
 const HLC_RE =
-  /^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z)-([0-9a-z]{4,8})-([A-Za-z0-9_]{1,32})$/;
+  /^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}(?:Z|[+-]\d{2}:\d{2}))-([0-9a-z]{4,8})-([A-Za-z0-9_]{1,32})$/;
 const DEVICE_ID_RE = /^[A-Za-z0-9_]{1,32}$/;
 const ENTITY_ID_RE = /^[A-Za-z0-9][A-Za-z0-9_.:-]{0,79}$/;
 const EXERCISE_ID_RE = /^[a-z0-9][a-z0-9-]{0,63}$/;
@@ -24,11 +26,51 @@ const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
 const isPlainObject = (x) => x !== null && typeof x === 'object' && !Array.isArray(x);
 
-export function isIsoInstant(s) {
-  if (typeof s !== 'string' || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{1,3})?Z$/.test(s)) return false;
-  const t = Date.parse(s);
-  // Round-trip so impossible dates (Feb 30) are rejected rather than rolled over.
-  return !Number.isNaN(t) && new Date(t).toISOString().slice(0, 19) === s.slice(0, 19);
+const INSTANT_RE = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.(\d{1,3}))?(Z|[+-]\d{2}:\d{2})$/;
+
+// Milliseconds since the epoch for an ISO-8601 time with Z or a +/-hh:mm offset; NaN if it is
+// malformed or impossible (Feb 30, 25:00, ...).
+export function parseInstant(s) {
+  const m = typeof s === 'string' ? INSTANT_RE.exec(s) : null;
+  if (!m) return NaN;
+  const [y, mo, d, h, mi, sec] = m.slice(1, 7).map(Number);
+  const local = Date.UTC(y, mo - 1, d, h, mi, sec);
+  const back = new Date(local);
+  if (
+    back.getUTCFullYear() !== y || back.getUTCMonth() !== mo - 1 || back.getUTCDate() !== d ||
+    back.getUTCHours() !== h || back.getUTCMinutes() !== mi || back.getUTCSeconds() !== sec
+  ) return NaN;
+  let offsetMin = 0;
+  if (m[8] !== 'Z') {
+    const oh = Number(m[8].slice(1, 3));
+    const om = Number(m[8].slice(4, 6));
+    if (oh > 23 || om > 59) return NaN;
+    offsetMin = (m[8][0] === '-' ? -1 : 1) * (oh * 60 + om);
+  }
+  const millis = m[7] ? Number(m[7].padEnd(3, '0')) : 0;
+  return local + millis - offsetMin * 60000;
+}
+
+export const isIsoInstant = (s) => !Number.isNaN(parseInstant(s));
+
+// Splits an event ts into { ms, counter, deviceId }, or null if it is not a valid ts.
+export function parseTs(ts) {
+  const m = typeof ts === 'string' ? HLC_RE.exec(ts) : null;
+  if (!m) return null;
+  const ms = parseInstant(m[1]);
+  return Number.isNaN(ms) ? null : { ms, counter: m[2], deviceId: m[3] };
+}
+
+// Replay order: instant, then counter, then device id. Use this, not string comparison.
+export function compareTs(a, b) {
+  const x = parseTs(a);
+  const y = parseTs(b);
+  if (x.ms !== y.ms) return x.ms < y.ms ? -1 : 1;
+  if (x.counter !== y.counter) {
+    if (x.counter.length !== y.counter.length) return x.counter.length < y.counter.length ? -1 : 1;
+    return x.counter < y.counter ? -1 : 1;
+  }
+  return x.deviceId === y.deviceId ? 0 : x.deviceId < y.deviceId ? -1 : 1;
 }
 
 const isoDate = (s) => {
@@ -46,7 +88,7 @@ const num = (min, max, { int = false } = {}) => (x) => {
 };
 const int = (min, max) => num(min, max, { int: true });
 const bool = (x) => (typeof x === 'boolean' ? null : 'must be true or false');
-const instant = (x) => (isIsoInstant(x) ? null : 'must be an ISO-8601 UTC time');
+const instant = (x) => (isIsoInstant(x) ? null : 'must be an ISO-8601 time with Z or an offset');
 const oneOf = (...values) => (x) => (values.includes(x) ? null : `must be one of ${values.join(', ')}`);
 const text = (maxLen) => (x) => {
   if (typeof x !== 'string') return 'must be a string';
@@ -243,10 +285,10 @@ export function validateEvent(ev, now = Date.now()) {
   if (typeof ev.id !== 'string' || !ULID_RE.test(ev.id)) {
     errs.push({ field: 'id', reason: 'must be a ULID' });
   }
-  const m = typeof ev.ts === 'string' ? HLC_RE.exec(ev.ts) : null;
-  if (!m || !isIsoInstant(m[1])) {
-    errs.push({ field: 'ts', reason: 'must look like 2026-09-30T17:42:11.120Z-0003-d_7f3a' });
-  } else if (Date.parse(m[1]) > now + MAX_FUTURE_MS) {
+  const ts = parseTs(ev.ts);
+  if (!ts) {
+    errs.push({ field: 'ts', reason: 'must look like 2026-09-30T10:42:11.120-07:00-0003-d_7f3a' });
+  } else if (ts.ms > now + MAX_FUTURE_MS) {
     errs.push({ field: 'ts', reason: 'is more than 1 day in the future' });
   }
   if (typeof ev.entityId !== 'string' || !ENTITY_ID_RE.test(ev.entityId)) {

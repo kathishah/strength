@@ -5,14 +5,18 @@ Stack region is `us-west-2`; the CloudFront certificate must be in `us-east-1` (
 
 Prerequisites: Node 22, [AWS SAM CLI](https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/install-sam-cli.html), AWS CLI v2 with credentials for the account (`export AWS_PROFILE=...` if you use profiles).
 
-Shell variables used below (set them once per terminal; nothing here is a secret):
+There is one stack, `strength-prod`. Shell variables used below (set them once per terminal; nothing here is a secret). The certificate ARN is looked up, so it never has to be written into the repo:
 
 ```bash
 export AWS_REGION=us-west-2
-export STACK=strength-prod                  # or strength-dev
-export DOMAIN=strength.logbook.me           # use "" for a dev stack (then it serves on *.cloudfront.net)
-export CERT_ARN='arn:aws:acm:us-east-1:<account-id>:certificate/<certificate-id>'   # "" for a dev stack
+export STACK=strength-prod
+export DOMAIN=strength.logbook.me
+export CERT_ARN=$(aws acm list-certificates --region us-east-1 \
+  --query "CertificateSummaryList[?DomainName=='$DOMAIN' && Status=='ISSUED'].CertificateArn | [0]" --output text)
+echo "$CERT_ARN"          # must print an arn:aws:acm:us-east-1:... value, not "None"
 ```
+
+Time zone: everything uses US Pacific time (`America/Los_Angeles`, so PDT in summer and PST in winter). The month file an event lands in, the server's `recvAt`, and the app's `ts` all use Pacific dates with an explicit offset such as `2026-09-29T12:30:00.123-07:00`. Months roll over at Pacific midnight. Offsets change with daylight saving, so order timestamps by instant (`compareTs` in `lambda/events/registry.mjs`), never as plain strings.
 
 ## 1. Test
 
@@ -82,11 +86,13 @@ aws cognito-idp admin-create-user --region "$AWS_REGION" --user-pool-id "$POOL_I
   --user-attributes Name=email,Value="$EMAIL" Name=email_verified,Value=true \
   --message-action SUPPRESS
 
-printf 'Password (12+ chars, upper, lower, digit, symbol): '; stty -echo; read -r PW; stty echo; printf '\n'
+printf 'PIN (exactly 6 digits): '; stty -echo; read -r PW; stty echo; printf '\n'
 aws cognito-idp admin-set-user-password --region "$AWS_REGION" --user-pool-id "$POOL_ID" \
   --username "$EMAIL" --password "$PW" --permanent
 unset PW
 ```
+
+The "password" is a numeric PIN. Cognito's password policy cannot go below 6 characters and has no maximum, so the PIN must be exactly 6 digits (a 4-digit PIN is rejected); the sign-in form only accepts 6 digits. Cognito locks an account temporarily after repeated wrong attempts, but a 6-digit PIN is far weaker than a password, so treat it as a convenience for a personal test app.
 
 `--permanent` means the account never enters the `NEW_PASSWORD_REQUIRED` state, so the page needs no challenge handling. While the command runs, the password is visible in the process list to other users on this machine; that is acceptable on a personal laptop.
 
@@ -143,6 +149,6 @@ For the Phase A check, add the page to the iPhone home screen (Share, Add to Hom
 
 ## Notes
 
-- Test events are real, permanent log entries (`session.notes` on an entity whose id starts with `spike_`; no session ever refers to it). Use a separate `strength-dev` stack (`DOMAIN=""`, `CERT_ARN=""`) for spike experiments if you want the production log to stay clean.
+- Test events are real, permanent log entries (`session.notes` on an entity whose id starts with `spike_`; no session ever refers to it).
 - After a code-only change to the Lambda: `sam build` and the same `sam deploy` command as in step 5. After an app-only change: step 7.
 - Logs: `sam logs --stack-name "$STACK" --region "$AWS_REGION" --tail`. They never contain request bodies.

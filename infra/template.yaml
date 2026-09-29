@@ -1,30 +1,21 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
-Description: Recomp Tracker v1 - static site (S3 + CloudFront), Cognito login, HTTP API + Lambda, private S3 event log (DEPLOYMENT-PLAN.md sections 2, 6, 7)
+Description: Recomp Tracker v1 (single prod stack) - static site (S3 + CloudFront), Cognito login, HTTP API + Lambda, private S3 event log (DEPLOYMENT-PLAN.md sections 2, 6, 7)
 
 Parameters:
   DomainName:
     Type: String
     Default: strength.logbook.me
-    Description: Custom hostname for the site (a CloudFront alias). DNS is at GoDaddy. Leave empty to use the *.cloudfront.net domain, for example for a dev stack.
+    Description: Hostname for the site (a CloudFront alias). DNS is at GoDaddy.
   CertificateArn:
     Type: String
-    Default: ''
-    Description: ACM certificate ARN in us-east-1 covering DomainName. Required when DomainName is set.
+    AllowedPattern: '^arn:aws:acm:us-east-1:[0-9]{12}:certificate/.+$'
+    ConstraintDescription: Must be an ACM certificate ARN in us-east-1 that covers DomainName.
+    Description: ACM certificate ARN in us-east-1 covering DomainName.
   OwnerSub:
     Type: String
     Default: ''
     Description: Cognito sub of the single owner. May be empty on the first deploy; the Lambda then answers 403 to every request until it is set.
-
-Rules:
-  CertificateNeededForDomain:
-    RuleCondition: !Not [!Equals [!Ref DomainName, '']]
-    Assertions:
-      - Assert: !Not [!Equals [!Ref CertificateArn, '']]
-        AssertDescription: CertificateArn is required when DomainName is set.
-
-Conditions:
-  UseCustomDomain: !Not [!Equals [!Ref DomainName, '']]
 
 Resources:
   # ---------------------------------------------------------------- site
@@ -102,11 +93,6 @@ Resources:
 
   Distribution:
     Type: AWS::CloudFront::Distribution
-    Metadata:
-      cfn-lint:
-        config:
-          # CertificateArn is only '' when UseCustomDomain is false, and then it is not used.
-          ignore_checks: [W1030]
     Properties:
       DistributionConfig:
         Enabled: true
@@ -115,13 +101,11 @@ Resources:
         IPV6Enabled: true
         PriceClass: PriceClass_100
         DefaultRootObject: index.html
-        Aliases: !If [UseCustomDomain, [!Ref DomainName], !Ref 'AWS::NoValue']
-        ViewerCertificate: !If
-          - UseCustomDomain
-          - AcmCertificateArn: !Ref CertificateArn
-            SslSupportMethod: sni-only
-            MinimumProtocolVersion: TLSv1.2_2021
-          - CloudFrontDefaultCertificate: true
+        Aliases: [!Ref DomainName]
+        ViewerCertificate:
+          AcmCertificateArn: !Ref CertificateArn
+          SslSupportMethod: sni-only
+          MinimumProtocolVersion: TLSv1.2_2021
         Origins:
           - Id: site
             DomainName: !GetAtt SiteBucket.RegionalDomainName
@@ -203,13 +187,15 @@ Resources:
         RecoveryMechanisms:
           - Name: admin_only
             Priority: 1
+      # The "password" is a numeric PIN. Cognito's minimum length is 6, so 6 digits is the shortest
+      # PIN it accepts; it has no maximum setting, so the sign-in form limits input to 6 digits.
       Policies:
         PasswordPolicy:
-          MinimumLength: 12
-          RequireLowercase: true
-          RequireUppercase: true
-          RequireNumbers: true
-          RequireSymbols: true
+          MinimumLength: 6
+          RequireLowercase: false
+          RequireUppercase: false
+          RequireNumbers: false
+          RequireSymbols: false
 
   UserPoolClient:
     Type: AWS::Cognito::UserPoolClient
@@ -236,7 +222,7 @@ Resources:
     Properties:
       CorsConfiguration:
         AllowOrigins:
-          - !If [UseCustomDomain, !Sub 'https://${DomainName}', !Sub 'https://${Distribution.DomainName}']
+          - !Sub 'https://${DomainName}'
         AllowHeaders: [Authorization, Content-Type]
         AllowMethods: [GET, POST, OPTIONS]
         MaxAge: 3600
@@ -323,7 +309,7 @@ Outputs:
     Value: !Ref Distribution
   SiteUrl:
     Description: Where the app is served
-    Value: !If [UseCustomDomain, !Sub 'https://${DomainName}', !Sub 'https://${Distribution.DomainName}']
+    Value: !Sub 'https://${DomainName}'
   ApiUrl:
     Description: HTTP API base URL (goes in app/js/config.js)
     Value: !Sub 'https://${HttpApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}'

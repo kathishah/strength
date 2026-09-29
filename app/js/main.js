@@ -5,6 +5,7 @@ import { isConfigured } from './config.js';
 import { AuthError, hasRefreshToken, signIn, signOut } from './auth.js';
 import { ApiError, buildTestEvent, getEvents, postEvents } from './api.js';
 import { getDeviceId } from './ids.js';
+import { tsMs } from './time.js';
 
 const EVENTS_KEY = 'strength.spike.events';
 const CURSOR_KEY = 'strength.cursor';
@@ -79,7 +80,8 @@ function describe(ev) {
 }
 
 function render() {
-  const events = loadEvents().sort((a, b) => (a.ts < b.ts ? 1 : a.ts > b.ts ? -1 : a.id < b.id ? 1 : -1));
+  // Newest first; ts is ordered by instant because its UTC offset changes with daylight saving.
+  const events = loadEvents().sort((a, b) => tsMs(b.ts) - tsMs(a.ts) || (a.id < b.id ? 1 : -1));
   el.cursor.textContent = loadCursor() ?? 'none';
   el.count.textContent = String(events.length);
   el.empty.hidden = events.length > 0;
@@ -101,7 +103,7 @@ function render() {
 // ---- errors ----
 function authMessage(err) {
   switch (err.kind) {
-    case 'not_authorized': return 'Incorrect email or password.';
+    case 'not_authorized': return 'Incorrect email or PIN.';
     case 'unavailable': return 'Sign-in unavailable.';
     case 'throttled': return 'Too many attempts. Wait a minute and try again.';
     case 'network': return 'Cannot reach the sign-in service. Check your connection.';
@@ -179,6 +181,10 @@ el.form.addEventListener('submit', (e) => {
   e.preventDefault();
   guarded(async () => {
     notify('');
+    if (!/^\d{6}$/.test(el.password.value)) {
+      notify('Enter your 6-digit PIN.', 'error');
+      return;
+    }
     await signIn(el.email.value.trim(), el.password.value);
     el.password.value = '';
     showSignedIn(true);
