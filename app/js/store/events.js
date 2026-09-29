@@ -21,6 +21,12 @@ function sortEvents(list) {
   return keyed.sort(byTs).map((k) => k.ev);
 }
 
+// The page's test note (the Phase A spike, kept for checking sync between devices): a session.notes on an
+// entity that is never created, so it cannot change state. Its entityId starts with "spike_".
+export function testNote(deviceId, id = ulid()) {
+  return { type: 'session.notes', entityId: `spike_${id}`, payload: { notes: `Test note from ${deviceId}` } };
+}
+
 // storage: an object from open.js. deviceId: like "d_7f3a". clock/now/newId are injectable for tests.
 export async function createEventStore({ storage, deviceId, clock = createClock(), now = Date.now, newId = ulid }) {
   const loaded = await storage.loadAll();
