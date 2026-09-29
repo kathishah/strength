@@ -1,10 +1,11 @@
 // Lambda "events": POST /events and GET /events (DEPLOYMENT-PLAN.md section 3).
 //
 // Storage: u/<sub>/events/<yyyy-mm>.json, an append-only JSON array per RECEIVE
-// month (server UTC). The GET cursor is "<yyyy-mm>:<index>", a position in those files.
+// month (US Pacific time, see time.mjs). The GET cursor is "<yyyy-mm>:<index>", a position in those files.
 
 import { MAX_BODY_BYTES, validateBatch } from './registry.mjs';
 import { StoreError, createS3ObjectStore } from './object-store.mjs';
+import { pacificIso } from './time.mjs';
 
 const DEFAULT_LIMIT = 2000;
 const MAX_LIMIT = 5000;
@@ -93,7 +94,7 @@ export function createHandler(deps = {}) {
         errors: errors.slice(0, MAX_REPORTED_ERRORS),
       });
     }
-    const recvAt = new Date(now()).toISOString();
+    const recvAt = pacificIso(now()); // e.g. 2026-09-29T12:30:00.123-07:00; its yyyy-mm picks the file
     const result = await appendEvents(getStore(), sub, body.events, recvAt);
     if (!result) {
       const busy = fail(503, 'busy', 'concurrent writes; retry shortly');

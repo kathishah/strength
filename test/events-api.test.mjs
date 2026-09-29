@@ -1,6 +1,7 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import { MAX_BODY_BYTES } from '../lambda/events/registry.mjs';
+import { pacificIso } from '../lambda/events/time.mjs';
 import { OWNER, NOW, makeEvent, makeRequest, post, get, setup, monthKey, ulid } from '../test-support/util.mjs';
 
 const ids = (events) => events.map((e) => e.id);
@@ -30,7 +31,7 @@ describe('POST /events: storage', () => {
     const res = await call(post(events));
     assert.equal(res.statusCode, 200);
     assert.deepEqual(res.json, { accepted: 3, duplicates: 0 });
-    assert.deepEqual(store.json(monthKey('2026-10')), stored(events, '2026-10-05T12:00:00.000Z'));
+    assert.deepEqual(store.json(monthKey('2026-10')), stored(events, '2026-10-05T05:00:00.000-07:00')); // Pacific, not UTC
   });
 
   test('first event of a month creates the file with If-None-Match; later posts use If-Match', async () => {
@@ -46,7 +47,7 @@ describe('POST /events: storage', () => {
     assert.equal(puts[1].cond.ifNoneMatch, undefined);
 
     // Next month: a fresh file, again created with If-None-Match; October is untouched.
-    clock.now = Date.parse('2026-11-01T00:00:01.000Z');
+    clock.now = Date.parse('2026-11-01T07:00:01.000Z'); // 00:00:01 PDT on Nov 1
     const octBefore = store.objects.get(monthKey('2026-10')).body;
     await call(post(range(3, 3)));
     assert.deepEqual(store.calls('put')[2].cond, { ifNoneMatch: '*' });
@@ -60,6 +61,38 @@ describe('POST /events: storage', () => {
     await call(post([late]));
     assert.equal(store.json(monthKey('2026-09')), undefined);
     assert.deepEqual(ids(store.json(monthKey('2026-10'))), [late.id]);
+  });
+
+  test('the month rolls over at Pacific midnight, not UTC midnight (summer, PDT)', async () => {
+    const { call, store, clock } = setup();
+    const postAt = async (n, iso) => {
+      clock.now = Date.parse(iso);
+      const res = await call(post([makeEvent(n, { ts: `${pacificIso(clock.now)}-0001-d_7f3a` })]));
+      assert.equal(res.statusCode, 200, iso);
+    };
+    await postAt(1, '2026-10-01T06:59:59.999Z'); // 23:59:59.999 PDT on Sep 30
+    await postAt(2, '2026-10-01T07:00:00.000Z'); // 00:00:00.000 PDT on Oct 1
+    assert.deepEqual(store.json(monthKey('2026-09')).map((e) => e.recvAt), ['2026-09-30T23:59:59.999-07:00']);
+    assert.deepEqual(store.json(monthKey('2026-10')).map((e) => e.recvAt), ['2026-10-01T00:00:00.000-07:00']);
+  });
+
+  test('the month rolls over at Pacific midnight in winter too (PST is UTC-8)', async () => {
+    const { call, store, clock } = setup();
+    const postAt = async (n, iso) => {
+      clock.now = Date.parse(iso);
+      await call(post([makeEvent(n, { ts: `${pacificIso(clock.now)}-0001-d_7f3a` })]));
+    };
+    await postAt(1, '2026-12-01T07:59:59.999Z'); // 23:59:59.999 PST on Nov 30 (UTC says Dec 1)
+    await postAt(2, '2026-12-01T08:00:00.000Z'); // 00:00:00.000 PST on Dec 1
+    assert.deepEqual(store.json(monthKey('2026-11')).map((e) => e.recvAt), ['2026-11-30T23:59:59.999-08:00']);
+    assert.deepEqual(store.json(monthKey('2026-12')).map((e) => e.recvAt), ['2026-12-01T00:00:00.000-08:00']);
+  });
+
+  test('9 pm Pacific on the last day of the month is still that month, though UTC is already the next', async () => {
+    const { call, store, clock } = setup();
+    clock.now = Date.parse('2026-10-01T04:00:00.000Z'); // 21:00 PDT on Sep 30
+    await call(post([makeEvent(1, { ts: `${pacificIso(clock.now)}-0001-d_7f3a` })]));
+    assert.deepEqual([...store.objects.keys()], [monthKey('2026-09')]);
   });
 
   test('users are kept under their own prefix', async () => {
@@ -104,7 +137,7 @@ describe('POST /events: idempotence', () => {
     await call(post(range(1, 2)));
     assert.deepEqual(
       store.json(monthKey('2026-10')).map((e) => e.recvAt),
-      ['2026-10-05T12:00:00.000Z', '2026-10-05T12:01:00.000Z'],
+      ['2026-10-05T05:00:00.000-07:00', '2026-10-05T05:01:00.000-07:00'],
     );
   });
 });
@@ -363,8 +396,8 @@ describe('GET /events: cursor and reads', () => {
     const { call, store, clock } = setup();
     store.seed(monthKey('2026-09'), stored(range(1, 3), 'a'));
     assert.deepEqual((await call(get({ since: '2026-09:3' }))).json.events, []);
-    clock.now = Date.parse('2026-10-01T00:00:05.000Z');
-    const first = await call(post([makeEvent(4, { ts: '2026-10-01T00:00:04.000Z-0001-d_7f3a' })]));
+    clock.now = Date.parse('2026-10-01T07:00:05.000Z'); // 00:00:05 PDT on Oct 1
+    const first = await call(post([makeEvent(4, { ts: '2026-10-01T00:00:04.000-07:00-0001-d_7f3a' })]));
     assert.equal(first.statusCode, 200);
     const res = await call(get({ since: '2026-09:3' }));
     assert.deepEqual(ids(res.json.events), [ulid(4)]);
@@ -518,14 +551,14 @@ describe('late events reach devices with a later cursor', () => {
 
   test('a device at a September cursor keeps getting new events after the month rolls over', async () => {
     const { call, clock } = setup();
-    const at = (n, iso) => makeEvent(n, { ts: `${iso}-0001-d_7f3a` });
-    clock.now = Date.parse('2026-09-30T23:59:00.000Z');
-    assert.equal((await call(post([at(1, '2026-09-30T23:58:00.000Z')]))).statusCode, 200);
+    const at = (n) => makeEvent(n, { ts: `${pacificIso(clock.now - 30_000)}-0001-d_7f3a` });
+    clock.now = Date.parse('2026-10-01T06:59:00.000Z'); // 23:59 PDT on Sep 30
+    assert.equal((await call(post([at(1)]))).statusCode, 200);
     const c = (await call(get())).json.cursor;
-    clock.now = Date.parse('2026-10-01T00:01:00.000Z');
-    assert.equal((await call(post([at(2, '2026-10-01T00:00:30.000Z')]))).statusCode, 200);
-    clock.now = Date.parse('2026-11-01T00:01:00.000Z');
-    assert.equal((await call(post([at(3, '2026-11-01T00:00:30.000Z')]))).statusCode, 200);
+    clock.now = Date.parse('2026-10-01T07:01:00.000Z'); // 00:01 PDT on Oct 1
+    assert.equal((await call(post([at(2)]))).statusCode, 200);
+    clock.now = Date.parse('2026-11-01T07:01:00.000Z'); // 00:01 PDT on Nov 1
+    assert.equal((await call(post([at(3)]))).statusCode, 200);
     const res = await readAll(call, { since: c, limit: 1 });
     assert.deepEqual(ids(res.all), [ulid(2), ulid(3)]);
   });
