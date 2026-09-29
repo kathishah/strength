@@ -28,10 +28,57 @@ export function pacificIso(ms) {
   return `${p.year}-${p.month}-${p.day}T${p.hour}:${p.minute}:${p.second}.${millis}${sign}${hh}:${mm}`;
 }
 
+// ---- parsing and ordering (same rules as lambda/events/registry.mjs; test/time.test.mjs checks parity) ----
 
-// Instant (ms) of an event ts like "2026-09-29T12:30:00.123-07:00-0003-d_7f3a"; NaN if malformed.
-// Offsets change with daylight saving, so sort by this, not by the string.
-export function tsMs(ts) {
-  const m = /^(.+?)-[0-9a-z]{4,8}-[A-Za-z0-9_]{1,32}$/.exec(String(ts));
-  return m ? Date.parse(m[1]) : NaN;
+const INSTANT_RE = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.(\d{1,3}))?(Z|[+-]\d{2}:\d{2})$/;
+const HLC_RE =
+  /^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}(?:Z|[+-]\d{2}:\d{2}))-([0-9a-z]{4,8})-([A-Za-z0-9_]{1,32})$/;
+
+// Milliseconds since the epoch for an ISO-8601 time with Z or a +/-hh:mm offset; NaN if it is
+// malformed or impossible (Feb 30, 25:00, ...).
+export function parseInstant(s) {
+  const m = typeof s === 'string' ? INSTANT_RE.exec(s) : null;
+  if (!m) return NaN;
+  const [y, mo, d, h, mi, sec] = m.slice(1, 7).map(Number);
+  const local = Date.UTC(y, mo - 1, d, h, mi, sec);
+  const back = new Date(local);
+  if (
+    back.getUTCFullYear() !== y || back.getUTCMonth() !== mo - 1 || back.getUTCDate() !== d ||
+    back.getUTCHours() !== h || back.getUTCMinutes() !== mi || back.getUTCSeconds() !== sec
+  ) return NaN;
+  let offsetMin = 0;
+  if (m[8] !== 'Z') {
+    const oh = Number(m[8].slice(1, 3));
+    const om = Number(m[8].slice(4, 6));
+    if (oh > 23 || om > 59) return NaN;
+    offsetMin = (m[8][0] === '-' ? -1 : 1) * (oh * 60 + om);
+  }
+  const millis = m[7] ? Number(m[7].padEnd(3, '0')) : 0;
+  return local + millis - offsetMin * 60000;
 }
+
+// Splits an event ts like "2026-09-29T12:30:00.123-07:00-0003-d_7f3a" into { ms, counter, deviceId },
+// or null if it is not a valid ts.
+export function parseTs(ts) {
+  const m = typeof ts === 'string' ? HLC_RE.exec(ts) : null;
+  if (!m) return null;
+  const ms = parseInstant(m[1]);
+  return Number.isNaN(ms) ? null : { ms, counter: m[2], deviceId: m[3] };
+}
+
+// Order two parsed timestamps: instant, then counter, then device id.
+export function compareParsedTs(x, y) {
+  if (x.ms !== y.ms) return x.ms < y.ms ? -1 : 1;
+  if (x.counter !== y.counter) {
+    if (x.counter.length !== y.counter.length) return x.counter.length < y.counter.length ? -1 : 1;
+    return x.counter < y.counter ? -1 : 1;
+  }
+  return x.deviceId === y.deviceId ? 0 : x.deviceId < y.deviceId ? -1 : 1;
+}
+
+// Replay order for two ts strings. Offsets change with daylight saving, so use this, never string
+// comparison. Both arguments must be valid (parseTs not null), as on the server.
+export const compareTs = (a, b) => compareParsedTs(parseTs(a), parseTs(b));
+
+// Instant (ms) of an event ts; NaN if malformed.
+export const tsMs = (ts) => parseTs(ts)?.ms ?? NaN;
