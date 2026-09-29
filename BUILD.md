@@ -147,6 +147,17 @@ aws cloudfront create-invalidation --distribution-id "$DIST_ID" --paths '/*'
 Then open `SiteUrl`, sign in, press **Send test event** and **Sync**.
 For the Phase A check, add the page to the iPhone home screen (Share, Add to Home Screen) and repeat from there. The **Last round trip** line shows the cold-start time.
 
+## 8. Load Monday's workout (optional, once the API works)
+
+Your workout lives in `private/` (git-ignored, because the repo is public). `private/2026-09-28-workout-a.json` describes it and `scripts/build-events.mjs` turns it into events; the reps are recorded as the bottom of the ranges you gave, so edit the JSON if you want different numbers, then rebuild:
+
+```bash
+node scripts/build-events.mjs private/2026-09-28-workout-a.json > private/2026-09-28-workout-a.events.json
+node scripts/post-events.mjs private/2026-09-28-workout-a.events.json "$EMAIL"     # asks for the PIN, then for y/N
+```
+
+Posting is safe to repeat (events are de-duplicated by id), but rebuilding generates new ids, so post the same events file each time.
+
 ## Notes
 
 - Test events are real, permanent log entries (`session.notes` on an entity whose id starts with `spike_`; no session ever refers to it).
