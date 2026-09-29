@@ -234,7 +234,7 @@ Built on branch `v1-phase-b`; nothing here has been deployed, and the Lambda and
 - *Sync runs after any local write* (debounced 2 s), since the store cannot tell a completed set from another write.
 - *`entity.deleted`* only affects sessions and sets; a tombstone for `settings` or an unknown id changes nothing.
 
-**Not settled by the plan or spec (needs a decision before the phase that uses it):**
+**Not settled by the plan or spec (the first three are decided in section 14):**
 - `entityId` for `swap.*` and `deload.*` events (only the payload is used by replay today; tests use `swap_A_1`, `deload_12`).
 - What `deload.postponed` means for the original week. Replay stores raw records, `deloads[programWeek] = { programWeek, source?, postponedFromWeek? }`; the event carries no `source`, and spec 5.8 ("schedule restarts from it", "once per scheduled deload") needs the engine to say when a scheduled deload is written as an event at all.
 - The seed is the v0.2 display data. Spec section 8 wants numeric `repMin`, `repMax`, `loadIncrementLbs`, `startingWeightLbs`, `firstLoadedWeightLbs`, `startingLevel` and `loadsBack`; v0.2 has text (`sets: "3"`, `reps: "8–12"`, `start: "20 lbs per hand"`) and no increments or `loadsBack`. The pushup ladder and TRX level text are present. Phase C needs a structured catalog.
