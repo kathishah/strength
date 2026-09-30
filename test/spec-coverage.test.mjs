@@ -1,6 +1,7 @@
-// Meta-test: every example in the spec has a numbered test, and the spec text has not changed under it.
-// Reads SPEC-strength.md and test/spec-examples.test.mjs. If this fails after a spec edit, re-read the example, fix or
-// add its test in spec-examples.test.mjs, and update the fingerprint (the message prints the new one).
+// Meta-test: every live example in the spec has a numbered test, struck ones have none, and the spec text has not
+// changed under a test. Reads SPEC-strength.md and test/spec-examples.test.mjs. If this fails after a spec edit, re-read
+// the example, fix, add or remove its test in spec-examples.test.mjs, and update the fingerprint (the message prints it).
+// A bullet starting with "~~" is struck (removed from the app, v1.13): it must have no test.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
@@ -18,27 +19,27 @@ function bulletsBetween(from, to) {
 }
 
 const fingerprint = (text) => createHash('sha1').update(text).digest('hex').slice(0, 8);
+const isStruck = (bullet) => bullet.startsWith('~~');
 
 // Every `example('5.7', 12, 'abcd1234', ...)` in the examples file: { n, fingerprint }.
 function registered(section) {
-  const found = [];
   const re = new RegExp(`^example\\('${section.replace('.', '\\.')}', (\\d+), '([0-9a-f]*)',`, 'gm');
-  for (const m of examples.matchAll(re)) found.push({ n: Number(m[1]), fingerprint: m[2] });
-  return found;
+  return [...examples.matchAll(re)].map((m) => ({ n: Number(m[1]), fingerprint: m[2] }));
 }
 
 for (const [section, bullets, expectedCount] of [
-  ['5.7', bulletsBetween('### 5.7 Examples', '### 5.8 Deload'), 34],
+  ['5.7', bulletsBetween('### 5.7 Examples', '### ~~5.8 Deload'), 34],
   ['5.12', bulletsBetween('Test cases:', '\n---'), 9],
 ]) {
-  test(`spec ${section}: every example bullet has exactly one numbered test`, () => {
+  test(`spec ${section}: every live bullet has exactly one numbered test, and struck bullets have none`, () => {
     assert.equal(bullets.length, expectedCount, `the spec now has ${bullets.length} bullets in ${section} (was ${expectedCount}): add or remove tests, then update this count`);
-    const numbers = registered(section).map((r) => r.n);
-    const want = bullets.map((_, i) => i + 1);
-    assert.deepEqual([...numbers].sort((a, b) => a - b), want, `numbered tests for ${section} do not match its ${bullets.length} bullets`);
+    const numbers = registered(section).map((r) => r.n).sort((a, b) => a - b);
+    const live = bullets.map((b, i) => (isStruck(b) ? null : i + 1)).filter(Boolean);
+    assert.ok(live.length > 0);
+    assert.deepEqual(numbers, live, `numbered tests for ${section} do not match its live (not struck) bullets`);
   });
 
-  test(`spec ${section}: the bullets are the ones the tests were written for`, () => {
+  test(`spec ${section}: the live bullets are the ones the tests were written for`, () => {
     for (const { n, fingerprint: fp } of registered(section)) {
       const now = fingerprint(bullets[n - 1] ?? '');
       assert.equal(fp, now, `${section} #${n} changed in the spec: "${bullets[n - 1]}" — re-check its test, then set its fingerprint to '${now}'`);
@@ -46,12 +47,6 @@ for (const [section, bullets, expectedCount] of [
   });
 }
 
-test('the examples file has a test whose name starts with each number (5.7 #1 ... 5.7 #34, 5.12 #1 ... 5.12 #9)', () => {
-  // The names are built from the spec at run time; this checks the naming rule the plan asks for.
+test('test names are built as "<section> #<n>: ..." so each starts with its number', () => {
   assert.match(examples, /test\(`\$\{section\} #\$\{n\}: /);
-});
-
-test('sections 5.7 and 5.12 are where the plan says: 34 and 9 bullets', () => {
-  assert.equal(bulletsBetween('### 5.7 Examples', '### 5.8 Deload').length, 34);
-  assert.equal(bulletsBetween('Test cases:', '\n---').length, 9);
 });

@@ -3,19 +3,21 @@
 // untouched so their parity test with the frozen viewer keeps working (DEPLOYMENT-PLAN.md section 14).
 //
 // Values come from spec 4.3 (reps), 4.5.1 (TRX reps and levels), 5.3 (increments) and the 5.6 table
-// (starting and first-loaded weights, loadsBack). test/rules.test.mjs reads those tables out of
+// (starting and first-loaded weights). test/rules.test.mjs reads those tables out of
 // SPEC-strength.md and compares. A null where a value would be is "the spec gives none":
 //   - repMin/repMax/perSide/targetDistanceM null: an alternative with no range of its own uses the range of the
 //     slot it is swapped into (spec question in plan section 14).
 //   - startingWeightLbs null: no pre-fill; the user is asked for a weight (spec 5.6, swapped-in alternatives).
 
 // How the engine treats an exercise:
-//   load        weight is progressed by double progression (dumbbell, barbell, machine, cable, loadable, carry)
-//   bodyweight  no load, no progression, a hint when every set reaches the top (dead bug)
-//   ladder      pushup: level by reps, then variation (spec 5.4)
-//   suspension  TRX: level 1-5 instead of a load
+//   load        weight: pre-filled with last time's heaviest weight, raised one increment when a scheduled increase is
+//               due (spec 5.12): dumbbell, barbell, machine, cable, carry
+//   loadable    45° back extension: pre-filled with last time's weight, never changed (no progression, spec 5.4)
+//   bodyweight  dead bug: no load, no progression
+//   ladder      pushup: pre-filled with last time's level, never changed
+//   suspension  TRX: pre-filled with last time's level (start 2), never changed
 //   hold        completion only (TRX plank, weighted bird dog)
-//   none        no progression and no suggestion beyond sets and reps (band pull-apart)
+//   none        sets and reps only (band pull-apart)
 const base = {
   progression: 'load',
   repMin: null,
@@ -27,21 +29,22 @@ const base = {
   startingWeightLbs: null,
   firstLoadedWeightLbs: null,
   startingLevel: null,
-  loadsBack: false,
 };
 const ex = (type, fields) => ({ ...base, type, ...fields });
 const reps = (repMin, repMax, perSide = false) => ({ repMin, repMax, perSide });
 
-// Increments by type (spec 5.3): dumbbell 5 per dumbbell, barbell/trap bar 10, machine/cable 10, carry 5, loadable 5.
-const DB = 5;
+// Increments (spec 5.3): one dumbbell (goblet squat, box squat) 5; two dumbbells 2.5 per dumbbell; barbell/trap bar 10;
+// machine/cable 10 (face pull 5); carry 5 per hand.
+const DB1 = 5;
+const DB = 2.5;
 const BB = 10;
 const MC = 10;
 
 export const RULES = {
   // ---- Workout A ----
-  'goblet-squat': ex('dumbbell', { ...reps(8, 12), loadIncrementLbs: DB, startingWeightLbs: 20, loadsBack: true }),
+  'goblet-squat': ex('dumbbell', { ...reps(8, 12), loadIncrementLbs: DB1, startingWeightLbs: 20 }),
   'db-bench-press': ex('dumbbell', { ...reps(8, 12), loadIncrementLbs: DB, startingWeightLbs: 20 }),
-  'db-romanian-deadlift': ex('dumbbell', { ...reps(8, 10), loadIncrementLbs: DB, startingWeightLbs: 15, loadsBack: true }),
+  'db-romanian-deadlift': ex('dumbbell', { ...reps(8, 10), loadIncrementLbs: DB, startingWeightLbs: 15 }),
   'chest-supported-row': ex('dumbbell', { ...reps(10, 12), loadIncrementLbs: DB, startingWeightLbs: 20 }),
   'dead-bug': ex('bodyweight', { progression: 'bodyweight', ...reps(8, 8, true), startingWeightLbs: 0 }),
   'face-pull': ex('cable', { ...reps(12, 15), loadIncrementLbs: 5, startingWeightLbs: 20 }),
@@ -51,24 +54,21 @@ export const RULES = {
   'lat-pulldown': ex('cable', { ...reps(10, 12), loadIncrementLbs: MC, startingWeightLbs: 60 }),
   'hip-thrust': ex('barbell', { ...reps(10, 12), loadIncrementLbs: BB, startingWeightLbs: 0, firstLoadedWeightLbs: 45 }),
   'seated-db-shoulder-press': ex('dumbbell', { ...reps(8, 12), loadIncrementLbs: DB, startingWeightLbs: 15 }),
-  // Level 1 range (standard, 10-20); the other levels are in PUSHUP_LADDER. Level 5 adds load in 5-lb steps (spec 5.4).
-  pushup: ex('bodyweight_ladder', {
-    progression: 'ladder', ...reps(10, 20), loadIncrementLbs: 5, startingWeightLbs: 0, startingLevel: 1,
-  }),
-  'back-extension-45': ex('bodyweight_loadable', {
-    ...reps(10, 15), loadIncrementLbs: 5, startingWeightLbs: 0, loadsBack: true,
-  }),
+  // Level 1 range (standard, 10-20); the other levels are in PUSHUP_LADDER (display only).
+  pushup: ex('bodyweight_ladder', { progression: 'ladder', ...reps(10, 20), startingWeightLbs: 0, startingLevel: 1 }),
+  // Bodyweight-based: no progression (spec 5.4); the box is pre-filled with last time's weight.
+  'back-extension-45': ex('bodyweight_loadable', { progression: 'loadable', ...reps(10, 15), startingWeightLbs: 0 }),
 
   // ---- Workout C ----
   // The trap bar starts at the bar's own weight: the trapBarWeightLbs setting (default 45).
-  'trap-bar-deadlift': ex('barbell', { ...reps(6, 10), loadIncrementLbs: BB, startingWeightLbs: null, loadsBack: true }),
+  'trap-bar-deadlift': ex('barbell', { ...reps(6, 10), loadIncrementLbs: BB, startingWeightLbs: null }),
   'incline-db-press': ex('dumbbell', { ...reps(8, 12), loadIncrementLbs: DB, startingWeightLbs: 20 }),
   'reverse-lunge': ex('dumbbell', { ...reps(8, 8, true), loadIncrementLbs: DB, startingWeightLbs: 0, firstLoadedWeightLbs: 10 }),
   'seated-cable-row': ex('cable', { ...reps(10, 12), loadIncrementLbs: MC, startingWeightLbs: 60 }),
-  'farmer-carry': ex('carry', { targetDistanceM: 40, loadIncrementLbs: 5, startingWeightLbs: 35, loadsBack: true }),
+  'farmer-carry': ex('carry', { targetDistanceM: 40, loadIncrementLbs: 5, startingWeightLbs: 35 }),
 
   // ---- Back-friendly alternatives (spec 4.5) ----
-  'box-squat': ex('dumbbell', { loadIncrementLbs: DB }),
+  'box-squat': ex('dumbbell', { loadIncrementLbs: DB1 }),
   'cable-pull-through': ex('cable', { loadIncrementLbs: MC }),
   'bulgarian-split-squat': ex('dumbbell', { loadIncrementLbs: DB }),
   'split-squat': ex('dumbbell', { loadIncrementLbs: DB }),
@@ -122,27 +122,11 @@ export const PUSHUP_LADDER = [
   { level: 5, repMin: 8, repMax: 15 },
 ];
 
-// Program-wide numbers (spec 5.1, 5.8, 5.12 and the UserProfile defaults of spec 8).
+// Program-wide numbers (spec 5.1, 5.12 and the UserProfile defaults of spec 8).
 export const PROGRAM = {
   defaultProgramStartDate: '2026-09-28',
   defaultTrapBarWeightLbs: 45,
   defaultScheduledIncreaseDays: 21,
   phase1Weeks: 4,
   phase1Sets: 2,
-  firstDeloadWeek: 11,
-  deloadGapWeeks: 7,
-  // Suggested reduction after two weak sessions (spec 5.2 rule 2): about 10%.
-  reductionPercent: 10,
-  // Reductions within this many weeks make an exercise stalled (spec 5.10).
-  stallWeeks: 9,
-  stallReductions: 2,
-  // Back pain before above this holds loadsBack exercises at the base load (spec 5.9).
-  backPainGate: 3,
-  // Ramp-up sets (spec 5.5): a share of the working weight, and the reps.
-  rampUp: [{ share: 0.5, reps: 8 }, { share: 0.75, reps: 4 }],
-  rampUpSlots: [1, 3],
-  // Calibration lasts an exercise's first sessions (spec 5.6).
-  calibrationSessions: 2,
-  maxLevel: 5,
-  minLevel: 1,
 };

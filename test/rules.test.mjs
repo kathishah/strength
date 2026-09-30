@@ -84,7 +84,7 @@ describe('rules.js covers the catalog', () => {
       assert.equal(r.type, EXERCISES[id].type, `${id} type`);
       if (r.progression === 'load') {
         assert.ok(r.loadIncrementLbs > 0, `${id} needs a load increment`);
-        assert.ok(['dumbbell', 'barbell', 'machine', 'cable', 'bodyweight_loadable', 'carry'].includes(r.type), `${id} load type`);
+        assert.ok(['dumbbell', 'barbell', 'machine', 'cable', 'carry'].includes(r.type), `${id} load type`);
       }
       if (r.progression === 'suspension') {
         assert.equal(r.type, 'suspension');
@@ -97,7 +97,7 @@ describe('rules.js covers the catalog', () => {
   test('rules reference no field the spec section 8 does not know', () => {
     const allowed = new Set([
       'type', 'progression', 'repMin', 'repMax', 'perSide', 'holdSeconds', 'targetDistanceM', 'loadIncrementLbs',
-      'startingWeightLbs', 'firstLoadedWeightLbs', 'startingLevel', 'loadsBack',
+      'startingWeightLbs', 'firstLoadedWeightLbs', 'startingLevel',
     ]);
     for (const [id, r] of Object.entries(RULES)) {
       for (const k of Object.keys(r)) assert.ok(allowed.has(k), `${id}.${k}`);
@@ -162,27 +162,39 @@ describe('rules.js matches spec 4.5.1 (TRX)', () => {
 });
 
 describe('rules.js matches spec 5.3 and 5.6', () => {
-  test('load increments by type (5.3)', () => {
+  test('load increments (5.3, v1.13): two dumbbells 2.5 each, one dumbbell 5', () => {
     const table = Object.fromEntries(tableRows(section('### 5.3 Load increments')).map(([type, inc]) => [type, inc]));
-    const amount = (key) => Number(/\+(\d+)/.exec(table[key])[1]);
-    const byType = {
-      dumbbell: amount('Dumbbell'),
-      barbell: amount('Barbell / trap bar'),
-      machine: amount('Machine / cable'),
-      cable: amount('Machine / cable'),
-      carry: amount('Carry'),
-      bodyweight_loadable: amount('Bodyweight loadable'),
+    const rowFor = (prefix) => {
+      const key = Object.keys(table).find((k) => k.startsWith(prefix));
+      assert.ok(key, `no 5.3 row starting "${prefix}"`);
+      return table[key];
     };
-    assert.match(table['Machine / cable'], /face pull \+5 lbs/);
+    const amount = (text) => Number(/\+(\d+(?:\.\d+)?)/.exec(text)[1]);
+    const oneDumbbell = Object.keys(table).find((k) => k.startsWith('Dumbbell, one dumbbell'));
+    const single = [...oneDumbbell.matchAll(/(goblet squat|box squat)/g)].map((m) => idOf(m[1]));
+    assert.deepEqual(single.sort(), ['box-squat', 'goblet-squat']);
+    const byType = { barbell: amount(rowFor('Barbell')), machine: amount(rowFor('Machine')), cable: amount(rowFor('Machine')), carry: amount(rowFor('Carry')) };
+    assert.match(rowFor('Machine'), /face pull \+5 lbs/);
     for (const [id, r] of Object.entries(RULES)) {
       if (r.progression !== 'load') continue;
-      const want = id === 'face-pull' ? 5 : byType[r.type];
+      let want = byType[r.type];
+      if (r.type === 'dumbbell') want = single.includes(id) ? amount(rowFor('Dumbbell, one dumbbell')) : amount(rowFor('Dumbbell, one in each hand'));
+      if (id === 'face-pull') want = 5;
       assert.equal(r.loadIncrementLbs, want, `${id} (${r.type})`);
     }
+    assert.equal(RULES['goblet-squat'].loadIncrementLbs, 5);
+    assert.equal(RULES['db-bench-press'].loadIncrementLbs, 2.5);
+  });
+
+  test('bodyweight-based exercises have no increment and no progression (5.4, v1.13)', () => {
+    for (const id of ['dead-bug', 'back-extension-45', 'pushup', 'trx-row', 'trx-squat']) {
+      assert.ok(!['load'].includes(RULES[id].progression), id);
+    }
+    assert.equal(RULES['back-extension-45'].progression, 'loadable');
   });
 
   test('starting weights and first-loaded weights (5.6 table)', () => {
-    const rows = tableRows(section('### 5.6 Starting weights and calibration'));
+    const rows = tableRows(section('### 5.6 Starting weights'));
     assert.equal(rows.length, 18);
     for (const [name, start, first] of rows) {
       const r = RULES[idOf(name)];
@@ -196,14 +208,6 @@ describe('rules.js matches spec 5.3 and 5.6', () => {
 
   test('the pushup starts at ladder level 1', () => assert.equal(RULES.pushup.startingLevel, 1));
 
-  test('exactly the exercises the spec names have loadsBack (5.9)', () => {
-    const line = /flagged `loadsBack = true` \(seed: ([^)]*)\)/.exec(section('### 5.9 Back pain gate'));
-    assert.ok(line, 'the 5.9 seed list was not found');
-    const named = line[1].split(',').map((n) => idOf(n.trim()));
-    const flagged = Object.keys(RULES).filter((id) => RULES[id].loadsBack);
-    assert.deepEqual([...flagged].sort(), [...named].sort());
-  });
-
   test('pushup ladder (5.4) has the spec ranges', () => {
     const rows = tableRows(section('### 5.4 Bodyweight exercises')).filter(([level]) => /^\d$/.test(level));
     assert.equal(rows.length, 6);
@@ -215,19 +219,12 @@ describe('rules.js matches spec 5.3 and 5.6', () => {
 });
 
 describe('program constants match the spec', () => {
-  test('phase, deload, gate, stall and ramp-up numbers', () => {
+  test('phase and scheduled-increase numbers', () => {
     assert.equal(PROGRAM.phase1Weeks, 4);
     assert.equal(PROGRAM.phase1Sets, 2);
-    assert.equal(PROGRAM.firstDeloadWeek, 11);
-    assert.equal(PROGRAM.deloadGapWeeks, 7);
     assert.equal(PROGRAM.defaultScheduledIncreaseDays, 21);
     assert.equal(PROGRAM.defaultProgramStartDate, '2026-09-28');
-    assert.equal(PROGRAM.calibrationSessions, 2);
-    assert.equal(PROGRAM.stallWeeks, 9);
-    assert.equal(PROGRAM.stallReductions, 2);
-    assert.equal(PROGRAM.backPainGate, 3);
-    assert.deepEqual(PROGRAM.rampUp, [{ share: 0.5, reps: 8 }, { share: 0.75, reps: 4 }]);
-    assert.deepEqual(PROGRAM.rampUpSlots, [1, 3]);
     assert.match(spec, /Initial value: \*\*2026-09-28\*\*/);
+    assert.match(spec, /default 21/);
   });
 });

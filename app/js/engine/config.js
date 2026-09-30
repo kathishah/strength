@@ -24,13 +24,11 @@ export function firstSlotFor(exerciseId) {
 
 const num = (x) => (typeof x === 'number' && Number.isFinite(x) ? x : null);
 
-// Working sets in the current phase for a slot; Phase 1 has 2 sets everywhere (spec 5.1), a deload halves the count
-// and rounds up (spec 5.8).
-export function setsFor(templateCode, slot, phase, isDeload) {
+// Working sets in the current phase for a slot; Phase 1 has 2 sets everywhere (spec 5.1).
+export function setsFor(templateCode, slot, phase) {
   const full = SLOT_SETS[templateCode]?.[slot - 1];
   if (!full) return null;
-  const normal = phase === 1 ? Math.min(PROGRAM.phase1Sets, full) : full;
-  return isDeload ? Math.ceil(normal / 2) : normal;
+  return phase === 1 ? Math.min(PROGRAM.phase1Sets, full) : full;
 }
 
 // settings: replay(...).settings. templateCode/slot may be omitted (a history page); the exercise then borrows from
@@ -44,7 +42,7 @@ export function resolveExercise(exerciseId, { settings = {}, templateCode = null
   const slotRules = defaultId && Object.hasOwn(RULES, defaultId) ? RULES[defaultId] : null;
 
   // An alternative with no range of its own takes the slot's range (unloaded holds and TRX levels keep theirs).
-  const inherits = rules.repMin === null && rules.targetDistanceM === null && ['load', 'none'].includes(rules.progression);
+  const inherits = rules.repMin === null && rules.targetDistanceM === null && ['load', 'loadable', 'none'].includes(rules.progression);
   const repMin = inherits ? slotRules?.repMin ?? null : rules.repMin;
   const repMax = inherits ? slotRules?.repMax ?? null : rules.repMax;
   const perSide = rules.perSide ?? (inherits ? slotRules?.perSide ?? false : false);
@@ -74,7 +72,6 @@ export function resolveExercise(exerciseId, { settings = {}, templateCode = null
     firstLoadedWeightLbs: first !== null ? (first > 0 ? first : null) : rules.firstLoadedWeightLbs,
     startingWeightLbs: start !== null && start >= 0 ? start : seededStart,
     startingLevel: rules.startingLevel,
-    loadsBack: rules.loadsBack,
     scheduledOn: settings.scheduledIncreasesEnabled !== false && setting('scheduledIncrease') !== false,
     scheduledDays: num(settings.scheduledIncreaseDays) ?? PROGRAM.defaultScheduledIncreaseDays,
   };

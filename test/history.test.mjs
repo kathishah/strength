@@ -15,13 +15,6 @@ describe('which sessions and sets count', () => {
     assert.deepEqual(hist(log, 'goblet-squat').map((h) => h.date), ['2026-09-28']);
   });
 
-  test('deload sessions are left out', () => {
-    const log = makeLog()
-      .session('2026-09-28', 'A', [lift('goblet-squat', 20, [10, 10])])
-      .session('2026-12-07', 'A', [lift('goblet-squat', 20, [10])], { isDeload: true });
-    assert.equal(hist(log, 'goblet-squat').length, 1);
-  });
-
   test('ramp-up sets and sets marked not completed are left out; so are sets with nothing recorded', () => {
     const log = makeLog().session('2026-09-28', 'A', [
       ramp('goblet-squat', [{ weightLbs: 10, reps: 8 }, { weightLbs: 15, reps: 4 }]),
@@ -87,11 +80,6 @@ describe('base load', () => {
     const log = makeLog().session('2026-09-28', 'B', [atLevel('pushup', 1, [20, 20]), atLevel('pushup', 2, [8])]);
     const [h] = hist(log, 'pushup');
     assert.deepEqual([h.baseLevel, h.baseLoad], [2, null]);
-  });
-
-  test('a logged reduction is remembered for stall detection', () => {
-    const log = makeLog().session('2026-09-28', 'A', [lift('goblet-squat', 20, [10], { suggestionSource: 'reduction' })]);
-    assert.equal(hist(log, 'goblet-squat')[0].reductionLogged, true);
   });
 });
 
