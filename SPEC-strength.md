@@ -8,6 +8,8 @@ A personal, mobile-first web app for logging gym workouts in a body recompositio
   - Exercises that start at 0 and have a first-loaded weight (leg press, hip thrust, reverse lunge) pre-fill that weight when there is no history (5.6). What was logged last time still wins.
   - Reps in reserve (RIR) is no longer asked per set. Target effort is shown in plain words ("stop each set with about 3 reps left"). The `rir` field stays in the data model, unused.
   - Session screen follows the v0.2 viewer: one horizontal swipe carousel of exercise cards, colour-coded supersets (6.3).
+  - Home is that viewer's page (6.2): a slim header (status line, day pills, save state, theme, sign out) over the day's cards; no Start button, the workout starts when the first exercise is ticked.
+  - Logging is one tick per exercise with a barrel dial per set for the weight (2.5 lb notches, at the suggested weight) and a shared reps dial (at the recommended reps); Edit and Undo after the tick; rest timer after each tick (6.3).
 - **v1.13**
   - Progression scope cut to what the app needs: show the weights used last time, pre-fill an editable suggestion, and prompt an increase after a few weeks (scheduled increase, 5.12). Struck-through text in Section 5 (and where it is mentioned elsewhere) is removed and is not built; it is kept for reference.
   - Removed: ramp-up sets (5.5), calibration (5.6), earned increases and reductions (5.2 rules 1 and 2), deload weeks (5.8), back pain gate (5.9), stall detection (5.10), expected pace (5.11), and all progression for bodyweight-based exercises (5.4: bodyweight, loadable, TRX levels, pushup ladder). Those exercises still show sets, reps, last time and an editable box; nothing is suggested to change.
