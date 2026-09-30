@@ -81,3 +81,25 @@ describe('the test note', () => {
     assert.deepEqual([state.sessions, state.skipped], [{}, []]);
   });
 });
+
+import { describeSaveState } from '../app/js/ui/format.js';
+describe('the header save state', () => {
+  test('nothing waiting is "All saved", whatever the pull did', () => {
+    assert.deepEqual(describeSaveState({ syncing: false, lastError: null }, 0), { text: 'All saved', kind: 'ok' });
+    assert.equal(describeSaveState({ syncing: false, lastError: new ApiError(0, null) }, 0).text, 'All saved');
+  });
+
+  test('events waiting: uploading, waiting, or saved here and not uploaded (offline)', () => {
+    assert.deepEqual(describeSaveState({ syncing: true, lastError: null }, 3), { text: 'Uploading 3 events…', kind: 'info' });
+    assert.deepEqual(describeSaveState({ syncing: false, lastError: null }, 1), { text: '1 event waiting to upload', kind: 'info' });
+    const offline = describeSaveState({ syncing: false, lastError: new ApiError(0, null) }, 14);
+    assert.deepEqual(offline, { text: '14 events saved on this device, not uploaded yet', kind: 'warn' });
+  });
+
+  test('a lost sign-in says so and still says the work is saved', () => {
+    const line = describeSaveState({ syncing: false, lastError: new AuthError('signed_out', '') }, 5);
+    assert.equal(line.kind, 'error');
+    assert.match(line.text, /5 events saved here/);
+    assert.equal(describeSaveState({ syncing: false, lastError: new AuthError('signed_out', '') }, 0).text, 'Sign in to sync');
+  });
+});

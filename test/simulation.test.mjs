@@ -63,11 +63,11 @@ describe('a load rises only through the scheduled increase, whatever the reps', 
     assert.ok(step('db-bench-press').length >= 5 && step('db-bench-press').every((x) => x === 2.5));
   });
 
-  test('hip thrust: 0 until 21 days after its first session, then 45, then +10', () => {
+  test('hip thrust: 45 (the first-loaded weight) from the start, +10 every 21 days', () => {
     const w = series(strong, 'hip-thrust').map((e) => e.weightLbs);
-    assert.deepEqual(w.slice(0, 4), [0, 0, 0, 45]);
-    assert.equal(w[4], 45);
-    assert.equal(w[7], 55);
+    assert.deepEqual(w.slice(0, 4), [45, 45, 45, 55]);
+    assert.equal(w[4], 55);
+    assert.equal(w[7], 65);
   });
 
   test('every step is one increment, and nothing ever goes down or negative', () => {

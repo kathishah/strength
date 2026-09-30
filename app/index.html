@@ -19,18 +19,17 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-title" content="Strength" />
   <link rel="stylesheet" href="css/app.css" />
+  <script src="js/theme-boot.js"></script>
   <script type="module" src="js/main.js"></script>
 </head>
 <body>
+  <header id="app-header" class="app-header" hidden></header>
   <main class="page">
-    <header class="top">
-      <h1>Strength</h1>
-      <p class="tag">Backbone</p>
-    </header>
 
     <p id="notice" class="notice" role="status" aria-live="polite" hidden></p>
 
     <section id="signin" class="card" aria-labelledby="signin-title" hidden>
+      <h1 class="brand">Strength</h1>
       <h2 id="signin-title">Sign in</h2>
       <form id="signin-form" autocomplete="on" novalidate>
         <label for="email">Email</label>
@@ -42,41 +41,45 @@
       <p id="signin-pending" class="muted" hidden></p>
     </section>
 
-    <section id="app" class="card" aria-labelledby="app-title" hidden>
-      <h2 id="app-title">Signed in</h2>
-      <div class="actions">
-        <button id="note-button" class="btn primary" type="button">Add test note</button>
-        <button id="sync-button" class="btn" type="button">Sync now</button>
-        <button id="signout-button" class="btn quiet" type="button">Sign out</button>
-      </div>
+    <div id="app" hidden>
+      <div id="screen"></div>
 
-      <dl class="stats">
-        <dt>Sync</dt>
-        <dd id="sync-state" data-kind="info">Not synced yet.</dd>
-        <dt>Waiting to upload</dt>
-        <dd id="pending">nothing</dd>
-        <dt>Events on this device</dt>
-        <dd id="count">0</dd>
-        <dt>Replayed state</dt>
-        <dd id="state-summary">0 sessions, 0 sets, 0 settings</dd>
-        <dt>Stored in</dt>
-        <dd id="storage">IndexedDB</dd>
-        <dt>Cursor</dt>
-        <dd id="cursor" class="mono">none</dd>
-        <dt>Last round trip</dt>
-        <dd id="rtt">none yet</dd>
-      </dl>
+      <details id="device" class="card device">
+        <summary>Sync and this device</summary>
+        <div class="actions">
+          <button id="note-button" class="btn primary" type="button">Add test note</button>
+          <button id="sync-button" class="btn" type="button">Sync now</button>
+          <button id="signout-button" class="btn quiet" type="button">Sign out</button>
+        </div>
 
-      <div id="rejected" hidden>
-        <h3>Set aside</h3>
-        <p class="muted">The server refused these events. They are kept here, and do not count towards your data.</p>
-        <ul id="rejected-list" class="events"></ul>
-      </div>
+        <dl class="stats">
+          <dt>Sync</dt>
+          <dd id="sync-state" data-kind="info">Not synced yet.</dd>
+          <dt>Waiting to upload</dt>
+          <dd id="pending">nothing</dd>
+          <dt>Events on this device</dt>
+          <dd id="count">0</dd>
+          <dt>Replayed state</dt>
+          <dd id="state-summary">0 sessions, 0 sets, 0 settings</dd>
+          <dt>Stored in</dt>
+          <dd id="storage">IndexedDB</dd>
+          <dt>Cursor</dt>
+          <dd id="cursor" class="mono">none</dd>
+          <dt>Last round trip</dt>
+          <dd id="rtt">none yet</dd>
+        </dl>
 
-      <h3>Events</h3>
-      <p id="empty" class="muted">No events yet. Add a test note, then open the app on another device.</p>
-      <ul id="events" class="events"></ul>
-    </section>
+        <div id="rejected" hidden>
+          <h3>Set aside</h3>
+          <p class="muted">The server refused these events. They are kept here, and do not count towards your data.</p>
+          <ul id="rejected-list" class="events"></ul>
+        </div>
+
+        <h3>Events</h3>
+        <p id="empty" class="muted">No events yet. Add a test note, then open the app on another device.</p>
+        <ul id="events" class="events"></ul>
+      </details>
+    </div>
   </main>
 </body>
 </html>

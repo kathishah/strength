@@ -24,11 +24,9 @@ export function firstSlotFor(exerciseId) {
 
 const num = (x) => (typeof x === 'number' && Number.isFinite(x) ? x : null);
 
-// Working sets in the current phase for a slot; Phase 1 has 2 sets everywhere (spec 5.1).
-export function setsFor(templateCode, slot, phase) {
-  const full = SLOT_SETS[templateCode]?.[slot - 1];
-  if (!full) return null;
-  return phase === 1 ? Math.min(PROGRAM.phase1Sets, full) : full;
+// Working sets for a slot (spec 4.3). Since v1.14 every week has the full count; the phases differ only in target effort.
+export function setsFor(templateCode, slot) {
+  return SLOT_SETS[templateCode]?.[slot - 1] ?? null;
 }
 
 // settings: replay(...).settings. templateCode/slot may be omitted (a history page); the exercise then borrows from
@@ -56,6 +54,10 @@ export function resolveExercise(exerciseId, { settings = {}, templateCode = null
   const trapBar = num(settings.trapBarWeightLbs) ?? PROGRAM.defaultTrapBarWeightLbs;
   // The trap bar starts at the bar's own weight (spec 5.6); a per-exercise starting weight overrides it.
   const seededStart = exerciseId === 'trap-bar-deadlift' ? trapBar : rules.startingWeightLbs;
+  const firstLoaded = first !== null ? (first > 0 ? first : null) : rules.firstLoadedWeightLbs;
+  // v1.14: an exercise whose seeded start is 0 and that has a first-loaded weight (leg press, hip thrust, reverse lunge)
+  // pre-fills that weight when there is no history. A startingWeight setting, and anything already logged, still win.
+  const seededPrefill = seededStart === 0 && firstLoaded !== null ? firstLoaded : seededStart;
 
   return {
     exerciseId,
@@ -69,8 +71,8 @@ export function resolveExercise(exerciseId, { settings = {}, templateCode = null
     holdSeconds: rules.holdSeconds,
     targetDistanceM,
     incrementLbs: inc !== null && inc > 0 ? inc : rules.loadIncrementLbs,
-    firstLoadedWeightLbs: first !== null ? (first > 0 ? first : null) : rules.firstLoadedWeightLbs,
-    startingWeightLbs: start !== null && start >= 0 ? start : seededStart,
+    firstLoadedWeightLbs: firstLoaded,
+    startingWeightLbs: start !== null && start >= 0 ? start : seededPrefill,
     startingLevel: rules.startingLevel,
     scheduledOn: settings.scheduledIncreasesEnabled !== false && setting('scheduledIncrease') !== false,
     scheduledDays: num(settings.scheduledIncreaseDays) ?? PROGRAM.defaultScheduledIncreaseDays,
