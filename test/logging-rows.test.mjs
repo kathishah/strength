@@ -28,11 +28,11 @@ describe('which boxes an exercise shows', () => {
 });
 
 describe('a fresh exercise', () => {
-  test('one todo row per set of the slot, every weight pre-filled with the suggestion, reps empty', () => {
+  test('one todo row per set of the slot, weight and reps pre-filled with the recommendation, ready to log', () => {
     const s = gobletFresh(); // week 1: the full 3 sets
     const rows = buildRows({ suggestion: s, planned: s.sets });
     assert.equal(rows.length, 3);
-    assert.deepEqual(rows.map((r) => [r.setNumber, r.status, r.weightLbs, r.reps, r.canLog]), [[1, 'todo', 20, null, false], [2, 'todo', 20, null, false], [3, 'todo', 20, null, false]]);
+    assert.deepEqual(rows.map((r) => [r.setNumber, r.status, r.weightLbs, r.reps, r.canLog]), [[1, 'todo', 20, 8, true], [2, 'todo', 20, 8, true], [3, 'todo', 20, 8, true]]);
     assert.ok(rows.every((r) => !r.weightChanged));
   });
 
@@ -92,9 +92,11 @@ describe('carry-over of weight to the remaining sets', () => {
     assert.deepEqual(weights(rows), [null, null, null]);
   });
 
-  test('reps are never carried', () => {
-    const rows = buildRows({ suggestion: s(), ...three, logged: [set(1, { reps: 12 })] });
-    assert.deepEqual(rows.map((r) => r.reps), [12, null, null]);
+  test('reps start at the recommended number and follow the row before, like the weight', () => {
+    const target = s().targetReps;
+    assert.deepEqual(buildRows({ suggestion: s(), ...three }).map((r) => r.reps), [target, target, target]);
+    assert.deepEqual(buildRows({ suggestion: s(), ...three, logged: [set(1, { reps: 12 })] }).map((r) => r.reps), [12, 12, 12]);
+    assert.deepEqual(buildRows({ suggestion: s(), ...three, draftRows: { 2: { reps: 9 } } }).map((r) => r.reps), [target, 9, 9]);
   });
 
   test('levels carry the same way (TRX and the pushup ladder)', () => {
@@ -130,9 +132,9 @@ describe('done, editing and undone rows', () => {
 
   test('an editing row shows what was typed over what was logged, and is dirty only when it differs', () => {
     const logged = [set(1, { weightLbs: 25 })];
-    const same = buildRows({ suggestion: s(), planned: 1, logged, draftRows: { 1: { editing: true } } })[0];
+    const same = buildRows({ suggestion: s(), planned: 1, logged, editing: true })[0];
     assert.deepEqual([same.status, same.weightLbs, same.dirty], ['editing', 25, false]);
-    const typed = buildRows({ suggestion: s(), planned: 1, logged, draftRows: { 1: { editing: true, weightLbs: 27.5, reps: 8 } } })[0];
+    const typed = buildRows({ suggestion: s(), planned: 1, logged, editing: true, draftRows: { 1: { weightLbs: 27.5, reps: 8 } } })[0];
     assert.deepEqual([typed.weightLbs, typed.reps, typed.dirty], [27.5, 8, true]);
     assert.equal(typed.canLog, true);
   });
@@ -161,13 +163,13 @@ describe('done, editing and undone rows', () => {
 });
 
 describe('other kinds of exercise', () => {
-  test('carries: weight and distance, distance never pre-filled', () => {
+  test('carries: weight and distance, distance pre-filled with the 40 m target', () => {
     const c = suggest(fresh(), 'farmer-carry', 'C', 5);
     const [row] = buildRows({ suggestion: c, planned: 1 });
     assert.equal(row.weightLbs, 35);
-    assert.equal(row.distanceM, null);
-    assert.equal(row.canLog, false);
-    assert.equal(buildRows({ suggestion: c, planned: 1, draftRows: { 1: { distanceM: 40 } } })[0].canLog, true);
+    assert.equal(row.distanceM, 40);
+    assert.equal(row.canLog, true);
+    assert.equal(buildRows({ suggestion: c, planned: 2, draftRows: { 1: { distanceM: 30 } } })[1].distanceM, 30, 'and follows the row before');
   });
 
   test('holds log completion only', () => {
@@ -177,10 +179,18 @@ describe('other kinds of exercise', () => {
     assert.equal(row.weightLbs, null);
   });
 
-  test('dead bug needs reps only', () => {
+  test('dead bug needs reps only, pre-filled with its 8 per side', () => {
     const bug = suggest(fresh(), 'dead-bug', 'A', 5);
-    const rows = buildRows({ suggestion: bug, planned: 2, draftRows: { 1: { reps: 8 } } });
-    assert.deepEqual(rows.map((r) => r.canLog), [true, false]);
+    const rows = buildRows({ suggestion: bug, planned: 2 });
+    assert.deepEqual(rows.map((r) => [r.reps, r.weightLbs, r.canLog]), [[8, null, true], [8, null, true]]);
+    assert.equal(buildRows({ suggestion: bug, planned: 1, draftRows: { 1: { reps: null } } })[0].canLog, false, 'a cleared box has to be filled in');
+  });
+
+  test('the pushup ladder pre-fills the bottom of the level\'s range', () => {
+    const p = suggest(fresh(), 'pushup', 'B', 5);
+    const ladder = (level) => (level === 1 ? 10 : 8);
+    assert.deepEqual(buildRows({ suggestion: p, planned: 2, targetRepsFor: ladder }).map((r) => r.reps), [10, 10]);
+    assert.equal(buildRows({ suggestion: p, planned: 1, draftRows: { 1: { levelNumber: 3 } }, targetRepsFor: ladder })[0].reps, 8);
   });
 
   test('history changes the suggestion, and so the pre-fill', () => {

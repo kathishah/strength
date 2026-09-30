@@ -29,3 +29,29 @@ export function stepValue(current, delta, { min = 0, max = Infinity, emptyStarts
     : current;
   return Math.min(max, Math.max(min, round2(from + delta)));
 }
+
+// ---- barrel dials (ui/dial.js) ----
+
+// Every notch of a range: start, start + step, ... end (rounded, so no 22.500000001), plus any extra values the range does not contain
+// (a weight logged as 21), sorted.
+export function notches({ start, end, step, include = [] }) {
+  const out = new Set();
+  for (let v = start; v <= end + 1e-9; v += step) out.add(Math.round(v * 100) / 100);
+  for (const v of include) if (typeof v === 'number' && Number.isFinite(v)) out.add(v);
+  return [...out].sort((a, b) => a - b);
+}
+
+export const WEIGHT_NOTCH = 2.5; // the smallest plate step: every weight dial turns in 2.5 lb notches, whatever the exercise's own increment
+
+// The notches of one dial. field: weightLbs | levelNumber | reps | distanceM. used: values the dial has to be able to show (what the
+// sets hold now, the suggestion). The range grows with them, so a 130 lb leg press and a 20 lb squat both get a sensible drum.
+export function dialNotches(field, used = []) {
+  const top = Math.max(0, ...used.filter((v) => typeof v === 'number' && Number.isFinite(v)));
+  switch (field) {
+    case 'weightLbs': return notches({ start: 0, end: Math.max(60, Math.ceil((top * 1.6 + 20) / 10) * 10), step: WEIGHT_NOTCH, include: used });
+    case 'levelNumber': return notches({ start: 1, end: 5, step: 1 });
+    case 'reps': return notches({ start: 1, end: Math.max(30, Math.ceil(top * 2)), step: 1, include: used });
+    case 'distanceM': return notches({ start: 5, end: Math.max(200, Math.ceil(top * 2 / 5) * 5), step: 5, include: used });
+    default: throw new RangeError(`no dial for "${field}"`);
+  }
+}

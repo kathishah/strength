@@ -7,8 +7,9 @@ import { exerciseForSlot } from '../engine/session.js';
 import { WORKOUTS } from '../seed/index.js';
 import { pacificDate } from '../time.js';
 import {
-  addExtraSet, clearRest, clearRow, setBackPainAfter, setNotes, setRestLength, setRowField, startEdit, startRest,
+  addExtraSet, clearExercise, clearRest, setBackPainAfter, setNotes, setRestLength, setRowField, startEditing, startRest,
 } from './draft.js';
+import { PENDING } from './day-view.js';
 import { adjustedRestLength } from './rest-timer.js';
 import { canLog, inputsFor, pickValues } from './rows.js';
 import { inProgressSessions, nextTemplate } from './rotation.js';
@@ -36,14 +37,48 @@ export function createActions({ events, drafts, now, newId }) {
     return session;
   }
 
-  return {
-    draft: draftOf,
+  // Starts the next workout by rotation. Resolves with the new session id.
+  async function startSession({ backPainBefore = null, sessionId = `sess_${newId(now())}` } = {}) {
+    const state = events.state;
+    if (inProgressSessions(state).length > 0) throw new Error('A workout is already in progress.');
+    const nowMs = now();
+    const templateCode = nextTemplate(state);
+    const { calendar } = planSession(state, { today: pacificDate(nowMs), templateCode });
+    await write(make.sessionStarted({ templateCode, nowMs, calendar, backPainBefore }), sessionId);
+    return sessionId;
+  }
 
-    // ---- typing (draft only, nothing is written to the log) ----
-    setValue: (sessionId, exerciseId, setNumber, field, value) => update(sessionId, (d) => setRowField(d, exerciseId, setNumber, field, value)),
-    beginEdit: (sessionId, exerciseId, setNumber) => update(sessionId, (d) => startEdit(d, exerciseId, setNumber)),
-    cancelEdit: (sessionId, exerciseId, setNumber) => update(sessionId, (d) => clearRow(d, exerciseId, setNumber)),
-    addSet: (sessionId, exerciseId) => update(sessionId, (d) => addExtraSet(d, exerciseId)),
+  // The workout an exercise is logged into: the open one, or a new one when the cards on screen are still the preview (no session
+  // yet). What was typed into the preview (its draft, under PENDING) moves to the new session.
+  async function ensureSession(sessionId, backPainBefore) {
+    if (sessionId && sessionId !== PENDING) {
+      openSession(sessionId);
+      return sessionId;
+    }
+    // The typed values move to the new session's draft first, so the screen redraws with them when session.started lands.
+    const typed = drafts.load(PENDING);
+    const id = `sess_${newId(now())}`;
+    drafts.save({ ...typed, sessionId: id });
+    try {
+      await startSession({ backPainBefore, sessionId: id });
+    } catch (err) {
+      drafts.save(typed);
+      throw err;
+    }
+    return id;
+  }
+
+  return {
+    draft: (sessionId) => draftOf(sessionId ?? PENDING),
+    startSession,
+
+    // ---- typing (draft only, nothing is written to the log). sessionId is null (or PENDING) before the workout has started ----
+    setValue: (sessionId, exerciseId, setNumber, field, value) => update(sessionId ?? PENDING, (d) => setRowField(d, exerciseId, setNumber, field, value)),
+    // One weight (or level) for every set of the exercise, from the shared box of the card.
+    setAll: (sessionId, exerciseId, setNumbers, field, value) => update(sessionId ?? PENDING, (d) => setNumbers.reduce((acc, n) => setRowField(acc, exerciseId, n, field, value), d)),
+    beginEdit: (sessionId, exerciseId) => update(sessionId, (d) => startEditing(d, exerciseId)),
+    cancelEdit: (sessionId, exerciseId) => update(sessionId, (d) => clearExercise(d, exerciseId)),
+    addSet: (sessionId, exerciseId) => update(sessionId ?? PENDING, (d) => addExtraSet(d, exerciseId)),
     typeNotes: (sessionId, text) => update(sessionId, (d) => setNotes(d, text)),
     setBackPainAfter: (sessionId, value) => update(sessionId, (d) => setBackPainAfter(d, value)),
     skipRest: (sessionId) => update(sessionId, clearRest),
@@ -53,64 +88,61 @@ export function createActions({ events, drafts, now, newId }) {
 
     // ---- events ----
 
-    // Start the next workout by rotation. Resolves with the new session id.
-    async startSession({ backPainBefore = null } = {}) {
+    // Done on an exercise: log every set that has its numbers, or, for an exercise reopened with Edit, save the changes. rows: the card's
+    // rows as on screen ({ setNumber, setId, weightLbs, levelNumber, reps, distanceM }). A set with no reps (or distance) is left out,
+    // so doing two sets of three is fine; nothing is written unless at least one set is complete. The first Done of the day starts the
+    // workout (sessionId null), with the back pain rating chosen in the header. Resolves with the session id.
+    async saveExercise(sessionId, { exerciseId, rows, suggestion, backPainBefore = null }) {
+      const inputs = inputsFor(suggestion);
+      const edits = [];
+      const adds = [];
+      for (const row of rows) {
+        const values = pickValues(row, inputs);
+        if (row.setId) {
+          if (!canLog(values, inputs)) throw new RangeError('Fill in every box before saving, or undo the exercise.');
+          edits.push({ setId: row.setId, values });
+        } else if (canLog(values, inputs)) {
+          adds.push({ setNumber: row.setNumber, values });
+        }
+      }
+      if (edits.length === 0 && adds.length === 0) throw new RangeError('Enter the reps for at least one set.');
+
+      const id = await ensureSession(sessionId, backPainBefore);
       const state = events.state;
-      if (inProgressSessions(state).length > 0) throw new Error('A workout is already in progress.');
-      const nowMs = now();
-      const templateCode = nextTemplate(state);
-      const { calendar } = planSession(state, { today: pacificDate(nowMs), templateCode });
-      const sessionId = `sess_${newId(nowMs)}`;
-      await write(make.sessionStarted({ templateCode, nowMs, calendar, backPainBefore }), sessionId);
-      return sessionId;
+      let logged = 0;
+      for (const { setNumber, values } of adds) {
+        const exists = Object.values(state.sets).some((x) => x.sessionId === id && x.exerciseId === exerciseId && x.setNumber === setNumber);
+        if (exists) continue; // the same tap twice, or the same set from another device
+        const nowMs = now();
+        await write(make.setLogged({ sessionId: id, exerciseId, setNumber, values, suggestion }), `set_${newId(nowMs)}`);
+        logged++;
+      }
+      for (const { setId, values } of edits) {
+        const set = events.state.sets[setId];
+        if (!set || set.sessionId !== id) throw new RangeError('That set does not exist.');
+        const made = make.setEdited({ logged: set, values });
+        if (made) await write(made, setId);
+      }
+      update(id, (d) => {
+        const cleared = clearExercise(d, exerciseId);
+        return logged > 0 ? startRest(cleared, now()) : cleared;
+      });
+      return id;
     },
 
-    // Done on a row: log the set and start the rest timer. Logging a number that already exists changes nothing
-    // (a double tap, or the same tap on two screens), and resolves with that set's id.
-    async logSet(sessionId, { exerciseId, setNumber, values, suggestion }) {
+    // Undo an exercise: every set logged for it is deleted (the tombstones are final, so logging again makes new sets).
+    async undoExercise(sessionId, exerciseId) {
       openSession(sessionId);
-      const inputs = inputsFor(suggestion);
-      const picked = pickValues(values, inputs);
-      if (!canLog(picked, inputs)) throw new RangeError('Fill in every box before logging the set.');
-      const existing = Object.values(events.state.sets).find(
-        (s) => s.sessionId === sessionId && s.exerciseId === exerciseId && s.setNumber === setNumber,
-      );
-      if (existing) return existing.id;
-      const nowMs = now();
-      const setId = `set_${newId(nowMs)}`;
-      await write(make.setLogged({ sessionId, exerciseId, setNumber, values: picked, suggestion }), setId);
-      update(sessionId, (d) => startRest(clearRow(d, exerciseId, setNumber), nowMs));
-      return setId;
-    },
-
-    // Save after Edit: only the fields that changed are written; nothing changed, nothing written.
-    async saveSet(sessionId, { setId, values, suggestion }) {
-      openSession(sessionId);
-      const logged = events.state.sets[setId];
-      if (!logged || logged.sessionId !== sessionId) throw new RangeError('That set does not exist.');
-      const inputs = inputsFor(suggestion);
-      const picked = pickValues(values, inputs);
-      if (!canLog(picked, inputs)) throw new RangeError('Fill in every box before saving the set.');
-      const made = make.setEdited({ logged, values: picked });
-      if (made) await write(made, setId);
-      update(sessionId, (d) => clearRow(d, logged.exerciseId, logged.setNumber));
-      return made !== null;
-    },
-
-    // Undo a logged set. The tombstone is final, so logging again makes a new set.
-    async undoSet(sessionId, setId) {
-      openSession(sessionId);
-      const logged = events.state.sets[setId];
-      if (!logged || logged.sessionId !== sessionId) throw new RangeError('That set does not exist.');
-      await write(make.setDeleted(), setId);
-      update(sessionId, (d) => clearRow(d, logged.exerciseId, logged.setNumber));
+      const sets = Object.values(events.state.sets).filter((x) => x.sessionId === sessionId && x.exerciseId === exerciseId);
+      for (const set of sets) await write(make.setDeleted(), set.id);
+      update(sessionId, (d) => clearExercise(d, exerciseId));
     },
 
     // Swap the exercise in a slot for good (until changed back). Not allowed once a set of the current exercise is logged
-    // in this session. Choosing the default clears the swap.
-    async swap(sessionId, { slotNumber, exerciseId }) {
-      const session = openSession(sessionId);
-      const { templateCode } = session;
+    // in this session. Choosing the default clears the swap. With no workout started yet, `templateCode` names the workout on screen.
+    async swap(sessionId, { slotNumber, exerciseId, templateCode: shown = null }) {
+      const session = sessionId ? openSession(sessionId) : null;
+      const templateCode = session ? session.templateCode : shown;
       const slot = WORKOUTS[templateCode]?.slots.find((s) => s.slot === slotNumber);
       if (!slot) throw new RangeError('No such slot.');
       if (!swapOptions(templateCode, slotNumber, null).some((o) => o.exerciseId === exerciseId)) {
@@ -119,7 +151,7 @@ export function createActions({ events, drafts, now, newId }) {
       const state = events.state;
       const current = exerciseForSlot(state, templateCode, slotNumber);
       if (current.exerciseId === exerciseId) return false;
-      const started = Object.values(state.sets).some((s) => s.sessionId === sessionId && s.exerciseId === current.exerciseId && isWorking(s));
+      const started = sessionId && Object.values(state.sets).some((s) => s.sessionId === sessionId && s.exerciseId === current.exerciseId && isWorking(s));
       if (started) throw new Error('Undo the sets logged for this exercise before swapping it.');
       const made = make.swapChanged({ templateCode, slotNumber, exerciseId, defaultExerciseId: slot.exercise });
       await write(made);

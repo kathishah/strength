@@ -32,30 +32,22 @@ export async function makeWorld({ start = '2026-09-28T11:00:00-07:00', deviceId 
   return world;
 }
 
-// Logs a whole workout the way the screen does: every card, every row, Done on each. `plan` overrides per exercise:
-//   { weightLbs, reps: [..] | number, level, distanceM }   (anything left out uses the box as pre-filled, reps = target)
-export async function doWorkout(world, { sessionId = null, plan = {}, backPainBefore = null, finish = true, secondsPerSet = 90 } = {}) {
+// Logs a whole workout the way the screen does: every card gets its typed changes, then one Done for the exercise. `plan` overrides
+// per exercise: { weightLbs, level, reps: [..] per set | number, distanceM } (anything left out is the pre-filled value).
+export async function doWorkout(world, { sessionId = null, plan = {}, backPainBefore = null, finish = true, secondsPerExercise = 180 } = {}) {
   const id = sessionId ?? (await world.actions.startSession({ backPainBefore }));
-  const view = world.view(id);
-  for (const group of view.groups) {
-    for (const card of group.cards) {
-      const p = plan[card.exerciseId] ?? {};
-      const total = card.rows.length;
-      for (let i = 0; i < total; i++) {
-        if (p.weightLbs !== undefined) await world.actions.setValue(id, card.exerciseId, i + 1, 'weightLbs', p.weightLbs);
-        if (p.level !== undefined) await world.actions.setValue(id, card.exerciseId, i + 1, 'levelNumber', p.level);
-        const row = world.view(id).groups.flatMap((g) => g.cards).find((c) => c.exerciseId === card.exerciseId).rows.find((r) => r.setNumber === i + 1);
-        const reps = Array.isArray(p.reps) ? p.reps[i] : p.reps ?? card.suggestion.targetReps;
-        const values = {
-          weightLbs: row.weightLbs, levelNumber: row.levelNumber,
-          reps: card.inputs.reps ? reps : null,
-          distanceM: card.inputs.distance ? p.distanceM ?? card.suggestion.targetDistanceM : null,
-          rir: null,
-        };
-        world.advance(secondsPerSet);
-        await world.actions.logSet(id, { exerciseId: card.exerciseId, setNumber: i + 1, values, suggestion: card.suggestion });
-      }
-    }
+  for (const startCard of world.view(id).cards) {
+    const { exerciseId } = startCard;
+    const p = plan[exerciseId] ?? {};
+    const numbers = startCard.rows.map((r) => r.setNumber);
+    if (p.weightLbs !== undefined) world.actions.setAll(id, exerciseId, numbers, 'weightLbs', p.weightLbs);
+    if (p.level !== undefined) world.actions.setAll(id, exerciseId, numbers, 'levelNumber', p.level);
+    if (p.distanceM !== undefined) world.actions.setAll(id, exerciseId, numbers, 'distanceM', p.distanceM);
+    if (typeof p.reps === 'number') world.actions.setAll(id, exerciseId, numbers, 'reps', p.reps);
+    if (Array.isArray(p.reps)) p.reps.forEach((r, i) => world.actions.setValue(id, exerciseId, numbers[i], 'reps', r));
+    const card = world.view(id).cards.find((c) => c.exerciseId === exerciseId);
+    world.advance(secondsPerExercise);
+    await world.actions.saveExercise(id, { exerciseId, rows: card.rows, suggestion: card.suggestion });
   }
   if (finish) {
     world.advance(60);

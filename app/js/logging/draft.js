@@ -2,11 +2,12 @@
 // the browser code saves and loads it (ui/draft-store.js).
 //
 // Logged sets are events and need no draft. The draft holds only what is not an event yet: values typed into rows that
-// are not logged, rows being edited, notes text, back pain after, extra sets added, and the rest timer. Every function
+// are not logged, the exercises being edited, notes text, back pain after, extra sets added, and the rest timer. Every function
 // returns a new draft and leaves the old one alone.
 //
 //   { v: 1, sessionId,
-//     rows: { [exerciseId]: { [setNumber]: { weightLbs?, levelNumber?, reps?, distanceM?, editing? } } },
+//     rows: { [exerciseId]: { [setNumber]: { weightLbs?, levelNumber?, reps?, distanceM? } } },
+//     editing: { [exerciseId]: true },     (a logged exercise reopened for changes)
 //     extra: { [exerciseId]: number },
 //     notes: string | null, backPainAfter: number | null | undefined,
 //     restStartedAtMs: number | null, restSec: number | null }
@@ -14,7 +15,7 @@
 export const DRAFT_VERSION = 1;
 
 export const emptyDraft = (sessionId) => ({
-  v: DRAFT_VERSION, sessionId, rows: {}, extra: {}, notes: null, backPainAfter: undefined, restStartedAtMs: null, restSec: null,
+  v: DRAFT_VERSION, sessionId, rows: {}, editing: {}, extra: {}, notes: null, backPainAfter: undefined, restStartedAtMs: null, restSec: null,
 });
 
 const ROW_FIELDS = ['weightLbs', 'levelNumber', 'reps', 'distanceM'];
@@ -37,10 +38,12 @@ export function parseDraft(text, sessionId) {
         if (!Number.isInteger(setNumber) || setNumber < 1 || !isObject(row)) continue;
         const clean = {};
         for (const f of ROW_FIELDS) if (Object.hasOwn(row, f) && isNumOrNull(row[f])) clean[f] = row[f];
-        if (row.editing === true) clean.editing = true;
         if (Object.keys(clean).length > 0) ((draft.rows[exerciseId] ??= {})[setNumber] = clean);
       }
     }
+  }
+  if (isObject(raw.editing)) {
+    for (const [exerciseId, on] of Object.entries(raw.editing)) if (safeKey(exerciseId) && on === true) draft.editing[exerciseId] = true;
   }
   if (isObject(raw.extra)) {
     for (const [exerciseId, n] of Object.entries(raw.extra)) {
@@ -67,10 +70,18 @@ export function setRowField(draft, exerciseId, setNumber, field, value) {
   return { ...draft, rows: { ...draft.rows, [exerciseId]: { ...draft.rows[exerciseId], [setNumber]: row } } };
 }
 
-// Marks a logged row as being edited (its values then come from the logged set until something is typed).
-export function startEdit(draft, exerciseId, setNumber) {
-  const row = { ...(draft.rows[exerciseId]?.[setNumber] ?? {}), editing: true };
-  return { ...draft, rows: { ...draft.rows, [exerciseId]: { ...draft.rows[exerciseId], [setNumber]: row } } };
+// Reopens a logged exercise for changes (its values then come from the logged sets until something is typed).
+export const startEditing = (draft, exerciseId) => ({ ...draft, editing: { ...draft.editing, [exerciseId]: true } });
+
+// Forgets everything typed for an exercise and closes its edit (after it is saved, undone or the edit is cancelled).
+export function clearExercise(draft, exerciseId) {
+  const rows = { ...draft.rows };
+  delete rows[exerciseId];
+  const editing = { ...draft.editing };
+  delete editing[exerciseId];
+  const extra = { ...draft.extra };
+  delete extra[exerciseId];
+  return { ...draft, rows, editing, extra };
 }
 
 // Forgets a row's typed values (after it is logged or saved, or an edit is cancelled).

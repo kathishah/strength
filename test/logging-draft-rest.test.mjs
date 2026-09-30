@@ -1,17 +1,18 @@
 // The local draft and the rest timer (spec 6.3, 9): draft safety and a timer that works from timestamps.
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
-import { addExtraSet, clearRest, clearRow, createDraftStore, emptyDraft, parseDraft, serializeDraft, setRowField, startEdit, startRest } from '../app/js/logging/draft.js';
+import { addExtraSet, clearExercise, clearRest, clearRow, createDraftStore, emptyDraft, parseDraft, serializeDraft, setRowField, startEditing, startRest } from '../app/js/logging/draft.js';
 import { adjustedRestLength, DEFAULT_REST_SEC, formatClock, restLength, restStatus } from '../app/js/logging/rest-timer.js';
 
 describe('draft', () => {
   test('typed values, edits and extra sets are kept per exercise and set, without changing the old draft', () => {
     const d0 = emptyDraft('sess_1');
     const d1 = setRowField(d0, 'goblet-squat', 1, 'weightLbs', 25);
-    const d2 = addExtraSet(startEdit(setRowField(d1, 'goblet-squat', 1, 'reps', null), 'goblet-squat', 2), 'face-pull');
+    const d2 = addExtraSet(startEditing(setRowField(d1, 'goblet-squat', 1, 'reps', null), 'goblet-squat'), 'face-pull');
     assert.deepEqual(d0.rows, {});
     assert.deepEqual(d1.rows, { 'goblet-squat': { 1: { weightLbs: 25 } } });
-    assert.deepEqual(d2.rows['goblet-squat'], { 1: { weightLbs: 25, reps: null }, 2: { editing: true } });
+    assert.deepEqual(d2.rows['goblet-squat'], { 1: { weightLbs: 25, reps: null } });
+    assert.deepEqual(d2.editing, { 'goblet-squat': true });
     assert.deepEqual(d2.extra, { 'face-pull': 1 });
     assert.throws(() => setRowField(d0, 'goblet-squat', 1, 'completed', true), RangeError);
   });
@@ -21,6 +22,14 @@ describe('draft', () => {
     assert.deepEqual(clearRow(d, 'a', 1).rows, { a: { 2: { reps: 6 } } });
     assert.deepEqual(clearRow(clearRow(d, 'a', 1), 'a', 2).rows, {});
     assert.deepEqual(clearRow(d, 'zzz', 9).rows, d.rows);
+  });
+
+  test('clearExercise forgets typed values, the edit and extra sets of one exercise only', () => {
+    let d = setRowField(emptyDraft('s'), 'a', 1, 'reps', 5);
+    d = addExtraSet(startEditing(setRowField(d, 'b', 1, 'reps', 6), 'a'), 'a');
+    const cleared = clearExercise(d, 'a');
+    assert.deepEqual(cleared.rows, { b: { 1: { reps: 6 } } });
+    assert.deepEqual([cleared.editing, cleared.extra], [{}, {}]);
   });
 
   test('it survives a save and a load', () => {
@@ -41,7 +50,7 @@ describe('draft', () => {
   test('bad fields are dropped one by one and the good ones kept', () => {
     const text = JSON.stringify({
       v: 1, sessionId: 's',
-      rows: { a: { 0: { reps: 5 }, 1: { reps: 'lots', weightLbs: 30, editing: 'yes' }, x: { reps: 1 } }, b: 'nope', __proto__: { c: 1 } },
+      rows: { a: { 0: { reps: 5 }, 1: { reps: 'lots', weightLbs: 30 }, x: { reps: 1 } }, b: 'nope', __proto__: { c: 1 } },
       extra: { a: 2, b: -1, c: 1.5, d: 99 },
       notes: 12, backPainAfter: 11, restStartedAtMs: 'soon', restSec: null,
     });
