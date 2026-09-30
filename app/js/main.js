@@ -1,6 +1,6 @@
-// Phase B page: sign in, then a status screen over the local event store. Everything the person does is
-// written to IndexedDB first (store/events.js); uploading and downloading happen in the background
-// (store/sync.js). No engine, session screen or history yet (DEPLOYMENT-PLAN.md section 9, phases C to E).
+// The page: sign in, then Home, the session screen, the summary and the recovery routine (Phase D, DEPLOYMENT-PLAN.md section 15),
+// over the local event store. Everything the person does is written to IndexedDB first (store/events.js); uploading and
+// downloading happen in the background (store/sync.js). History, settings and export arrive in Phase E.
 
 import { isConfigured } from './config.js';
 import { hasRefreshToken, signIn, signOut } from './store/auth.js';
@@ -8,9 +8,11 @@ import { defaultApi } from './store/api.js';
 import { openStorage } from './store/open.js';
 import { createEventStore, testNote } from './store/events.js';
 import { attachSyncTriggers, createSync } from './store/sync.js';
-import { getDeviceId } from './ids.js';
-import { describeError, needsSignIn } from './ui/format.js';
+import { getDeviceId, ulid } from './ids.js';
+import { createActions, createDraftStore } from './logging/index.js';
+import { describeError, describeSaveState, needsSignIn } from './ui/format.js';
 import { mountAuthScreen } from './ui/auth-screen.js';
+import { mountScreens } from './ui/screens.js';
 import { mountSyncPanel } from './ui/sync-panel.js';
 
 // The Phase A spike kept a copy of the events and the cursor in localStorage. Both were only a cache;
@@ -19,7 +21,8 @@ const SPIKE_CACHE_KEYS = ['strength.spike.events', 'strength.cursor'];
 
 const $ = (id) => document.getElementById(id);
 const el = {
-  notice: $('notice'), signin: $('signin'), app: $('app'), signinPending: $('signin-pending'),
+  notice: $('notice'), signin: $('signin'), app: $('app'), signinPending: $('signin-pending'), screen: $('screen'),
+  device: $('device'), saveState: $('save-state'),
   form: $('signin-form'), email: $('email'), pin: $('password'), signinButton: $('signin-button'),
 };
 
@@ -55,6 +58,25 @@ async function start() {
   const sync = createSync({ events, api: defaultApi });
   let signedIn = false;
 
+  // The in-progress draft (values typed but not logged yet, the rest timer) lives in localStorage; logged sets are events.
+  let draftBackend = null;
+  try { draftBackend = localStorage; } catch { /* storage blocked: the draft stays in memory */ }
+  const actions = createActions({ events, drafts: createDraftStore(draftBackend), now: Date.now, newId: ulid });
+  let screensStarted = false;
+  const screens = mountScreens({
+    root: el.screen, events, actions, notify,
+    onRoute(route) { el.device.hidden = route.name !== 'home'; },
+  });
+
+  // Whether the person's work is safe, in the header, on every screen.
+  function paintSaveState() {
+    const line = describeSaveState(sync.status(), events.pendingCount());
+    el.saveState.textContent = line.text;
+    el.saveState.dataset.kind = line.kind;
+  }
+  events.subscribe(paintSaveState);
+  sync.subscribe(paintSaveState);
+
   function showSignedIn(value) {
     signedIn = value;
     el.signin.hidden = value;
@@ -62,8 +84,13 @@ async function start() {
     const waiting = events.pendingCount();
     el.signinPending.hidden = value || waiting === 0;
     el.signinPending.textContent = `${waiting} event${waiting === 1 ? '' : 's'} saved on this device will upload after you sign in.`;
-    if (value) panel.render();
-    else authScreen.focus();
+    if (value) {
+      panel.render();
+      if (!screensStarted) { screensStarted = true; screens.start(); } else screens.update();
+    } else {
+      authScreen.focus();
+    }
+    paintSaveState();
   }
 
   const authScreen = mountAuthScreen(

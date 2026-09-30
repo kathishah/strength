@@ -172,6 +172,7 @@ describe('session view', () => {
     const squat = card(v, 'trx-squat');
     assert.equal(squat.swapped, true);
     assert.equal(squat.rows[0].levelNumber, 2);
+    assert.equal(squat.sourceLabel, 'Starting level');
     assert.match(squat.rows[0].levelInfo, /Level 1: lean back/);
     assert.ok(squat.hints.some((h) => /alternate with the dumbbell version/.test(h)));
   });

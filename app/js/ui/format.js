@@ -73,3 +73,18 @@ export function describeState(state) {
     n(Object.keys(state.settings).length, 'setting'),
   ].join(', ');
 }
+
+// The header's one-line answer to "is my workout safe?" (the person may be offline at the gym). { text, kind }
+// Logged sets are safe on this device whenever the outbox says so; the network only decides when they reach the server.
+export function describeSaveState(status, pending = 0) {
+  const n = (count) => `${count} event${count === 1 ? '' : 's'}`;
+  if (status.lastError && needsSignIn(status.lastError)) {
+    return { text: pending > 0 ? `${n(pending)} saved here. Sign in to upload.` : 'Sign in to sync', kind: 'error' };
+  }
+  if (pending > 0) {
+    if (status.syncing) return { text: `Uploading ${n(pending)}…`, kind: 'info' };
+    if (status.lastError) return { text: `${n(pending)} saved on this device, not uploaded yet`, kind: 'warn' };
+    return { text: `${n(pending)} waiting to upload`, kind: 'info' };
+  }
+  return { text: 'All saved', kind: 'ok' };
+}
