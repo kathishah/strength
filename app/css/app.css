@@ -450,3 +450,42 @@ textarea {
 .dcol.skipped .dial { opacity: 0.3; }
 .dcol.skipped .dcap { text-decoration: line-through; }
 .edit-bar p { margin: 0 0 8px; }
+
+/* ---- Header icons, History, exercise detail, Settings (Phase E) ---- */
+.pill.iconbtn { min-width: 44px; justify-content: center; padding: 0 10px; color: var(--link); border-color: var(--accent); background: var(--accent-soft); }
+.pill-icons { display: flex; gap: 6px; align-items: center; }
+.pill-sep { align-self: center; width: 1px; height: 24px; background: var(--surface-border); margin: 0 2px; }
+@media (max-width: 480px) { .pill-sep { display: none; } }
+.seg { display: flex; gap: 6px; margin: 0 0 12px; }
+.seg a { flex: 1; min-height: 44px; display: flex; align-items: center; justify-content: center; text-decoration: none; color: var(--text); background: var(--surface); border: 1px solid var(--surface-border); border-radius: 999px; font-size: 0.9rem; }
+.seg a[aria-current="true"], .seg button[aria-pressed="true"] { color: var(--accent-text); background: var(--accent); border-color: var(--accent); }
+.seg button { flex: 1; min-height: 44px; font: inherit; font-size: 0.9rem; color: var(--text); background: var(--surface); border: 1px solid var(--surface-border); border-radius: 999px; cursor: pointer; }
+.group-label { margin: 18px 4px 6px; font-size: 0.8rem; font-weight: 600; color: var(--muted); }
+.hlist { padding: 0 14px; }
+.hrow { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 56px; padding: 8px 0; border-top: 1px solid var(--border); color: inherit; text-decoration: none; }
+.hrow:first-child { border-top: 0; }
+.hrow .main { min-width: 0; }
+.hrow .sub { display: block; font-size: 0.8rem; color: var(--muted); }
+.hrow .ssbar { display: inline-block; width: 4px; height: 14px; border-radius: 2px; margin-right: 8px; vertical-align: -2px; background: var(--border); }
+.ssbar.ss1 { background: var(--ss1); } .ssbar.ss2 { background: var(--ss2); } .ssbar.ss3 { background: var(--ss3); }
+.wk { display: inline-block; width: 24px; height: 24px; border-radius: 6px; text-align: center; line-height: 24px; font-weight: 700; font-size: 0.8rem; margin-right: 8px; color: var(--accent-text); background: var(--accent); }
+.tag-due, .tag-miss { flex: none; font-size: 0.75rem; padding: 1px 8px; border-radius: 6px; white-space: nowrap; }
+.tag-due { color: var(--ok-text); background: var(--ok-bg); }
+.tag-miss { color: var(--notice-text); background: var(--notice-bg); }
+.stats2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 0 0 12px; }
+.stats2 > div { padding: 10px 12px; background: var(--surface); border: 1px solid var(--border); border-radius: 14px; }
+.stats2 .k { display: block; font-size: 0.75rem; color: var(--muted); }
+.stats2 .v { font-weight: 600; }
+.chart { width: 100%; height: auto; display: block; }
+.chart .grid { stroke: var(--border); }
+.chart .tick, .chart .axis { fill: var(--muted); font-size: 11px; }
+.chart .line { fill: none; stroke: var(--accent); stroke-width: 2; }
+.chart .dot { fill: var(--accent); }
+.chart .inc { stroke: var(--ss1); stroke-dasharray: 3 3; }
+.chart .inclabel { fill: var(--ok-text); font-size: 11px; }
+.htable { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+.htable th { text-align: left; font-weight: 500; font-size: 0.75rem; color: var(--muted); padding: 4px 0; }
+.htable td { padding: 10px 0; border-top: 1px solid var(--border); vertical-align: top; }
+.htable td.r, .htable th.r { text-align: right; }
+.htable a { color: inherit; text-decoration: none; display: block; }
+.empty-note { padding: 14px 0; color: var(--muted); }

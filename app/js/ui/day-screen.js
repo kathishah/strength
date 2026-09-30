@@ -268,15 +268,6 @@ export function mountDay(container, ctx, editId = null) {
         armedButton(h('button', { type: 'button', class: 'btn quiet', text: 'Discard' }), { armedText: 'Tap again', onConfirm: () => guard(() => ctx.actions.discard(o.sessionId)) }))));
   }
 
-  // Home, below the cards: the workouts finished in the last 7 days, each with Edit (spec 6.2).
-  function finishedCard(view) {
-    return h('section', { class: 'card finished-recent', 'aria-label': 'Finished workouts' },
-      h('h3', { text: 'Finished workouts' }),
-      view.finishedRecent.map((f) => h('div', { class: 'older-row' },
-        h('span', { text: `${f.label}, ${f.dateText} · ${f.exercisesDone}/${f.exerciseCount} done` }),
-        h('button', { type: 'button', class: 'btn', 'aria-label': `Edit ${f.label}, ${f.dateText}`, onclick: () => ctx.navigate(`#/workout/${f.sessionId}`) }, 'Edit'))));
-  }
-
   // ---- the whole page ----
   function build(view) {
     for (const { dial } of dials) dial.dispose(); // the old dials are leaving the page: none of them may report a value again
@@ -303,12 +294,11 @@ export function mountDay(container, ctx, editId = null) {
       view.warningText ? h('p', { class: 'notice day-notice', role: 'note', text: view.warningText }) : null,
       view.older.length ? olderCard(view) : null,
       view.mode === 'edit' ? h('div', { class: 'edit-bar' },
-        h('a', { class: 'back', href: '#/' }, '← Home'),
+        h('a', { class: 'back', href: '#/history/date' }, '← History'),
         h('p', { class: 'muted small', text: `Finished workout. What you tick or change is added to it. Week ${view.programWeek} · ${view.phaseText}` })) : null,
       view.mode === 'workout' ? h('p', { class: 'phase-line muted small', text: `Week ${view.programWeek} · ${view.phaseText}` }) : null,
       view.mode === 'recovery' ? h('p', { class: 'phase-line muted small', text: `${view.label}. Guidance only: nothing to check off.` }) : null,
-      track,
-      view.finishedRecent.length ? finishedCard(view) : null);
+      track);
     return track;
   }
 
@@ -325,7 +315,6 @@ export function mountDay(container, ctx, editId = null) {
 
     const key = JSON.stringify([
       view.mode, view.started, view.canFinish, view.exercisesDone, view.warningText, view.older.map((o) => [o.sessionId, o.loggedSets]),
-      view.finishedRecent.map((f) => [f.sessionId, f.exercisesDone]),
       view.mode === 'recovery' ? view.cards.length : view.cards.map(cardKey), [...ui.alt],
     ]);
     if (key !== structure) {

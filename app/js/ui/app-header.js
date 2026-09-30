@@ -1,13 +1,18 @@
 // The header of the v0.2 viewer (spec 0.B.1): collapsed it is one line (the status, for example "Wed · Workout B · 0/6 done", with a
-// chevron, a dot for whether the work is saved, and the theme button); tapping the status opens the day pills, the save state and the
-// sign-out icon after Sunday. Picking a day or scrolling down closes it again.
+// chevron, a dot for whether the work is saved, and the theme button); tapping the status opens the day pills, then three icon buttons
+// after a divider (History, Settings, sign out) and the save state. Picking a day or scrolling down closes it again.
 
 import { armedIconButton, h, svgIcon } from './dom.js';
 import { THEME_ICONS, THEME_NAMES, cycleTheme, currentTheme } from './theme.js';
 
 const LOGOUT_PATHS = ['M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4', 'M16 17l5-5-5-5', 'M21 12H9'];
+const HISTORY_PATHS = ['M12 8v4l2 2', 'M3.05 11a9 9 0 1 1 .5 4', 'M3 20v-5h5'];
+const SETTINGS_PATHS = [
+  'M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 0 0 2.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 0 0 1.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 0 0-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 0 0-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 0 0-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 0 0-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 0 0 1.066-2.573c-.94-1.543.826-3.31 2.37-2.37 1 .608 2.296.07 2.572-1.065z',
+  'M9 12a3 3 0 1 0 6 0a3 3 0 0 0-6 0',
+];
 
-// handlers: { onPickDay(weekday), onSignOut() }. Returns the controls the screens use.
+// handlers: { onPickDay(weekday), onNavigate(hash), onSignOut() }. Returns the controls the screens use.
 export function mountHeader({ root }, handlers) {
   let expanded = false;
   let lastY = 0;
@@ -45,6 +50,10 @@ export function mountHeader({ root }, handlers) {
     lastY = y;
   }, { passive: true });
 
+  const navButton = (label, paths, hash) => h('button', {
+    type: 'button', class: 'pill iconbtn', 'aria-label': label, title: label,
+    onclick() { setExpanded(false); handlers.onNavigate(hash); },
+  }, svgIcon(paths));
   const signOut = armedIconButton({
     label: 'Sign out', armedText: 'Sign out?', className: 'pill signout', icon: svgIcon(LOGOUT_PATHS), onConfirm: () => handlers.onSignOut(),
   });
@@ -59,7 +68,8 @@ export function mountHeader({ root }, handlers) {
           type: 'button', class: `pill ${p.kind}${p.weekday === selected ? ' active' : ''}${p.isToday ? ' today' : ''}`, 'aria-pressed': String(p.weekday === selected),
           onclick() { setExpanded(false); handlers.onPickDay(p.weekday); },
         }, h('span', { class: 'dot', 'aria-hidden': 'true' }), p.label, p.isToday ? h('span', { class: 'sr-only', text: ' (today)' }) : null)),
-        signOut,
+        // One group, so on a narrow phone the three icons wrap together onto their own line.
+        h('span', { class: 'pill-icons' }, h('span', { class: 'pill-sep', 'aria-hidden': 'true' }), navButton('History', HISTORY_PATHS, '#/history'), navButton('Settings', SETTINGS_PATHS, '#/settings'), signOut),
       );
     },
     // { text, kind, pending }: the dot and count in the bar, the sentence in the panel.
