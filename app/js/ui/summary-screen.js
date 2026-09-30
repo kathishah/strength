@@ -5,6 +5,9 @@ import { fill, h } from './dom.js';
 
 export function mountSummary(container, ctx, sessionId) {
   function render() {
+    ctx.header.setStatus('Workout summary');
+    ctx.header.setDays([], null);
+    ctx.header.showBackPain(false, null);
     const s = summaryView(ctx.events.state, sessionId);
     if (!s) {
       fill(container,

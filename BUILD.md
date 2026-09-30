@@ -133,10 +133,17 @@ python3 -m http.server 4173 --directory app     # http://localhost:4173
 
 ## 7. Deploy the app
 
-```bash
-export SITE_BUCKET=<SiteBucketName output>
-export DIST_ID=<DistributionId output>
+One command does it (it reads the bucket and distribution from the stack, runs the tests, uploads, and refreshes CloudFront):
 
+```bash
+scripts/deploy-app.sh --dry-run     # preview: what would be uploaded or deleted
+scripts/deploy-app.sh               # deploy
+```
+
+`--skip-tests` skips the test run. The script exports `AWS_REGION`, `STACK`, `DOMAIN`, `SITE_BUCKET` and `DIST_ID` (from `scripts/aws-env.sh`) for its own commands; to have them in your terminal too, run `source scripts/aws-env.sh`. Set `AWS_PROFILE` first if you use profiles. By hand, the same thing is:
+
+```bash
+source scripts/aws-env.sh
 aws s3 sync app/ "s3://$SITE_BUCKET" --delete --dryrun --exclude '.DS_Store'      # preview
 aws s3 sync app/ "s3://$SITE_BUCKET" --delete --exclude '.DS_Store' --cache-control no-cache
 aws s3 cp app/manifest.webmanifest "s3://$SITE_BUCKET/manifest.webmanifest" \
@@ -148,11 +155,11 @@ Then open `SiteUrl` and sign in. The page syncs on open.
 For the Phase D check (workout logging), see the list after this paragraph. The Phase B two-device check below still works: the sync panel is under **Sync and this device** at the bottom of Home.
 For the Phase B check, use two devices (say the desktop and the phone, ideally the installed home-screen app): press **Add test note** on one, and within a few seconds it shows on that device as uploaded; open the app on the other (or press **Sync now**) and the same note appears there. Turn on airplane mode, add a note, and it stays in **Waiting to upload** until you are back online. To install on the iPhone: Share, Add to Home Screen. **Last round trip** shows the cold-start time.
 Phase D check, on the installed phone app (airplane mode is the real test):
-1. Home shows the next workout (B after the loaded Workout A), a recovery card first on Tuesday and Thursday, and a warning if you did a workout yesterday.
-2. Pick a back pain number if you like, tap **Start**, set a weight on set 1 (the later sets follow), type reps, tap **Done**, then swipe sideways to the next exercise (the left edge of each card is colour-coded by superset). The rest timer runs; lock the screen and unlock it and it is still right.
-3. Swipe the app away and reopen it in the middle of the workout: Home offers **Resume** and the sets you logged and the numbers you typed are back.
-4. Turn on airplane mode, log a whole workout, **Finish**. The header says how many events are saved on this device; turn the network back on and it changes to **All saved** within a few seconds. Open the desktop: the workout is there.
-5. The **Recovery routine** page opens from Home (its demo images need a connection).
+1. Home is the day's cards under a slim header (B after the loaded Workout A; the recovery routine on Tuesday and Thursday; tap the status line to open the day pills, the save state and the sign-out icon). A note above the cards warns if you did a workout yesterday.
+2. Optionally open the header and pick a back pain number. On an exercise card, turn the dials (each set's weight is already the suggestion, the reps the recommendation), then tap the tick. Swipe sideways to the next exercise (the left edge of each card is colour-coded by superset). The rest timer runs after each tick; lock the screen and unlock it and it is still right.
+3. Swipe the app away and reopen it in the middle of the workout: the exercises you ticked are still done and any dial you had turned is where you left it.
+4. Turn on airplane mode, log a whole workout, then on the last card tap **Save and finish**. The dot in the header turns amber with a count of events saved on this device; turn the network back on and it turns green within a few seconds. Open the desktop: the workout is there.
+5. Open the header and pick Tuesday or Thursday: the recovery routine cards (their demo images need a connection).
 
 The first start after this update discards the Phase A spike's `localStorage` copy of the events (it was only a cache) and downloads them again into IndexedDB.
 
