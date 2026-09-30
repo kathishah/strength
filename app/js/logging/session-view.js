@@ -97,7 +97,29 @@ function buildCard({ state, sessionId, draft, e, slot, superset, defaultExercise
     swapOptions: options,
     canSwap: options.length > 1 && !swapBlocked,
     swapBlockedReason: swapBlocked ? 'Undo the sets you logged for this exercise to swap it.' : null,
+    // The two lists of the v0.2 viewer (spec 0.B.4): Options (back-friendly swaps) and TRX. The default is reached by Revert.
+    optionGroups: {
+      alternatives: options.filter((o) => o.kind === 'alternative'),
+      trx: options.filter((o) => o.kind === 'trx'),
+    },
+    swappedFromName: swapped ? exerciseName(defaultExerciseId) : null,
+    // The card carries its own superset marking, filled in by markSupersets once every card is known.
+    ssClass: '',
+    chipText: superset === null ? 'Finisher' : `Superset ${superset}`,
+    partnerName: null,
+    done: planned > 0 && loggedCount >= planned,
   };
+}
+
+// Superset labels, colour class and the "Alternate with <partner>" line (spec 0.B.2, 4.3), after swaps.
+function markSupersets(cards) {
+  for (const card of cards) {
+    if (card.superset === null) continue;
+    const mates = cards.filter((c) => c.superset === card.superset);
+    card.ssClass = `ss${card.superset}`;
+    card.chipText = `Superset ${card.superset} · ${mates.indexOf(card) + 1} of ${mates.length}`;
+    card.partnerName = mates.length > 1 ? mates.find((c) => c !== card).name : null;
+  }
 }
 
 // Groups consecutive cards of one superset (spec 6.3); a card with no superset is a group of its own.
@@ -133,6 +155,8 @@ export function sessionView(state, sessionId, draft, nowMs) {
     logged: byExercise.get(e.exerciseId) ?? [], planned: e.sets,
   }));
 
+  markSupersets(cards);
+
   // Sets logged for an exercise that is not in the plan now (a swap made on another device, say) stay visible and editable.
   const inPlan = new Set(cards.map((c) => c.exerciseId));
   const orphans = [];
@@ -160,6 +184,8 @@ export function sessionView(state, sessionId, draft, nowMs) {
     backPainBefore: session.backPainBefore ?? null,
     groups: group(cards),
     orphans,
+    exerciseCount: cards.length,
+    exercisesDone: cards.filter((c) => c.done).length,
     plannedSets: cards.reduce((n, c) => n + c.plannedSets, 0),
     loggedSets,
     canFinish: loggedSets > 0,

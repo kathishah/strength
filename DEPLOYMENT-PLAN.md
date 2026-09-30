@@ -1,6 +1,6 @@
 # Deployment & Implementation Plan (v1)
 
-Companion to `SPEC-strength.md` (v1.13). Covers how v1 is hosted, authenticated, stored, and built. The spec says *what* the app does; this says *how it runs*.
+Companion to `SPEC-strength.md` (v1.14). Covers how v1 is hosted, authenticated, stored, and built. The spec says *what* the app does; this says *how it runs*.
 
 ## 1. Goals and constraints
 - Keep the front end a **static site with plain HTML + JS (ES modules, no build step)**.
@@ -174,7 +174,7 @@ Tests run with Node's built-in runner (`node --test`), so there is still no bund
 
 Phase C can start in parallel with A and B, since the engine has no dependencies.
 
-**Status (2026-09-29):** Phase 0 and Phase A are built and deployed as `strength-prod` at `https://strength.logbook.me` (section 13). The owner confirmed a sign-in, a test event, and a sync round trip; cold-start timings and the installed home-screen check were not recorded. Phase B is built and tested but not deployed (section 13a). Phase C is designed (section 14); Phase D is built and tested on branch `v1-phase-d` (section 15a), not deployed; Phase E is not started.
+**Status (2026-09-29, updated 2026-09-30):** Phase 0 and Phase A are built and deployed as `strength-prod` at `https://strength.logbook.me` (section 13). The owner confirmed a sign-in, a test event, and a sync round trip; cold-start timings and the installed home-screen check were not recorded. Phase B is built and tested but not deployed (section 13a). Phase C is designed (section 14); Phase D is built and tested on branch `v1-phase-d` (section 15a), not deployed; Phase E is not started.
 
 ## 10. Risks and mitigations
 | Risk | Mitigation |
@@ -308,6 +308,8 @@ Spec Section 5 is the rulebook and wins over this section; this section fixes wh
 10. *Sets and phases:* the deload set halving is gone, so week 11 has the normal Phase 2 set counts.
 
 ## 15. Phase D design (workout logging UI)
+**Changed after the first test on the phone: see 15b** (v0.2 carousel look, full set counts in weeks 1-4, first-loaded pre-fill, no RIR). Where 15 and 15a mention RIR, two sets in Phase 1 or the grouped session layout, 15b wins.
+
 Spec milestone 4 on the Phase B store and the Phase C engine. Spec 6.2, 6.3, 4.1, 4.5, 4.5.1, 4.6 and 9 are the rulebook (struck text is not built); this section fixes what they leave to the implementation. Branch `v1-phase-d`. No history, settings, export or service worker (Phase E). Nothing under `lambda/` or `infra/` changes: every event below is already in the registry.
 
 **Shape.** Everything that decides something is a pure function over `replay(events)` state, the seed, and arguments (`today`, `nowMs`, ids). The DOM layer only draws view models and forwards taps to `actions`. No `Date`, `document`, `localStorage` or `fetch` in the pure modules; the clock and id generator are passed in (`logging-purity` test, like `engine-purity`).
@@ -412,3 +414,16 @@ Built on branch `v1-phase-d`. Nothing under `lambda/` or `infra/` changed and no
 16. *Rest timer at the end of the workout.* It starts after every Done including the last set, and disappears when the workout is finished.
 
 **Known limits.** No service worker yet, so the app needs the network to load (Phase E); once loaded, logging works offline. Two tabs of the app on one device do not see each other's typing (and, as in Phase B, not each other's writes until reload). The demo images are hotlinked. Stale unfinished sessions are never closed automatically (question 9).
+
+## 15b. Changes after the first phone test (spec v1.14)
+The owner deployed Phase B, C and D to `strength.logbook.me` on 2026-09-29 and asked for four changes. Spec and code follow; 475 tests pass.
+
+1. **The v0.2 look on the session screen.** One horizontal scroll-snap carousel, one card per exercise with the neighbours peeking (spec 0.B.1), a left-edge colour per superset (1 green, 2 indigo, 3 amber, finisher none) and the chip "Superset 1 · 1 of 2", the meta block "3 × 8-12 / Sets × Reps", the form GIF with its credit, the cue with "Alternate with <partner>", tags, and the **Options** (cyan) and **TRX** (fuchsia) buttons with counts opening a list with a thumbnail and **Use this** per exercise. A swapped card shows "Swapped from X · Revert". The last card of the carousel is Finish (notes, back pain after, Save and finish, Discard). The header (Strength and the save state) is sticky; the status line reads "Workout B · 2/6 done · 5/17 sets". The v0.2 palette (dark and light, both follow the device) is now the app's palette, Home's exercise preview carries the superset colours, and the summary, recovery and Home cards use the v0.2 card style.
+   - *Kept from Phase D, not from v0.2:* the sets sit directly under the card header and the GIF and cues below them, so logging is not pushed below the fold; swap is blocked while sets of the slot are logged; the rebuild after a tap keeps the carousel where it was; a swipe to the next card scrolls the page back to the top.
+   - v0.2 had a Prev/Next-free, dot-free carousel with a counter in the header ("x/6 done"); the status line does the same. The manual theme button is not brought back: the app follows the device.
+   - The "tap the exercise name for cues" panel is gone (spec 6.3): the cues are on the card.
+2. **Full set counts in weeks 1-4** (spec 5.1, 5.7 examples #5 and #28, 4.3 table header). Phase 1 and Phase 2 have the same sets; they differ only in target effort. `PROGRAM.phase1Sets` is gone and `setsFor` ignores the phase. This replaces the "Phase 1 is 2 sets" rule of section 14 and the first design of the engine tests.
+3. **No zero pre-fills.** With no history an exercise whose seeded start is 0 and that has a first-loaded weight now pre-fills it (leg press 50, hip thrust 45, reverse lunge 10); back extension and dead bug stay at 0. A weight logged last time still wins, including a logged 0, and a `startingWeight:<id>` setting still overrides the seed (spec 5.6). The scheduled-increase rules are unchanged (from a logged 0 the increase still goes to the first-loaded weight).
+4. **RIR is gone from the screen.** No select on the rows, none in the done line, no RIR in the data written; the target effort is said in plain words ("Phase 1 · stop each set with about 3 reps left"). The registry, replay and the engine's `targetRir` still exist and are unused, so old events remain valid.
+
+Also from this pass: the header notice and errors are unchanged; `logging/session-view.js` now returns `chipText`, `ssClass`, `partnerName`, `optionGroups` (alternatives and TRX), `swappedFromName`, `done` per card and `exercisesDone` / `exerciseCount` for the status line.

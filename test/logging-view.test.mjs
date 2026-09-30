@@ -193,6 +193,42 @@ describe('session view', () => {
     assert.equal(card(v2, 'db-bench-press').canSwap, true); // slot 2 has only a TRX alternative
   });
 
+  test('superset labels and colour classes follow the plan, including a finisher with none', () => {
+    const a = view(open());
+    assert.deepEqual(cards(a).map((c) => [c.ssClass, c.chipText]), [
+      ['ss1', 'Superset 1 · 1 of 2'], ['ss1', 'Superset 1 · 2 of 2'], ['ss2', 'Superset 2 · 1 of 2'],
+      ['ss2', 'Superset 2 · 2 of 2'], ['ss3', 'Superset 3 · 1 of 2'], ['ss3', 'Superset 3 · 2 of 2'],
+    ]);
+    const c = view(open(makeLog(), '2026-11-02', 'C'));
+    assert.deepEqual(cards(c).map((x) => x.ssClass), ['ss1', 'ss1', 'ss2', 'ss2', '']);
+    assert.equal(card(c, 'farmer-carry').chipText, 'Finisher');
+    assert.equal(card(c, 'farmer-carry').partnerName, null);
+  });
+
+  test('the partner line names the other exercise of the superset after swaps', () => {
+    const log = makeLog().swap('A', 2, 'trx-chest-press');
+    const v = view(open(log));
+    assert.equal(card(v, 'goblet-squat').partnerName, 'TRX Chest Press');
+    assert.equal(card(v, 'trx-chest-press').partnerName, 'Goblet Squat');
+  });
+
+  test('Options and TRX are separate lists; a swapped card says what it was swapped from', () => {
+    const v = view(open(makeLog().swap('A', 1, 'box-squat')));
+    const c = card(v, 'box-squat');
+    assert.deepEqual(c.optionGroups.alternatives.map((o) => [o.exerciseId, o.current]), [['leg-press', false], ['box-squat', true]]);
+    assert.deepEqual(c.optionGroups.trx.map((o) => o.exerciseId), ['trx-squat']);
+    assert.equal(c.swappedFromName, 'Goblet Squat');
+    assert.equal(card(view(open()), 'goblet-squat').swappedFromName, null);
+  });
+
+  test('a card is done when every planned set is logged; the view counts them', () => {
+    const log = makeLog();
+    log.session('2026-10-05', 'A', [lift('goblet-squat', 20, [10, 10, 10]), lift('db-bench-press', 20, [10])], { finished: false, id: 'sess_open' });
+    const v = view(log);
+    assert.deepEqual([card(v, 'goblet-squat').done, card(v, 'db-bench-press').done], [true, false]);
+    assert.deepEqual([v.exercisesDone, v.exerciseCount, v.loggedSets, v.plannedSets], [1, 6, 4, 16]);
+  });
+
   test('a slot with nothing to swap to has no swap button (none in the seed has zero, but the rule holds)', () => {
     const v = view(open(makeLog(), '2026-10-05', 'C'));
     assert.ok(cards(v).every((c) => c.swapOptions.length >= 2));

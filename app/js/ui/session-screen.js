@@ -1,14 +1,16 @@
-// The session screen (spec 6.3): the most important screen, phone first. It draws the view model from logging/session-view.js and
-// forwards taps to logging/actions.js; every rule (pre-fill, carry-over, what can be logged, what a tap writes) lives there.
+// The session screen (spec 6.3): the most important screen, phone first. The look is the v0.2 viewer's (spec 0.B.1): one horizontal
+// swipe carousel, one card per exercise with the neighbours peeking, a colour on the card's left edge for each superset, and the
+// Options and TRX buttons. It draws the view model from logging/session-view.js and forwards taps to logging/actions.js; every rule
+// (pre-fill, carry-over, what can be logged, what a tap writes) lives there.
 //
-// Rendering. A change in structure (a row becoming done, a swap, a panel opening) rebuilds the body. Anything else, such as typing
-// or a +/- press, only patches values into the existing rows, so the box being typed in is never replaced. Typed values go to the
-// draft on every keystroke, so a refresh loses nothing.
+// Rendering. A change in structure (a row becoming done, a swap, an alternatives list opening) rebuilds the carousel and puts it back
+// where it was. Anything else, such as typing or a +/- press, only patches values into the existing rows, so the box being typed in is
+// never replaced. Typed values go to the draft on every keystroke, so a refresh loses nothing.
 
 import {
   REST_STEP_SEC, formatClock, formatNumber, parseDistance, parseReps, parseWeight, restStatus, sessionView, stepValue,
 } from '../logging/index.js';
-import { PLACEHOLDER_GIF } from '../seed/index.js';
+import { EXERCISES, PLACEHOLDER_GIF } from '../seed/index.js';
 import { armedButton, fill, h, painChips } from './dom.js';
 
 const FIELD = {
@@ -17,11 +19,11 @@ const FIELD = {
   distanceM: { label: 'Distance (m)', short: 'distance in metres', parse: parseDistance, mode: 'decimal', min: 0, max: 10000 },
 };
 
-const cardKey = (c) => [c.exerciseId, c.swapped, c.canSwap, c.increaseText, c.suggestionText, c.lastText, c.hints, c.swapBlockedReason, c.rows.map((r) => [r.id, r.status])];
+const cardKey = (c) => [c.exerciseId, c.swapped, c.canSwap, c.done, c.chipText, c.partnerName, c.increaseText, c.suggestionText, c.lastText, c.hints, c.swapBlockedReason, c.rows.map((r) => [r.id, r.status])];
 
 // ctx: { events, actions, now(), navigate(hash), notify(text, kind) }
 export function mountSession(container, ctx, sessionId) {
-  const ui = { info: new Set(), swap: new Set(), finishOpen: false };
+  const ui = { alt: new Map(), slide: 0 }; // alt: exercise id -> which list is open ('alternatives' | 'trx')
   const rowComps = new Map();
   let structure = null;
   let ticker = null;
@@ -156,8 +158,7 @@ export function mountSession(container, ctx, sessionId) {
         if (card.inputs.level && r.levelNumber !== null) parts.push(`level ${r.levelNumber}`);
         if (card.inputs.reps && r.reps !== null) parts.push(`${r.reps} reps`);
         if (card.inputs.distance && r.distanceM !== null) parts.push(`${r.distanceM} m`);
-        if (r.rir !== null) parts.push(`RIR ${r.rir}`);
-        summary.textContent = parts.length ? parts.join(' × ').replace(' × RIR', ' · RIR') : 'done';
+        summary.textContent = parts.length ? parts.join(' × ') : 'done';
         setChangedNote(changedNote, r);
       };
       return comp;
@@ -168,10 +169,6 @@ export function mountSession(container, ctx, sessionId) {
     if (card.inputs.level) fields.push(levelBox(comp));
     if (card.inputs.reps) fields.push(numberBox(comp, 'reps'));
     if (card.inputs.distance) fields.push(numberBox(comp, 'distanceM'));
-    const rir = h('select', {
-      id: `${row.id}-rir`, 'aria-label': `${card.name} set ${row.setNumber} reps in reserve (optional)`,
-      onchange() { setValue(comp, 'rir', rir.value === '' ? null : Number(rir.value)); },
-    }, h('option', { value: '', text: 'RIR –' }), [0, 1, 2, 3, 4, 5].map((n) => h('option', { value: String(n), text: `RIR ${n}` })));
     const editing = row.status === 'editing';
     const main = h('button', {
       type: 'button', class: 'btn primary done-btn',
@@ -184,10 +181,9 @@ export function mountSession(container, ctx, sessionId) {
       : null;
     comp.el = h('li', { class: `set ${editing ? 'editing' : 'todo'}`, 'data-status': row.status },
       head, h('div', { class: 'set-fields' }, fields.map((f) => f.el)), changedNote,
-      h('div', { class: 'set-actions' }, rir, cancel, main));
+      h('div', { class: 'set-actions' }, cancel, main));
     comp.sync = () => {
       fields.forEach((f) => f.sync());
-      if (document.activeElement !== rir) rir.value = comp.row.rir === null ? '' : String(comp.row.rir);
       main.disabled = !comp.row.canLog || (editing && !comp.row.dirty);
       setChangedNote(changedNote, comp.row);
     };
@@ -202,54 +198,71 @@ export function mountSession(container, ctx, sessionId) {
     el.hidden = bits.length === 0;
   }
 
-  // ---- an exercise card ----
-  function infoPanel(card) {
-    const c = card.cues;
-    const img = c.gifUrl ? h('img', { class: 'demo', src: c.gifUrl, alt: `${card.name} demonstration`, loading: 'lazy', referrerpolicy: 'no-referrer', width: 640, height: 400 }) : null;
-    img?.addEventListener('error', () => { img.src = PLACEHOLDER_GIF; }, { once: true });
-    return h('div', { class: 'info' },
-      c.tags.length ? h('p', { class: 'muted small', text: c.tags.join(' · ') }) : null,
-      c.notes ? h('p', { class: 'cue', text: c.notes }) : null,
-      c.startNote ? h('p', { class: 'small', text: `Start: ${c.startNote}` }) : null,
-      c.rationale ? h('p', { class: 'small muted', text: c.rationale }) : null,
-      c.levelText ? h('p', { class: 'small', text: c.levelText }) : null,
-      c.ladder ? h('ul', { class: 'plain small' }, c.ladder.map((l) => h('li', { text: `Level ${l.level}: ${l.variation}, ${l.reps} reps${l.cue ? `. ${l.cue}` : ''}` }))) : null,
-      img,
-      c.attribution ? h('p', { class: 'muted small' }, 'Demo: ', h('a', { href: c.attribution.url, target: '_blank', rel: 'noopener noreferrer', text: c.attribution.label })) : null);
+  // ---- an exercise card (v0.2 layout; the sets sit right under the header so the logging is never below the fold) ----
+  const thumb = (id, name) => {
+    const url = EXERCISES[id]?.gifUrl || PLACEHOLDER_GIF;
+    const img = h('img', { src: url, alt: '', loading: 'lazy', referrerpolicy: 'no-referrer', width: 56, height: 42 });
+    img.addEventListener('error', () => { img.src = PLACEHOLDER_GIF; }, { once: true });
+    return h('div', { class: 'alt-thumb', 'aria-label': name }, img);
+  };
+
+  function altPanel(card, group) {
+    const items = card.optionGroups[group];
+    return h('div', { class: 'alt-panel', 'data-group': group === 'trx' ? 'trxAlternatives' : 'alternatives', role: 'group', 'aria-label': `${group === 'trx' ? 'TRX' : 'Options'} for ${card.name}` },
+      items.map((o) => h('div', { class: 'alt-item' },
+        thumb(o.exerciseId, o.name),
+        h('div', { class: 'alt-name', text: o.name }),
+        h('button', {
+          type: 'button', class: 'alt-use', disabled: o.current,
+          onclick: () => guard(async () => { await ctx.actions.swap(sessionId, { slotNumber: card.slot, exerciseId: o.exerciseId }); ui.alt.delete(card.exerciseId); }),
+        }, o.current ? 'In use' : 'Use this'))));
   }
 
-  function swapPanel(card) {
-    return h('div', { class: 'swap-panel', role: 'group', 'aria-label': `Swap ${card.name}` },
-      h('p', { class: 'small muted', text: 'The swap stays for this workout until you change it back.' }),
-      card.swapOptions.map((o) => h('button', {
-        type: 'button', class: 'btn option', 'aria-pressed': String(o.current),
-        onclick: () => guard(async () => { await ctx.actions.swap(sessionId, { slotNumber: card.slot, exerciseId: o.exerciseId }); ui.swap.delete(card.exerciseId); }),
-      }, o.name, o.kind === 'trx' ? h('span', { class: 'muted small', text: ' (TRX)' }) : null, o.kind === 'default' ? h('span', { class: 'muted small', text: ' (default)' }) : null)));
+  function formSection(card) {
+    const c = card.cues;
+    const img = h('img', { src: c.gifUrl || PLACEHOLDER_GIF, alt: `${card.name} demonstration`, loading: 'lazy', referrerpolicy: 'no-referrer', width: 640, height: 400 });
+    img.addEventListener('error', () => { img.src = PLACEHOLDER_GIF; }, { once: true });
+    return h('div', { class: 'form-section' },
+      h('div', { class: 'gif-wrapper' }, img, h('div', { class: 'gif-label' }, h('span'), 'Live form reference')),
+      c.attribution ? h('div', { class: 'gif-attribution' }, 'Art credit: ', h('a', { href: c.attribution.url, target: '_blank', rel: 'noopener noreferrer', text: c.attribution.label })) : null,
+      h('div', { class: 'exercise-body' },
+        c.notes,
+        card.partnerName ? ` Alternate with ${card.partnerName}; rest 60–90 s between rounds.` : '',
+        card.hints.map((t) => h('div', { class: 'pairing-tip', text: t })),
+        c.levelText ? h('div', { class: 'start-line', text: `Level: start at 2 of 5. ${c.levelText}` }) : null,
+        c.rationale ? h('div', { class: 'start-line', text: c.rationale }) : null,
+        c.ladder ? h('details', { class: 'ladder' }, h('summary', { text: 'Pushup ladder' }),
+          h('ul', {}, c.ladder.map((l) => h('li', {}, h('strong', { text: `L${l.level}` }), ` ${l.variation} — ${l.reps}${l.cue ? ` · ${l.cue}` : ''}`)))) : null,
+        c.tags.length ? h('div', { class: 'tags' }, c.tags.map((t) => h('span', { class: 'tag', text: t }))) : null));
   }
 
   function buildCard(card) {
-    const toggle = (set) => () => { set.has(card.exerciseId) ? set.delete(card.exerciseId) : set.add(card.exerciseId); render(); };
     const rows = card.rows.map((r) => buildRow(card, r));
-    return h('article', { class: `ex${card.increased ? ' increased' : ''}`, 'aria-label': card.name },
-      h('header', { class: 'ex-head' },
-        h('button', { type: 'button', class: 'ex-name', 'aria-expanded': String(ui.info.has(card.exerciseId)), onclick: toggle(ui.info) }, card.name, card.swapped ? h('span', { class: 'muted small', text: ' (swapped)' }) : null),
-        card.swapOptions.length > 1 ? h('button', { type: 'button', class: 'btn quiet swap-btn', 'aria-expanded': String(ui.swap.has(card.exerciseId)), disabled: !card.canSwap, title: card.swapBlockedReason ?? 'Swap exercise', onclick: toggle(ui.swap) }, 'Swap') : null),
-      h('p', { class: 'prescription', text: card.prescription }),
+    const open = ui.alt.get(card.exerciseId) ?? null;
+    const toggle = (group) => () => { open === group ? ui.alt.delete(card.exerciseId) : ui.alt.set(card.exerciseId, group); render(); };
+    const groups = card.optionGroups;
+    const altButtons = [];
+    if (groups.alternatives.length) altButtons.push(h('button', { type: 'button', class: 'alt-toggle opt', 'aria-expanded': String(open === 'alternatives'), disabled: !card.canSwap, onclick: toggle('alternatives') }, 'Options ', h('span', { class: 'alt-badge', text: String(groups.alternatives.length) })));
+    if (groups.trx.length) altButtons.push(h('button', { type: 'button', class: 'alt-toggle trx', 'aria-expanded': String(open === 'trx'), disabled: !card.canSwap, onclick: toggle('trx') }, 'TRX ', h('span', { class: 'alt-badge', text: String(groups.trx.length) })));
+    return h('article', { class: `ex slide ${card.ssClass}${card.increased ? ' increased' : ''}${card.done ? ' done' : ''}`, 'aria-label': card.name },
+      card.done ? h('div', { class: 'done-flag' }, h('span'), 'Done') : null,
+      h('div', { class: 'ex-header' },
+        h('div', {}, h('h3', { class: 'ex-title', text: card.name }), h('div', { class: 'phase-chip', text: card.chipText })),
+        h('div', { class: 'ex-meta' }, h('strong', { text: card.prescription }), h('span', { text: 'Sets × Reps' }))),
       card.suggestionText ? h('p', { class: 'suggest', text: [card.suggestionText, card.sourceLabel].filter(Boolean).join(' · ') }) : null,
       card.increaseText ? h('p', { class: 'up', text: card.increaseText }) : null,
       card.lastText ? h('p', { class: 'last muted', text: card.lastText }) : null,
-      card.hints.map((t) => h('p', { class: 'hint small', text: t })),
-      card.swapBlockedReason && ui.swap.has(card.exerciseId) ? h('p', { class: 'small muted', text: card.swapBlockedReason }) : null,
-      ui.info.has(card.exerciseId) ? infoPanel(card) : null,
-      ui.swap.has(card.exerciseId) && card.canSwap ? swapPanel(card) : null,
       h('ol', { class: 'sets' }, rows.map((c) => c.el)),
-      h('button', { type: 'button', class: 'btn quiet add-set', onclick() { ctx.actions.addSet(sessionId, card.exerciseId); render(); } }, '+ Add set'));
+      h('button', { type: 'button', class: 'btn quiet add-set', onclick() { ctx.actions.addSet(sessionId, card.exerciseId); render(); } }, '+ Add set'),
+      formSection(card),
+      card.swappedFromName ? h('div', { class: 'swap-note' }, `Swapped from ${card.swappedFromName} · `, h('button', { type: 'button', class: 'revert-btn', onclick: () => guard(async () => { ui.alt.delete(card.exerciseId); await ctx.actions.swap(sessionId, { slotNumber: card.slot, exerciseId: card.defaultExerciseId }); }) }, 'Revert')) : null,
+      altButtons.length ? h('div', { class: 'alt-row' }, altButtons) : null,
+      card.swapBlockedReason && altButtons.length ? h('p', { class: 'small muted', text: card.swapBlockedReason }) : null,
+      open && card.canSwap ? altPanel(card, open) : null);
   }
 
-  // ---- the whole body ----
-  function buildBody(view) {
-    rowComps.clear();
-    const unlogged = Math.max(0, view.plannedSets - view.loggedSets);
+  // The last slide: notes, back pain after, and Finish (there is no separate Finish screen).
+  function buildFinishCard(view) {
     const notes = h('textarea', {
       id: 'session-notes', rows: 3, maxlength: 4000, placeholder: 'How did it go? (optional)',
       oninput() { ctx.actions.typeNotes(sessionId, notes.value); },
@@ -263,41 +276,49 @@ export function mountSession(container, ctx, sessionId) {
         try { await ctx.actions.discard(sessionId); ctx.navigate('#/'); } catch (err) { ctx.notify(err.message, 'error'); }
       },
     });
-    const finishPanel = ui.finishOpen ? h('section', { class: 'card finish', 'aria-labelledby': 'finish-title' },
-      h('h3', { id: 'finish-title', text: 'Finish workout' }),
-      unlogged > 0 ? h('p', { class: 'muted', text: `${unlogged} planned ${unlogged === 1 ? 'set is' : 'sets are'} not logged. You can still finish.` }) : null,
-      h('p', { class: 'field-label', text: 'Back pain after (optional)' }),
-      pain.el,
-      h('div', { class: 'actions' },
-        h('button', {
-          type: 'button', class: 'btn primary grow',
-          onclick: () => guard(async () => {
-            await ctx.actions.finish(sessionId, { backPainAfter: ctx.actions.draft(sessionId).backPainAfter ?? null, notes: notes.value });
-            ctx.navigate(`#/summary/${sessionId}`);
-          }),
-        }, 'Save and finish'),
-        h('button', { type: 'button', class: 'btn', onclick() { ui.finishOpen = false; render(); } }, 'Keep going'))) : null;
+    const unlogged = Math.max(0, view.plannedSets - view.loggedSets);
+    return h('article', { class: 'ex slide finish-card', 'aria-label': 'Finish workout' },
+      h('div', { class: 'ex-header' }, h('div', {}, h('h3', { class: 'ex-title', text: 'Finish workout' }), h('div', { class: 'phase-chip', text: 'Last card' }))),
+      h('p', { class: 'muted', text: `${view.loggedSets} of ${view.plannedSets} sets logged${unlogged > 0 ? `. ${unlogged} not logged; you can still finish.` : '.'}` }),
+      h('label', { for: 'session-notes', text: 'Notes (optional)' }), notes,
+      h('p', { class: 'field-label', text: 'Back pain after (optional)' }), pain.el,
+      h('button', {
+        type: 'button', class: 'btn primary block', disabled: !view.canFinish,
+        onclick: () => guard(async () => {
+          await ctx.actions.finish(sessionId, { backPainAfter: ctx.actions.draft(sessionId).backPainAfter ?? null, notes: notes.value });
+          ctx.navigate(`#/summary/${sessionId}`);
+        }),
+      }, 'Save and finish'),
+      !view.canFinish ? h('p', { class: 'muted small', text: 'Log a set to finish, or discard the workout.' }) : null,
+      h('div', { class: 'actions finish-actions' }, discard));
+  }
 
+  // ---- the whole body ----
+  function buildBody(view) {
+    rowComps.clear();
+    const cards = [...view.groups.flatMap((g) => g.cards), ...view.orphans];
+    const track = h('div', { class: 'track', role: 'region', tabindex: '0', 'aria-label': 'Exercises. Swipe sideways for the next one.' },
+      cards.map(buildCard), buildFinishCard(view));
+    // A swipe to another card returns the page to the top, so the new card starts at its title.
+    let settle = null;
+    track.addEventListener('scroll', () => {
+      clearTimeout(settle);
+      settle = setTimeout(() => {
+        const first = track.firstElementChild;
+        if (!first) return;
+        const index = Math.round(track.scrollLeft / (first.offsetWidth + 10));
+        if (index === ui.slide) return;
+        ui.slide = index;
+        const top = track.getBoundingClientRect().top;
+        if (top < 0) window.scrollBy({ top: top - 8 });
+      }, 120);
+    }, { passive: true });
     fill(body,
       h('a', { class: 'back', href: '#/' }, '← Home'),
-      h('header', { class: 'card session-head' },
-        h('h2', { text: view.label }),
-        h('p', { class: 'muted', text: `${view.dateText} · started ${view.startedText}` }),
-        h('p', { text: `Week ${view.programWeek} · ${view.phaseText}` }),
-        view.backPainBefore !== null ? h('p', { class: 'muted small', text: `Back pain before: ${view.backPainBefore} / 10` }) : null,
-        h('p', { class: 'progress-line' }, h('progress', { max: Math.max(1, view.plannedSets), value: Math.min(view.loggedSets, Math.max(1, view.plannedSets)), 'aria-label': 'Sets logged' }), h('span', { class: 'progress-text small muted' }))),
-      view.groups.map((g) => h('section', { class: 'group', 'aria-label': g.superset === null ? 'Single exercise' : `Superset ${g.superset}` },
-        g.superset !== null ? h('h3', { class: 'group-title', text: `Superset ${g.superset}` }) : null,
-        g.cards.map(buildCard))),
-      view.orphans.length ? h('section', { class: 'group', 'aria-label': 'Logged under another exercise' },
-        h('h3', { class: 'group-title', text: 'Logged under another exercise' }), view.orphans.map(buildCard)) : null,
-      h('section', { class: 'card' },
-        h('label', { for: 'session-notes', text: 'Notes (optional)' }), notes,
-        ui.finishOpen ? null : h('div', { class: 'actions finish-actions' },
-          h('button', { type: 'button', class: 'btn primary grow', disabled: !view.canFinish, onclick() { ui.finishOpen = true; render(); } }, 'Finish workout'),
-          discard),
-        !view.canFinish && !ui.finishOpen ? h('p', { class: 'muted small', text: 'Log a set to finish, or discard the workout.' }) : null),
-      finishPanel);
+      h('p', { class: 'status-line' }),
+      h('p', { class: 'phase-line muted small' }),
+      track);
+    return track;
   }
 
   // ---- render: rebuild on structure change, otherwise patch ----
@@ -311,14 +332,16 @@ export function mountSession(container, ctx, sessionId) {
     }
     if (view.finished) { ctx.navigate(`#/summary/${sessionId}`); return; }
 
-    const key = JSON.stringify([ui.finishOpen, view.canFinish, view.orphans.map(cardKey), view.groups.map((g) => [g.superset, g.cards.map(cardKey)]), [...ui.info], [...ui.swap], view.label]);
+    const key = JSON.stringify([view.canFinish, view.label, view.orphans.map(cardKey), view.groups.map((g) => [g.superset, g.cards.map(cardKey)]), [...ui.alt]]);
     if (key !== structure) {
       const active = document.activeElement;
       const restoreId = active && body.contains(active) && /^(INPUT|TEXTAREA|SELECT)$/.test(active.tagName) ? active.id : null;
       const caret = restoreId && 'selectionStart' in active ? [active.selectionStart, active.selectionEnd] : null;
       const y = window.scrollY;
+      const x = body.querySelector('.track')?.scrollLeft ?? 0;
       structure = key;
-      buildBody(view);
+      const track = buildBody(view);
+      track.scrollLeft = x;
       const target = restoreId ? document.getElementById(restoreId) : null;
       if (target) {
         target.focus({ preventScroll: true });
@@ -326,17 +349,17 @@ export function mountSession(container, ctx, sessionId) {
       }
       window.scrollTo(0, y);
     }
-    // Patch every row from the view (values, enabled buttons, "changed from" notes).
+    // Patch every row from the view (values, enabled buttons, "changed from" notes) and the status lines.
     for (const card of [...view.groups.flatMap((g) => g.cards), ...view.orphans]) {
       for (const row of card.rows) {
         const comp = rowComps.get(row.id);
         if (comp) { comp.card = card; comp.row = row; comp.sync(); }
       }
     }
-    const text = body.querySelector('.progress-text');
-    if (text) text.textContent = ` ${view.loggedSets} of ${view.plannedSets} sets logged`;
-    const bar = body.querySelector('progress');
-    if (bar) { bar.max = Math.max(1, view.plannedSets); bar.value = Math.min(view.loggedSets, bar.max); }
+    const status = body.querySelector('.status-line');
+    if (status) status.textContent = `${view.label.replace(' – Full body', '')} · ${view.exercisesDone}/${view.exerciseCount} done · ${view.loggedSets}/${view.plannedSets} sets`;
+    const phase = body.querySelector('.phase-line');
+    if (phase) phase.textContent = `${view.dateText} · started ${view.startedText} · Week ${view.programWeek} · ${view.phaseText}${view.backPainBefore !== null ? ` · back pain before ${view.backPainBefore}/10` : ''}`;
     updateRest();
   }
 
