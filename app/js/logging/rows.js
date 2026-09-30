@@ -3,7 +3,7 @@
 // A row is 'done' (a logged set), 'editing' (a logged set being changed) or 'todo'. The weight and the level of a
 // row that has not been logged come from, in order: what the person typed into it, the row before it (logged or
 // typed), else the suggestion. So a change on one set pre-fills the remaining sets and never the earlier ones.
-// Reps, distance and RIR are never pre-filled: they are what the person did, not a target.
+// Reps and distance are never pre-filled: they are what the person did, not a target.
 
 // Which boxes an exercise's rows show, from the engine's suggestion (its `progression` and `type`).
 export function inputsFor(suggestion) {
@@ -30,16 +30,16 @@ export function canLog(values, inputs) {
   return true;
 }
 
-const FIELDS = ['weightLbs', 'levelNumber', 'reps', 'distanceM', 'rir'];
+const FIELDS = ['weightLbs', 'levelNumber', 'reps', 'distanceM'];
 const has = (obj, key) => obj !== undefined && Object.hasOwn(obj, key);
 const orNull = (x) => (x === undefined ? null : x);
 
 // suggestion: the engine's suggestExercise result. logged: this exercise's sets in this session (replay records, deleted
-// ones already gone). draftRows: { [setNumber]: { weightLbs?, levelNumber?, reps?, distanceM?, rir?, editing? } }.
+// ones already gone). draftRows: { [setNumber]: { weightLbs?, levelNumber?, reps?, distanceM?, editing? } }.
 // planned: the slot's set count for the phase (0 for an exercise that is no longer in the plan). extra: sets added.
 //
 // Returns rows in set-number order:
-//   { id, setNumber, status, setId, weightLbs, levelNumber, reps, distanceM, rir,
+//   { id, setNumber, status, setId, weightLbs, levelNumber, reps, distanceM,
 //     suggestedWeightLbs, suggestedLevel,          // what "changed from" compares with
 //     weightChanged, levelChanged, canLog, dirty } // dirty: an editing row that differs from the logged set
 export function buildRows({ suggestion, logged = [], draftRows = {}, planned = 0, extra = 0 }) {
@@ -72,7 +72,6 @@ export function buildRows({ suggestion, logged = [], draftRows = {}, planned = 0
       levelNumber: inputs.level ? pick('levelNumber', carryLevel) : null,
       reps: inputs.reps ? pick('reps', null) : null,
       distanceM: inputs.distance ? pick('distanceM', null) : null,
-      rir: pick('rir', null),
     };
     carryWeight = values.weightLbs;
     carryLevel = values.levelNumber;
@@ -97,13 +96,12 @@ export function buildRows({ suggestion, logged = [], draftRows = {}, planned = 0
   return rows;
 }
 
-// Only the values the exercise's boxes show (a dead bug has no weight, a carry has no reps), plus RIR.
+// Only the values the exercise's boxes show (a dead bug has no weight, a carry has no reps).
 export function pickValues(values, inputs) {
   return {
     weightLbs: inputs.weight ? values.weightLbs ?? null : null,
     levelNumber: inputs.level ? values.levelNumber ?? null : null,
     reps: inputs.reps ? values.reps ?? null : null,
     distanceM: inputs.distance ? values.distanceM ?? null : null,
-    rir: values.rir ?? null,
   };
 }

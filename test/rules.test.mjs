@@ -117,7 +117,7 @@ describe('rules.js matches spec 4.3 (slots, sets, reps)', () => {
         const id = idOf(name);
         assert.equal(Number(slot), s.slot);
         assert.equal(id, s.exercise, `${code} slot ${slot} exercise`);
-        assert.equal(SLOT_SETS[code][i], Number(sets), `${code} slot ${slot} Phase 2 sets`);
+        assert.equal(SLOT_SETS[code][i], Number(sets), `${code} slot ${slot} sets`);
         const r = RULES[id];
         if (/ladder/.test(repsText)) {
           const level1 = parseReps(/standard: ([^)]*)/.exec(repsText)[1]);
@@ -221,7 +221,6 @@ describe('rules.js matches spec 5.3 and 5.6', () => {
 describe('program constants match the spec', () => {
   test('phase and scheduled-increase numbers', () => {
     assert.equal(PROGRAM.phase1Weeks, 4);
-    assert.equal(PROGRAM.phase1Sets, 2);
     assert.equal(PROGRAM.defaultScheduledIncreaseDays, 21);
     assert.equal(PROGRAM.defaultProgramStartDate, '2026-09-28');
     assert.match(spec, /Initial value: \*\*2026-09-28\*\*/);

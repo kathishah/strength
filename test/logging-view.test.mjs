@@ -21,9 +21,9 @@ describe('home', () => {
     const h = homeView(makeLog().state(), '2026-09-28');
     assert.equal(h.next.templateCode, 'A');
     assert.deepEqual(h.next.exercises.map((e) => e.name), ['Goblet Squat', 'Dumbbell Bench Press', 'Dumbbell Romanian Deadlift', 'Chest-Supported Row', 'Dead Bug', 'Face Pull']);
-    assert.equal(h.next.exercises[0].prescription, '2 × 8–12');
+    assert.equal(h.next.exercises[0].prescription, '3 × 8–12');
     assert.equal(h.next.exercises[0].suggestionText, 'Suggested: 20 lbs');
-    assert.match(h.next.phaseText, /Phase 1 · stop with about 3 reps in reserve/);
+    assert.match(h.next.phaseText, /Phase 1 · stop each set with about 3 reps left/);
     assert.equal(h.next.warning, null);
     assert.deepEqual(h.inProgress, []);
     assert.equal(h.recoveryFirst, false); // a Monday
@@ -75,16 +75,16 @@ describe('session view', () => {
     assert.equal(view(log).finished, true);
   });
 
-  test('Workout A, week 2: the header, six cards in three superset groups, two sets each', () => {
+  test('Workout A, week 2: the header, six cards in three superset groups, the full set counts', () => {
     const v = view(open());
     assert.equal(v.templateCode, 'A');
     assert.equal(v.programWeek, 2);
     assert.equal(v.phase, 1);
-    assert.equal(v.phaseText, 'Phase 1 · stop with about 3 reps in reserve');
+    assert.equal(v.phaseText, 'Phase 1 · stop each set with about 3 reps left');
     assert.deepEqual(v.groups.map((g) => [g.superset, g.cards.length]), [[1, 2], [2, 2], [3, 2]]);
     assert.deepEqual(v.groups.map((g) => g.cards.map((c) => c.slot)), [[1, 2], [3, 4], [5, 6]]);
-    assert.ok(cards(v).every((c) => c.rows.length === 2));
-    assert.equal(v.plannedSets, 12);
+    assert.deepEqual(cards(v).map((c) => c.rows.length), [3, 3, 3, 3, 2, 2]);
+    assert.equal(v.plannedSets, 16);
     assert.equal(v.loggedSets, 0);
     assert.equal(v.canFinish, false);
   });
@@ -92,7 +92,7 @@ describe('session view', () => {
   test('Phase 2 (week 5): full set counts', () => {
     const v = view(open(makeLog(), '2026-11-02'));
     assert.equal(v.phase, 2);
-    assert.equal(v.phaseText, 'Phase 2 · stop with 1–2 reps in reserve');
+    assert.equal(v.phaseText, 'Phase 2 · stop each set with 1–2 reps left');
     assert.deepEqual(cards(v).map((c) => c.rows.length), [3, 3, 3, 3, 2, 2]);
   });
 
@@ -111,12 +111,12 @@ describe('session view', () => {
     open(log, '2026-10-05', 'A', { id: 'sess_open' });
     const c = card(view(log), 'goblet-squat');
     assert.equal(c.name, 'Goblet Squat');
-    assert.equal(c.prescription, '2 × 8–12');
+    assert.equal(c.prescription, '3 × 8–12');
     assert.equal(c.suggestionText, 'Suggested: 35 lbs');
     assert.equal(c.sourceLabel, 'Same as last time');
     assert.equal(c.lastText, 'Last (Mon, Sep 28): 35 × 12, 12, 11');
     assert.equal(c.increaseText, null);
-    assert.deepEqual(c.rows.map((r) => r.weightLbs), [35, 35]);
+    assert.deepEqual(c.rows.map((r) => r.weightLbs), [35, 35, 35]);
   });
 
   test('the increase highlight: badge text, and the pre-fill is the increased weight', () => {
@@ -126,7 +126,7 @@ describe('session view', () => {
     const c = card(view(log), 'goblet-squat');
     assert.equal(c.increased, true);
     assert.equal(c.increaseText, '↑ +5 lbs from 25 · Scheduled');
-    assert.deepEqual(c.rows.map((r) => r.weightLbs), [30, 30]);
+    assert.deepEqual(c.rows.map((r) => r.weightLbs), [30, 30, 30]);
     assert.equal(c.sourceLabel, 'Scheduled increase');
   });
 
@@ -155,14 +155,14 @@ describe('session view', () => {
     log.session('2026-09-28', 'B', [atLevel('pushup', 3, [10, 10])]);
     open(log, '2026-10-05', 'B', { id: 'sess_open' });
     let c = card(view(log), 'pushup');
-    assert.deepEqual(c.rows.map((r) => r.levelNumber), [3, 3]);
+    assert.deepEqual(c.rows.map((r) => r.levelNumber), [3, 3, 3]);
     assert.equal(c.rows[0].targetText, '8–15');
     assert.match(c.rows[0].levelInfo, /Feet-elevated pushup/);
     assert.equal(c.rows[0].placeholderReps, 8);
     assert.equal(c.lastText, 'Last (Mon, Sep 28): level 3 × 10, 10');
     const draft = setRowField(emptyDraft('sess_open'), 'pushup', 1, 'levelNumber', 1);
     c = card(view(log, draft), 'pushup');
-    assert.deepEqual(c.rows.map((r) => [r.levelNumber, r.targetText]), [[1, '10–20'], [1, '10–20']]);
+    assert.deepEqual(c.rows.map((r) => [r.levelNumber, r.targetText]), [[1, '10–20'], [1, '10–20'], [1, '10–20']]);
   });
 
   test('a swapped TRX exercise shows its level text; two TRX in a superset get the tip', () => {
@@ -225,7 +225,7 @@ describe('session view', () => {
     let d = setRowField(emptyDraft('sess_open'), 'goblet-squat', 1, 'weightLbs', 25);
     d = { ...startRest(d, NOW - 30_000), notes: 'typing…' };
     const v = view(log, d);
-    assert.deepEqual(card(v, 'goblet-squat').rows.map((r) => r.weightLbs), [25, 25]);
+    assert.deepEqual(card(v, 'goblet-squat').rows.map((r) => r.weightLbs), [25, 25, 25]);
     assert.equal(v.rest.remainingSec, 60);
     assert.equal(v.notes, 'typing…');
     assert.equal(v.savedNotes, '');

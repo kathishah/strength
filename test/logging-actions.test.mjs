@@ -3,6 +3,7 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import { createActions, createDraftStore, homeView, nextTemplate, restStatus, sessionView } from '../app/js/logging/index.js';
+import { planSession } from '../app/js/engine/index.js';
 import { ulid } from '../app/js/ids.js';
 import { createMemoryStorage } from '../app/js/store/memory.js';
 import { validateBatch } from '../lambda/events/registry.mjs';
@@ -58,11 +59,11 @@ describe('logging sets', () => {
     const id = await w.actions.startSession();
     const c = card(w.view(id), 'goblet-squat');
     w.advance(120);
-    const setId = await w.actions.logSet(id, { exerciseId: 'goblet-squat', setNumber: 1, values: { weightLbs: 25, reps: 11, rir: 2 }, suggestion: c.suggestion });
+    const setId = await w.actions.logSet(id, { exerciseId: 'goblet-squat', setNumber: 1, values: { weightLbs: 25, reps: 11, rir: 2 }, suggestion: c.suggestion }); // a stray rir is dropped: it is not asked
     assert.match(setId, /^set_/);
     assert.deepEqual(w.state.sets[setId], {
       id: setId, sessionId: id, exerciseId: 'goblet-squat', setNumber: 1, isRampUp: false, isCalibration: false, completed: true,
-      suggestedWeightLbs: 20, suggestionSource: 'starting', weightLbs: 25, reps: 11, rir: 2,
+      suggestedWeightLbs: 20, suggestionSource: 'starting', weightLbs: 25, reps: 11,
     });
     const rest = restStatus(w.actions.draft(id), w.clock.ms);
     assert.equal(rest.remainingSec, 90);
@@ -75,10 +76,10 @@ describe('logging sets', () => {
     const w = await makeWorld();
     const id = await w.actions.startSession();
     w.actions.setValue(id, 'goblet-squat', 1, 'weightLbs', 25);
-    assert.deepEqual(card(w.view(id), 'goblet-squat').rows.map((r) => r.weightLbs), [25, 25]);
+    assert.deepEqual(card(w.view(id), 'goblet-squat').rows.map((r) => r.weightLbs), [25, 25, 25]);
     await w.actions.logSet(id, { exerciseId: 'goblet-squat', setNumber: 1, values: { weightLbs: 25, reps: 10 }, suggestion: card(w.view(id), 'goblet-squat').suggestion });
     const rows = card(w.view(id), 'goblet-squat').rows;
-    assert.deepEqual(rows.map((r) => [r.status, r.weightLbs, r.weightChanged]), [['done', 25, true], ['todo', 25, true]]);
+    assert.deepEqual(rows.map((r) => [r.status, r.weightLbs, r.weightChanged]), [['done', 25, true], ['todo', 25, true], ['todo', 25, true]]);
     assert.equal(w.actions.draft(id).rows['goblet-squat'], undefined, 'the typed values became the event');
   });
 
@@ -188,9 +189,9 @@ describe('editing, undoing and extra sets', () => {
     const { w, id, s } = await oneSet();
     w.actions.addSet(id, 'goblet-squat');
     const rows = card(w.view(id), 'goblet-squat').rows;
-    assert.equal(rows.length, 3);
-    await w.actions.logSet(id, { exerciseId: 'goblet-squat', setNumber: 3, values: { weightLbs: 20, reps: 8 }, suggestion: s });
-    assert.equal(card(w.view(id), 'goblet-squat').rows.length, 3);
+    assert.equal(rows.length, 4);
+    await w.actions.logSet(id, { exerciseId: 'goblet-squat', setNumber: 4, values: { weightLbs: 20, reps: 8 }, suggestion: s });
+    assert.equal(card(w.view(id), 'goblet-squat').rows.length, 4);
     assert.equal(w.view(id).loggedSets, 2);
   });
 });
@@ -345,8 +346,8 @@ describe('progression through the screens', () => {
     const squat = card(w.view(id), 'goblet-squat');
     assert.equal(w.state.sessions[id].templateCode, 'A');
     assert.equal(squat.increaseText, '↑ +5 lbs from 25 · Scheduled');
-    assert.deepEqual(squat.rows.map((r) => r.weightLbs), [30, 30]);
-    assert.equal(squat.lastText, 'Last (Mon, Sep 28): 25 × 12, 12');
+    assert.deepEqual(squat.rows.map((r) => r.weightLbs), [30, 30, 30]);
+    assert.equal(squat.lastText, 'Last (Mon, Sep 28): 25 × 12, 12, 12');
     // The person lifts 30. The summary has no callout for it, and the next A holds 30.
     await doWorkout(w, { sessionId: id, plan: { 'goblet-squat': { reps: 10 } } });
     w.assertValid();
@@ -391,10 +392,10 @@ describe('the Phase D done-when: a full Workout A is logged offline and syncs la
     const actions = createActions({ events: phone.events, drafts, now: () => phone.wall.now, newId: (ms) => ulid(ms) });
     const world = { actions, clock: { get ms() { return phone.wall.now; } }, view: (sid) => sessionView(phone.events.state, sid, actions.draft(sid), phone.wall.now), advance: (s) => { phone.wall.now += s * 1000; } };
 
-    const id = await doWorkout(world, { plan: { 'goblet-squat': { weightLbs: 25, reps: [12, 11] } } });
+    const id = await doWorkout(world, { plan: { 'goblet-squat': { weightLbs: 25, reps: [12, 11, 10] } } });
     await phone.sync.sync().catch(() => {}); // still offline: nothing is lost
     const waiting = phone.events.pendingCount();
-    assert.equal(waiting, 1 + 12 + 1, 'session.started, twelve sets, session.finished');
+    assert.equal(waiting, 1 + 16 + 1, 'session.started, sixteen sets, session.finished');
     assert.equal(desktop.events.eventCount(), 0);
 
     const batch = { deviceId: phone.deviceId, events: phone.events.pending() };
@@ -408,7 +409,7 @@ describe('the Phase D done-when: a full Workout A is logged offline and syncs la
     const onDesktop = desktop.events.state;
     assert.equal(onDesktop.sessions[id].templateCode, 'A');
     assert.ok(onDesktop.sessions[id].finishedAt);
-    assert.deepEqual(Object.values(onDesktop.sets).filter((s) => s.exerciseId === 'goblet-squat').map((s) => [s.weightLbs, s.reps]).sort(), [[25, 11], [25, 12]]);
+    assert.deepEqual(Object.values(onDesktop.sets).filter((s) => s.exerciseId === 'goblet-squat').map((s) => [s.weightLbs, s.reps]).sort(), [[25, 10], [25, 11], [25, 12]]);
     assert.equal(nextTemplate(onDesktop), 'B');
   });
 });
@@ -428,5 +429,36 @@ describe('back pain after', () => {
     await w.actions.finish(id2, { backPainAfter: w.actions.draft(id2).backPainAfter ?? null });
     assert.equal(w.state.sessions[id2].backPainAfter, 0, '0 out of 10 is a rating, not "skipped"');
     w.assertValid();
+  });
+});
+
+describe('what is pre-filled with no history (v1.14)', () => {
+  test('leg press starts at the first-loaded 50 lbs, hip thrust at 45, reverse lunge at 10; back extension stays at 0', async () => {
+    const w = await makeWorld();
+    const weight = (t, id) => planSession(w.state, { today: '2026-09-28', templateCode: t }).exercises.find((e) => e.exerciseId === id).weightLbs;
+    assert.deepEqual([weight('B', 'leg-press'), weight('B', 'hip-thrust'), weight('C', 'reverse-lunge'), weight('B', 'back-extension-45')], [50, 45, 10, 0]);
+  });
+
+  test('what was logged last time wins, including a logged 0', async () => {
+    const w = await makeWorld();
+    await doWorkout(w, { plan: { 'goblet-squat': { weightLbs: 20 } } }); // A
+    w.set('2026-09-30T11:00:00-07:00');
+    await doWorkout(w, { plan: { 'leg-press': { weightLbs: 60 }, 'hip-thrust': { weightLbs: 0 } } }); // B
+    w.set('2026-10-02T11:00:00-07:00');
+    await doWorkout(w); // C
+    w.set('2026-10-05T11:00:00-07:00');
+    await doWorkout(w); // A
+    w.set('2026-10-07T11:00:00-07:00');
+    const id = await w.actions.startSession();
+    assert.equal(w.state.sessions[id].templateCode, 'B');
+    assert.equal(card(w.view(id), 'leg-press').rows[0].weightLbs, 60);
+    assert.equal(card(w.view(id), 'hip-thrust').rows[0].weightLbs, 0);
+  });
+
+  test('RIR is not asked: a set never carries one', async () => {
+    const w = await makeWorld();
+    const id = await doWorkout(w);
+    assert.ok(Object.values(w.state.sets).every((set) => !Object.hasOwn(set, 'rir')));
+    assert.ok(sets(w).length > 0 && id);
   });
 });

@@ -32,16 +32,16 @@ describe('session.started', () => {
 });
 
 describe('set.logged', () => {
-  const values = (extra) => ({ weightLbs: null, levelNumber: null, reps: null, distanceM: null, rir: null, ...extra });
+  const values = (extra) => ({ weightLbs: null, levelNumber: null, reps: null, distanceM: null, ...extra });
 
   test('a weighted set records what was done and what was suggested', () => {
     const s = suggest('goblet-squat', 'A', 1);
-    const { payload } = make.setLogged({ sessionId: 'sess_1', exerciseId: 'goblet-squat', setNumber: 2, values: values({ weightLbs: 25, reps: 11, rir: 2 }), suggestion: s });
+    const { payload } = make.setLogged({ sessionId: 'sess_1', exerciseId: 'goblet-squat', setNumber: 2, values: values({ weightLbs: 25, reps: 11 }), suggestion: s });
     assert.deepEqual(payload, {
       sessionId: 'sess_1', exerciseId: 'goblet-squat', setNumber: 2, isRampUp: false, isCalibration: false, completed: true,
-      suggestedWeightLbs: 20, suggestionSource: 'starting', weightLbs: 25, reps: 11, rir: 2,
+      suggestedWeightLbs: 20, suggestionSource: 'starting', weightLbs: 25, reps: 11,
     });
-    valid(make.setLogged({ sessionId: 'sess_1', exerciseId: 'goblet-squat', setNumber: 2, values: values({ weightLbs: 25, reps: 11, rir: 2 }), suggestion: s }), 'set_1');
+    valid(make.setLogged({ sessionId: 'sess_1', exerciseId: 'goblet-squat', setNumber: 2, values: values({ weightLbs: 25, reps: 11 }), suggestion: s }), 'set_1');
   });
 
   test('every kind of exercise produces a valid event: level, carry, bodyweight, hold, weight 0', () => {
@@ -63,25 +63,25 @@ describe('set.logged', () => {
     }
   });
 
-  test('weight 0 is written, not dropped as empty', () => {
+  test('a logged weight of 0 is written, not dropped as empty', () => {
     const made = make.setLogged({ sessionId: 's', exerciseId: 'leg-press', setNumber: 1, values: values({ weightLbs: 0, reps: 10 }), suggestion: suggest('leg-press', 'B', 1) });
     assert.equal(made.payload.weightLbs, 0);
-    assert.equal(made.payload.suggestedWeightLbs, 0);
+    assert.equal(made.payload.suggestedWeightLbs, 50, 'the suggestion it was made under (first-loaded weight) is kept beside the 0');
   });
 });
 
 describe('set.edited', () => {
-  const logged = { weightLbs: 25, reps: 10, levelNumber: undefined, distanceM: undefined, rir: undefined };
+  const logged = { weightLbs: 25, reps: 10, levelNumber: undefined, distanceM: undefined };
   test('only what changed; nothing changed is no event', () => {
-    assert.deepEqual(make.setEdited({ logged, values: { weightLbs: 25, reps: 10, levelNumber: null, distanceM: null, rir: null } }), null);
-    const made = make.setEdited({ logged, values: { weightLbs: 27.5, reps: 10, levelNumber: null, distanceM: null, rir: 1 } });
-    assert.deepEqual(made.payload, { weightLbs: 27.5, rir: 1 });
+    assert.deepEqual(make.setEdited({ logged, values: { weightLbs: 25, reps: 10, levelNumber: null, distanceM: null } }), null);
+    const made = make.setEdited({ logged, values: { weightLbs: 27.5, reps: 8, levelNumber: null, distanceM: null } });
+    assert.deepEqual(made.payload, { weightLbs: 27.5, reps: 8 });
     valid(made, 'set_1');
   });
 
-  test('an emptied optional box is cleared with null', () => {
-    const made = make.setEdited({ logged: { ...logged, rir: 2 }, values: { weightLbs: 25, reps: 10, rir: null } });
-    assert.deepEqual(made.payload, { rir: null });
+  test('an emptied box is written as null (cleared)', () => {
+    const made = make.setEdited({ logged: { ...logged, distanceM: 40 }, values: { weightLbs: 25, reps: 10, distanceM: null } });
+    assert.deepEqual(made.payload, { distanceM: null });
     valid(made, 'set_1');
   });
 });

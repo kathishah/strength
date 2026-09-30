@@ -19,7 +19,7 @@ export function sessionStarted({ templateCode, nowMs, calendar, backPainBefore =
   return { type: 'session.started', payload };
 }
 
-// set.logged. values: { weightLbs, levelNumber, reps, distanceM, rir } (nulls are left out).
+// set.logged. values: { weightLbs, levelNumber, reps, distanceM } (nulls are left out).
 // suggestion: the engine's result for the exercise, so the set records what was suggested (spec 8: SetLog).
 export function setLogged({ sessionId, exerciseId, setNumber, values, suggestion }) {
   const payload = { sessionId, exerciseId, setNumber, isRampUp: false, isCalibration: false, completed: true };
@@ -28,7 +28,7 @@ export function setLogged({ sessionId, exerciseId, setNumber, values, suggestion
   return { type: 'set.logged', payload };
 }
 
-const EDITABLE = ['weightLbs', 'levelNumber', 'reps', 'distanceM', 'rir'];
+const EDITABLE = ['weightLbs', 'levelNumber', 'reps', 'distanceM'];
 
 // set.edited with only what changed, or null if nothing did. A box that was emptied becomes null (cleared).
 export function setEdited({ logged, values }) {
