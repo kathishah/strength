@@ -302,3 +302,80 @@ Spec Section 5 is the rulebook and wins over this section; this section fixes wh
 8. *A session with fewer sets than prescribed* counts; sets with `completed: false` or with nothing recorded are ignored.
 9. *Pushup level 0* (incline pushup, in the 5.4 reference table) cannot be logged: the registry accepts `levelNumber` and `suggestedLevel` from 1 to 5 only. Not blocking now (the ladder has no progression), but Phase D's pushup level picker cannot offer level 0 until the registry allows it.
 10. *Sets and phases:* the deload set halving is gone, so week 11 has the normal Phase 2 set counts.
+
+## 15. Phase D design (workout logging UI)
+Spec milestone 4 on the Phase B store and the Phase C engine. Spec 6.2, 6.3, 4.1, 4.5, 4.5.1, 4.6 and 9 are the rulebook (struck text is not built); this section fixes what they leave to the implementation. Branch `v1-phase-d`. No history, settings, export or service worker (Phase E). Nothing under `lambda/` or `infra/` changes: every event below is already in the registry.
+
+**Shape.** Everything that decides something is a pure function over `replay(events)` state, the seed, and arguments (`today`, `nowMs`, ids). The DOM layer only draws view models and forwards taps to `actions`. No `Date`, `document`, `localStorage` or `fetch` in the pure modules; the clock and id generator are passed in (`logging-purity` test, like `engine-purity`).
+
+### Screens
+Hash routes, so refresh and the back button work and a refresh during a workout returns to it.
+
+| Route | Screen |
+|---|---|
+| `#/` | **Home.** Resume card(s) for any unfinished session. Otherwise the next workout (A, B or C by rotation) with an exercise preview, the week and phase, the no-consecutive-days warning if it applies, an optional back-pain-before row (0-10, one tap, skippable) and **Start**. On a recovery day (Tue/Thu by default) the recovery card comes first and the workout card follows ("start a workout anyway"). Link to the recovery routine and, at the bottom, the Phase B sync panel (kept until Phase E gives it a home in settings). |
+| `#/session/<id>` | **Session.** Header with workout, program week, phase and target RIR. Exercises grouped by superset, one card each: name (tap for cues), swap, sets x reps, suggestion with its source, "Last: ..." line, increase badge, hints, then one row per set. Sticky rest timer. Bottom: notes, Finish (back pain after, notes, save) and Discard. |
+| `#/summary/<id>` | **Summary** of a finished session: total working sets, duration, the "weight increase next time" callouts, back to Home. |
+| `#/recovery` | **Recovery routine** (spec 4.6): eight guidance cards (name, prescription, cue, demo image). Nothing is checked, logged or synced. |
+
+The header shows a one-line save state ("All saved on this device", "3 events waiting to upload"), since the person is at the gym with a phone that may be offline.
+
+**Set row.** Weight box with -/+ (steps by the exercise's increment) for `load` and `loadable`; level stepper 1-5 for TRX and the pushup ladder (tap the level for its description); reps box with -/+; distance box for carries; nothing but Done for holds. Optional RIR select (0-5). **Done** logs the set and starts the rest timer. A done row shows its values with **Edit** (inline, Save/Cancel) and **Undo**. A "changed from X" note appears when the weight or level differs from the suggestion. The increase highlight is a header/box accent plus the text "↑ +5 lbs from 25 · Scheduled" (never colour alone), shown for that session only because the next plan is recomputed from what was logged.
+
+### Actions to events
+| Person does | Events written (all through `events.append`, so local first) |
+|---|---|
+| Start | `session.started` (entity `sess_<ulid>`): `templateCode, startedAt, programWeek, phase, isDeload:false, backPainBefore?`. Week and phase come from `planSession(...).calendar`. |
+| Done on a row | `set.logged` (entity `set_<ulid>`): `sessionId, exerciseId, setNumber, isRampUp:false, isCalibration:false, completed:true`, the values (`weightLbs, reps, levelNumber, distanceM, rir` as they apply) and `loggedDefaults(suggestion)` (`suggestedWeightLbs, suggestedLevel, suggestionSource`). Also starts the rest timer (draft). |
+| Save after Edit | `set.edited` on the set entity with only the fields that changed (none changed: no event). |
+| Undo | `entity.deleted { entityType: 'set' }` on the set entity. Tombstones are final, so Done afterwards makes a new set entity with the same `setNumber`. |
+| Swap | `swap.set { templateCode, slotNumber, exerciseId }`, or `swap.cleared` when the default is chosen (entity `swap_<template>_<slot>`). |
+| Notes | `session.notes` when the text changed (on blur and on finish). |
+| Finish | `session.notes` (if changed) then `session.finished { finishedAt, backPainAfter? }`. |
+| Discard | `entity.deleted { entityType: 'session' }` (replay drops the session and its sets). |
+
+### Draft safety
+Two layers. (1) Everything worth keeping is an event, written to IndexedDB before the UI moves on, so a refresh, app switch or dropped Wi-Fi loses no logged set, and the session screen is rebuilt from `replay` alone. Sync runs 2 s after each write (Phase B), which is the "opportunistically during the session" upload. (2) What is not an event yet lives in a small local draft (`localStorage`, one key, ignored if it belongs to another session or fails to parse): values typed into rows that are not done, rows being edited, notes text, back pain after, extra sets added, and the rest timer (`restStartedAtMs`, `restSec`). Losing the draft (cleared storage) loses only unsaved typing, never a logged set.
+
+### Rules
+- **Rotation (spec 4.1).** Next = the successor of the template of the latest *finished* session (order by `startedAt` instant; `finishedAt` alone does not count), A when there is none. Unfinished and deleted sessions are ignored.
+- **No consecutive days.** A finished session whose Pacific start date is yesterday (by `pacificDate`, so a 9 pm session is "yesterday" the next morning even though UTC has moved on) gives a non-blocking warning on Home; the button stays enabled.
+- **Recovery day.** The Pacific weekday of `today` (`weekdayOf` in `time.js`, 0 = Sunday) is in the `recoveryDays` setting, default `[2, 4]`.
+- **Set rows and pre-fill.** Rows are numbered 1..N (N = the slot's set count for the phase, plus extra sets added). A row's weight (and level) is, in order: what the person typed into it, else the value of the row before it (logged or typed), else the suggestion. So changing set 1 pre-fills sets 2 and 3, changing set 2 pre-fills set 3 only, and a value never flows backwards. Reps, distance and RIR are never pre-filled (see the questions). A row can be logged when every input it shows has a valid value; weight 0 is valid.
+- **Rest timer.** `remaining = restSec - (now - restStartedAtMs)`, computed from timestamps on every tick and on `visibilitychange`, so a locked screen or a background tab cannot make it drift. Default 90 s (`restTimerDefaultSec` setting when present); -15/+15 s buttons change the length for the rest of the session (15 to 600 s); Skip clears it. When it reaches zero it says so and vibrates where the browser allows.
+- **Swap.** Options are the slot's default, alternatives and TRX alternatives (spec 4.5, 4.5.1), from the seed. Disabled once any set of that slot is logged in the session (undo them first).
+- **Plans use the session's own date.** A session started at 11 pm and finished after midnight keeps the suggestions it started with: `planSession` is called with the Pacific date of `startedAt`.
+- **Program week and phase** on `session.started` and the session header come from the engine's calendar; before the program start date the week is 1 (engine question 1).
+
+### Pure modules (`app/js/logging/`, all tested with `node --test`)
+| Module | Contents |
+|---|---|
+| `rotation.js` | finished/in-progress sessions, `nextTemplate`, `consecutiveDayWarning`, `isRecoveryDay` |
+| `home.js` | `homeView(state, today)`: resume list, next workout preview, warning, recovery-first flag |
+| `input.js` | parse and step typed numbers (`parseWeight`, `parseReps`, `stepValue`) |
+| `rows.js` | `buildRows`: set rows with pre-fill carry-over, done/editing/todo, `canLog`, changed-from |
+| `rest-timer.js` | `restStatus(draft, nowMs, defaultSec)`, `startRest`, `adjustRest` |
+| `draft.js` | draft shape, `parseDraft` (rejects garbage), field updates, pruning |
+| `session-events.js` | payload builders for every event above; tests run each through the server validator |
+| `session-view.js` | `sessionView(state, sessionId, draft, nowMs)`: everything the session screen draws |
+| `summary.js` | working sets, duration, next-time callouts |
+| `actions.js` | `createActions({ events, draft, now, newId })`: the UI-to-event mapping above, over the real event store |
+| `ui/session-text.js` | pure strings: last time, increase badge, source labels, dates and times |
+
+Tests use the real event store over memory storage, the real replay and engine, and `validateEvent` on every event written; one test logs a full Workout A offline and syncs it through the real Lambda handler over the fake S3 (the Phase D done-when). The DOM code (`ui/*-screen.js`, `router.js`, `dom.js`, `draft-store.js`) has no logic worth a test of its own; it is checked in the browser pane at phone width.
+
+### Spec questions to raise, not decide
+The build follows the reading given.
+1. *Reps and distance pre-fill.* Spec 6.3 pre-fills weight only. Reps, carry distance and RIR are empty with the target as placeholder (+/- from empty starts at the target), so a set is never logged with a number the person did not confirm.
+2. *Rest timer "adjustable".* Read as -15/+15 s for the rest of the session, default from the `restTimerDefaultSec` setting (Phase E edits it). No sound.
+3. *Swap after sets are logged in the slot.* Blocked until those sets are undone.
+4. *Undo a set and add an extra set.* Spec is silent; both are provided (a mis-tap at the gym is likely, and a fourth set happens).
+5. *Back pain before* is asked on Home and written in `session.started`; it cannot be changed afterwards (the registry has no separate event).
+6. *Same-day second workout.* Spec 4.1 warns only for the day after; the same warning, worded for "earlier today", also shows for a second session on the same day.
+7. *`recoveryDays` numbering.* 0 = Sunday assumed (registry says only 0-6); default Tue/Thu = `[2, 4]`.
+8. *"Weight increase next time" callouts* (spec 6.3) are the exercises whose suggestion would be higher if the same workout were planned 7 days after this session (A, B, C each recur weekly on three days a week). Pending increases the person did not take show here too.
+9. *Session left open.* No auto-finish. Home keeps offering Resume (and Discard); a new workout cannot be started while one is open; `finishedAt` is the moment Finish is tapped, so a session finished the next morning has a long duration. A session with no logged set cannot be finished, only discarded.
+10. *Only the next workout in rotation can be started.* No picker for A/B/C.
+11. *Holds* (TRX plank, weighted bird dog) log completion only: the registry has no seconds field.
+12. *Pushup level 0* (incline) cannot be logged (registry allows 1-5); the picker offers 1-5 (engine question 9).
+13. *Superset order.* Cards are grouped by superset and listed slot by slot; the app does not interleave the rounds.
