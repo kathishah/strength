@@ -48,7 +48,8 @@ export function setsRepsText(exercise) {
 }
 
 export const SOURCE_LABELS = { starting: 'Starting weight', hold: 'Same as last time', scheduled: 'Scheduled increase' };
-export const sourceLabel = (source) => SOURCE_LABELS[source] ?? null;
+// A level exercise has a starting level, not a starting weight.
+export const sourceLabel = (source, { level = false } = {}) => (source === 'starting' && level ? 'Starting level' : SOURCE_LABELS[source] ?? null);
 
 // The line under the exercise name: what to put in the box.
 export function suggestionText(s) {

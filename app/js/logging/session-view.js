@@ -83,7 +83,7 @@ function buildCard({ state, sessionId, draft, e, slot, superset, defaultExercise
     suggestion: e,
     prescription: setsRepsText(e),
     suggestionText: suggestionText(e),
-    sourceLabel: sourceLabel(e.source),
+    sourceLabel: sourceLabel(e.source, { level: e.level !== null }),
     lastText: lastText(e),
     increaseText: increaseText(e),
     increased: e.increased,
