@@ -158,3 +158,8 @@ async function start() {
 }
 
 start();
+
+// Offline load (plan section 15e): the worker caches the app shell. Sync and logging already work offline once the page is loaded.
+if ('serviceWorker' in navigator) {
+  addEventListener('load', () => { navigator.serviceWorker.register('sw.js').catch((err) => console.warn('No service worker:', err)); });
+}
