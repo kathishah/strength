@@ -1,6 +1,7 @@
 // Mounts the header and the screen for the current route and keeps them up to date: every change to the event log (an exercise done
 // here, an event downloaded from another device) and every return to the page asks the current screen to redraw.
-// Routes: #/ is Home (the day's cards, spec 6.2) and #/summary/<id> is the summary after Finish. Older links (#/session/..,
+// Routes: #/ is Home (the day's cards, spec 6.2), #/summary/<id> is the summary after Finish and #/workout/<id> reopens a finished
+// workout to correct it (spec 6.3). Older links (#/session/..,
 // #/recovery) open Home.
 
 import { createRouter } from './router.js';
@@ -28,7 +29,7 @@ export function mountScreens({ root, headerRoot, events, actions, notify, handle
     host.className = `screen screen-${route.name}`;
     root.replaceChildren(host);
     const ctx = { events, actions, now, notify, header, day, navigate: (hash) => router.navigate(hash) };
-    current = route.name === 'summary' ? mountSummary(host, ctx, route.id) : mountDay(host, ctx);
+    current = route.name === 'summary' ? mountSummary(host, ctx, route.id) : mountDay(host, ctx, route.name === 'workout' ? route.id : null);
     window.scrollTo(0, 0);
     onRoute?.(route);
   }
