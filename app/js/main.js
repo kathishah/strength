@@ -1,5 +1,5 @@
-// The page: sign in, then Home, the session screen, the summary and the recovery routine (Phase D, DEPLOYMENT-PLAN.md section 15),
-// over the local event store. Everything the person does is written to IndexedDB first (store/events.js); uploading and
+// The page: sign in, then Home (the day's cards, in the v0.2 viewer's layout) and the summary (Phase D, DEPLOYMENT-PLAN.md sections 15 and
+// 15b), over the local event store. Everything the person does is written to IndexedDB first (store/events.js); uploading and
 // downloading happen in the background (store/sync.js). History, settings and export arrive in Phase E.
 
 import { isConfigured } from './config.js';
@@ -22,7 +22,7 @@ const SPIKE_CACHE_KEYS = ['strength.spike.events', 'strength.cursor'];
 const $ = (id) => document.getElementById(id);
 const el = {
   notice: $('notice'), signin: $('signin'), app: $('app'), signinPending: $('signin-pending'), screen: $('screen'),
-  device: $('device'), saveState: $('save-state'),
+  device: $('device'), header: $('app-header'),
   form: $('signin-form'), email: $('email'), pin: $('password'), signinButton: $('signin-button'),
 };
 
@@ -65,8 +65,14 @@ async function start() {
   try { draftBackend = localStorage; } catch { /* storage blocked: the draft stays in memory */ }
   const actions = createActions({ events, drafts: createDraftStore(draftBackend), now: Date.now, newId: ulid });
   let screensStarted = false;
+  async function signOutNow() {
+    sync.stop();
+    await signOut();
+    showSignedIn(false);
+    notify('Signed out.');
+  }
   const screens = mountScreens({
-    root: el.screen, events, actions, notify,
+    root: el.screen, headerRoot: el.header, events, actions, notify, handlers: { onSignOut: signOutNow },
     onRoute(route) {
       el.device.hidden = route.name !== 'home';
       notify('');
@@ -75,9 +81,8 @@ async function start() {
 
   // Whether the person's work is safe, in the header, on every screen.
   function paintSaveState() {
-    const line = describeSaveState(sync.status(), events.pendingCount());
-    el.saveState.textContent = line.text;
-    el.saveState.dataset.kind = line.kind;
+    const pending = events.pendingCount();
+    screens.header.setSave({ ...describeSaveState(sync.status(), pending), pending });
   }
   events.subscribe(paintSaveState);
   sync.subscribe(paintSaveState);
@@ -86,6 +91,7 @@ async function start() {
     signedIn = value;
     el.signin.hidden = value;
     el.app.hidden = !value;
+    screens.header.show(value);
     const waiting = events.pendingCount();
     el.signinPending.hidden = value || waiting === 0;
     el.signinPending.textContent = `${waiting} event${waiting === 1 ? '' : 's'} saved on this device will upload after you sign in.`;
@@ -130,12 +136,7 @@ async function start() {
       notify('');
       sync.sync().catch(() => {});
     },
-    async onSignOut() {
-      sync.stop();
-      await signOut();
-      showSignedIn(false);
-      notify('Signed out.');
-    },
+    onSignOut: signOutNow,
   });
 
   // A session that cannot be refreshed sends the person back to the form; nothing is lost, the outbox stays.

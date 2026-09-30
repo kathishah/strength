@@ -72,3 +72,41 @@ export function painChips({ label, value = null, onChange }) {
     set(v) { current = v; paint(); },
   };
 }
+
+// A small outline icon from path strings (createElementNS, so no markup is parsed).
+export function svgIcon(paths, size = 20) {
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  for (const [k, v] of Object.entries({ viewBox: '0 0 24 24', width: size, height: size, fill: 'none', stroke: 'currentColor', 'stroke-width': 2, 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'aria-hidden': 'true' })) svg.setAttribute(k, String(v));
+  for (const d of paths) {
+    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    path.setAttribute('d', d);
+    svg.append(path);
+  }
+  return svg;
+}
+
+// An icon button that needs two taps: the first shows armedText beside the icon for a few seconds, the second runs onConfirm.
+export function armedIconButton({ label, armedText, className, icon, onConfirm, ms = 4000 }) {
+  const words = h('span', { class: 'armed-text' });
+  const button = h('button', { type: 'button', class: className, 'aria-label': label }, icon, words);
+  let timer = null;
+  const disarm = () => {
+    clearTimeout(timer);
+    timer = null;
+    words.textContent = '';
+    button.classList.remove('armed');
+    button.setAttribute('aria-label', label);
+  };
+  button.addEventListener('click', () => {
+    if (timer === null) {
+      words.textContent = armedText;
+      button.classList.add('armed');
+      button.setAttribute('aria-label', `${label}: tap again to confirm`);
+      timer = setTimeout(disarm, ms);
+    } else {
+      disarm();
+      onConfirm();
+    }
+  });
+  return button;
+}

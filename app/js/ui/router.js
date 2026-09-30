@@ -1,11 +1,10 @@
-// Hash routes: #/ (home), #/session/<id>, #/summary/<id>, #/recovery. A refresh keeps the route, so a refresh in the middle of
-// a workout comes back to it, and the back button works.
+// Hash routes: #/ (home: the day's cards) and #/summary/<id>. Anything else, including the old #/session/<id> and #/recovery, is
+// home. A refresh keeps the route and the back button works.
 
 export function parseRoute(hash) {
   const parts = String(hash ?? '').replace(/^#\/?/, '').split('/').filter(Boolean);
   const [name, id] = parts;
-  if ((name === 'session' || name === 'summary') && /^[A-Za-z0-9_.:-]{1,80}$/.test(id ?? '')) return { name, id };
-  if (name === 'recovery') return { name: 'recovery' };
+  if (name === 'summary' && /^[A-Za-z0-9_.:-]{1,80}$/.test(id ?? '')) return { name, id };
   return { name: 'home' };
 }
 

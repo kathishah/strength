@@ -619,20 +619,20 @@ Test cases:
 - Data syncs across phone and desktop via the backend.
 
 ### 6.2 Home / Today screen
-- Next workout (A/B/C) with a "Start" button and the no-consecutive-days warning if applicable.
-- On Tuesdays and Thursdays, show the recovery routine (4.6) as today's primary card (still allow starting a workout).
+- Home is the v0.2 viewer's page (v1.14, 0.B.1): a slim header (one status line such as "Wed · Workout B · 0/6 done", which opens to the day pills Monday to Sunday, the save state, the back pain rating for the workout about to start, and sign out; a dot for whether the work is saved; a theme button) over the day's swipe carousel of cards. There is no Start button: the next workout (A/B/C by rotation) is shown as cards, and it starts when the first exercise is marked done. The no-consecutive-days warning shows above the cards if applicable.
+- On Tuesdays and Thursdays the cards are the recovery routine (4.6), with a last card to show the workout instead (a workout is never blocked). Picking a day pill shows that day's cards.
 - ~~Deload banner during a deload week (5.8), and the Start deload / Postpone controls.~~
 
 ### 6.3 Workout session (most important screen; phone-first)
 - **Exercises in one horizontal swipe carousel, as in the v0.2 viewer (0.B.1)** (v1.14): one card per swipe with the neighbours peeking, ordered by superset, each superset with its own accent colour on the card's left edge (Superset 1 green, 2 indigo, 3 amber, Finisher none) and a label such as "Superset 1 · 1 of 2". Each card shows: suggested weight, target reps, set count for the current phase, and last session's result (e.g. "Last: 35 × 12, 12, 11"). ~~Ramp-up sets shown above the first working set for slots 1 and 3, visually distinct.~~
-- Per set: weight (pre-filled with the suggestion or starting weight, always editable) and reps; no RIR (v1.14). Large tap targets; numeric keypad inputs; quick +/− buttons that step by the exercise's increment. When the logged weight differs from the suggestion, show a subtle "changed from X" indicator. Carries log load and distance.
+- **Logging (v1.14): one tick per exercise.** At the bottom of the card, where the viewer had "mark this exercise as done", a barrel dial per set holds the weight and one shared dial holds the reps; each shows one value, already at the suggested weight and the recommended reps, and turns in 2.5 lb notches (drag up for more, down for less, or tap its upper or lower half). One tick logs every set of the exercise at once; after that the card shows a one-line summary with Edit and Undo. A weight that differs between sets is set on that set's dial; a dial changed on a set carries to the sets after it. Levels (TRX, pushups) use dials of 1 to 5, carries a distance dial. No RIR. The layout follows what was asked for: the GIF is the hero at the top of the card, with the cue, muscles and the Options and TRX lists above the dials.
 - Changing the weight (or TRX level) on one set pre-fills it into the remaining sets of the same exercise in this session.
 - For suspension exercises, the weight field is replaced by a level stepper (1–5) with the exercise's level description shown on tap.
 - **Increase highlight:** when the suggested weight is higher than the previous session's base load, the weight field and exercise header use a distinct accent color and bold weight, with an up-arrow badge and text such as "↑ +5 lbs from 25 · Scheduled". Meaning must not rely on color alone (arrow + text always shown). The highlight stays for that session only.
 - ~~Calibration prompt after each working set during an exercise's first 2 sessions (5.6).~~
 - Back pain before is an optional field asked at session start (one tap, skippable); it changes no suggestion.
 - ~~Deload banner and halved set counts during deload weeks (5.8).~~
-- Rest timer (default 90 s, adjustable) that starts when a set is marked done.
+- Rest timer (default 90 s, adjustable) that starts when an exercise is marked done.
 - Swap exercise (Section 4.5). Tap exercise name for cues.
 - Optional session fields: back pain rating 0–10 (before and after), notes.
 - **Draft safety:** an in-progress session must survive a page refresh, app switch, or dropped gym Wi-Fi. Persist the draft locally and save to the backend on finish (and opportunistically during the session).

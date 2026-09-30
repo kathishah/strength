@@ -19,18 +19,17 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-title" content="Strength" />
   <link rel="stylesheet" href="css/app.css" />
+  <script src="js/theme-boot.js"></script>
   <script type="module" src="js/main.js"></script>
 </head>
 <body>
+  <header id="app-header" class="app-header" hidden></header>
   <main class="page">
-    <header class="top">
-      <h1><a href="#/">Strength</a></h1>
-      <p id="save-state" class="save-state" role="status" data-kind="info"></p>
-    </header>
 
     <p id="notice" class="notice" role="status" aria-live="polite" hidden></p>
 
     <section id="signin" class="card" aria-labelledby="signin-title" hidden>
+      <h1 class="brand">Strength</h1>
       <h2 id="signin-title">Sign in</h2>
       <form id="signin-form" autocomplete="on" novalidate>
         <label for="email">Email</label>
