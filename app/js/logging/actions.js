@@ -30,9 +30,13 @@ export function createActions({ events, drafts, now, newId }) {
     return next;
   };
 
-  function openSession(sessionId) {
+  function editableSession(sessionId) {
     const session = events.state.sessions[sessionId];
     if (!session) throw new RangeError('That workout does not exist.');
+    return session;
+  }
+  function openSession(sessionId) {
+    const session = editableSession(sessionId);
     if (session.finishedAt) throw new RangeError('That workout is finished.');
     return session;
   }
@@ -52,7 +56,7 @@ export function createActions({ events, drafts, now, newId }) {
   // yet). What was typed into the preview (its draft, under PENDING) moves to the new session.
   async function ensureSession(sessionId, backPainBefore) {
     if (sessionId && sessionId !== PENDING) {
-      openSession(sessionId);
+      editableSession(sessionId); // a finished workout takes ticks too (spec 6.3, v1.15)
       return sessionId;
     }
     // The typed values move to the new session's draft first, so the screen redraws with them when session.started lands.
@@ -88,7 +92,7 @@ export function createActions({ events, drafts, now, newId }) {
 
     // ---- events ----
 
-    // Done on an exercise: log every set that has its numbers, or, for an exercise reopened with Edit, save the changes. rows: the card's
+    // Done on an exercise (of an open or a finished workout, spec 6.3): log every set that has its numbers, or, for an exercise reopened with Edit, save the changes. rows: the card's
     // rows as on screen ({ setNumber, setId, weightLbs, levelNumber, reps, distanceM }). A set with no reps (or distance) is left out,
     // so doing two sets of three is fine; nothing is written unless at least one set is complete. The first Done of the day starts the
     // workout (sessionId null), with the back pain rating chosen in the header. Resolves with the session id.
@@ -123,16 +127,18 @@ export function createActions({ events, drafts, now, newId }) {
         const made = make.setEdited({ logged: set, values });
         if (made) await write(made, setId);
       }
+      const finished = Boolean(events.state.sessions[id]?.finishedAt); // a correction made afterwards has no rest
       update(id, (d) => {
         const cleared = clearExercise(d, exerciseId);
-        return logged > 0 ? startRest(cleared, now()) : cleared;
+        return logged > 0 && !finished ? startRest(cleared, now()) : cleared;
       });
       return id;
     },
 
-    // Undo an exercise: every set logged for it is deleted (the tombstones are final, so logging again makes new sets).
+    // Undo an exercise: every set logged for it is deleted (the tombstones are final, so logging again makes new sets). Works on a
+    // finished workout too.
     async undoExercise(sessionId, exerciseId) {
-      openSession(sessionId);
+      editableSession(sessionId);
       const sets = Object.values(events.state.sets).filter((x) => x.sessionId === sessionId && x.exerciseId === exerciseId);
       for (const set of sets) await write(make.setDeleted(), set.id);
       update(sessionId, (d) => clearExercise(d, exerciseId));
