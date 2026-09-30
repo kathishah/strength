@@ -2,10 +2,10 @@
 // Home list and edit view over real logs. Nothing here touches a DOM.
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
-import { dayView, editView, emptyDraft, finishedRecent, nextTemplate, restStatus } from '../app/js/logging/index.js';
+import { dayView, editView, emptyDraft, nextTemplate, restStatus } from '../app/js/logging/index.js';
 import { planSession } from '../app/js/engine/index.js';
 import { parseRoute } from '../app/js/ui/router.js';
-import { atLevel, lift, makeLog } from '../test-support/engine-log.mjs';
+import { lift, makeLog } from '../test-support/engine-log.mjs';
 import { doWorkout, makeWorld } from '../test-support/logging-world.mjs';
 
 const NOW = Date.parse('2026-09-30T18:00:00-07:00');
@@ -136,27 +136,13 @@ describe('the edit view', () => {
   });
 });
 
-describe('Home lists the finished workouts of the last 7 days', () => {
-  const home = (l, today) => dayView(l.state(), { today, nowMs: NOW, draftFor: (id) => emptyDraft(id) });
-
-  test('newest first, today and the six days before, with exercises done; older, open and deleted ones are left out', () => {
-    const l = makeLog()
-      .session('2026-09-22', 'C', [lift('trap-bar-deadlift', 95, [8, 8, 8])], { id: 'sess_old' })       // 8 days before the 30th
-      .session('2026-09-24', 'A', [lift('goblet-squat', 20, [10, 10, 10])], { id: 'sess_a' })           // 6 days before: in
-      .session('2026-09-28', 'B', [lift('leg-press', 50, [10, 10, 10]), atLevel('pushup', 1, [10, 10, 10])], { id: 'sess_b' })
-      .session('2026-09-30', 'C', [], { finished: false, id: 'sess_open' });
-    const list = finishedRecent(l.state(), '2026-09-30', NOW);
-    assert.deepEqual(list.map((f) => [f.sessionId, f.exercisesDone, f.exerciseCount]), [['sess_b', 2, 6], ['sess_a', 1, 6]]);
-    assert.deepEqual(list.map((f) => f.label), ['Workout B – Full body', 'Workout A – Full body']);
-    assert.deepEqual(home(l, '2026-09-30').finishedRecent, list);
-  });
-
-  test('is on the recovery-day page too, and empty when nothing is finished', () => {
+describe('Home no longer lists finished workouts (History by date does, v1.17)', () => {
+  test('neither the workout page nor the recovery page carries a finished-workouts list', () => {
     const l = makeLog().session('2026-09-29', 'A', [lift('goblet-squat', 20, [10, 10, 10])], { id: 'sess_a' });
-    const tue = home(l, '2026-09-29');
-    assert.equal(tue.mode, 'recovery');
-    assert.equal(tue.finishedRecent.length, 1);
-    assert.deepEqual(home(makeLog(), '2026-09-29').finishedRecent, []);
+    for (const today of ['2026-09-29', '2026-09-30']) {
+      const v = dayView(l.state(), { today, nowMs: NOW, draftFor: (id) => emptyDraft(id) });
+      assert.equal(Object.hasOwn(v, 'finishedRecent'), false, v.mode);
+    }
   });
 });
 
@@ -165,4 +151,16 @@ test('the route #/workout/<id> is parsed like the summary route', () => {
   assert.deepEqual(parseRoute('#/workout/'), { name: 'home' });
   assert.deepEqual(parseRoute('#/workout/a b'), { name: 'home' });
   assert.deepEqual(parseRoute('#/summary/sess_1'), { name: 'summary', id: 'sess_1' });
+});
+
+test('the History and Settings routes', () => {
+  assert.deepEqual(parseRoute('#/history'), { name: 'history', view: 'exercise' });
+  assert.deepEqual(parseRoute('#/history/'), { name: 'history', view: 'exercise' });
+  assert.deepEqual(parseRoute('#/history/date'), { name: 'history', view: 'date' });
+  assert.deepEqual(parseRoute('#/history/exercise/goblet-squat'), { name: 'exercise', id: 'goblet-squat' });
+  assert.deepEqual(parseRoute('#/history/exercise/'), { name: 'history', view: 'exercise' });
+  assert.deepEqual(parseRoute('#/history/exercise/a b'), { name: 'history', view: 'exercise' });
+  assert.deepEqual(parseRoute('#/settings'), { name: 'settings' });
+  assert.deepEqual(parseRoute('#/settings/x'), { name: 'settings' });
+  assert.deepEqual(parseRoute('#/recovery'), { name: 'home' });
 });
