@@ -24,10 +24,10 @@ describe('session.started', () => {
     valid(make.sessionStarted({ templateCode: 'A', nowMs: NOW, calendar }));
   });
 
-  test('back pain before is included when given (0 counts) and left out when skipped', () => {
-    assert.equal(make.sessionStarted({ templateCode: 'B', nowMs: NOW, calendar, backPainBefore: 0 }).payload.backPainBefore, 0);
-    assert.equal(Object.hasOwn(make.sessionStarted({ templateCode: 'B', nowMs: NOW, calendar }).payload, 'backPainBefore'), false);
-    valid(make.sessionStarted({ templateCode: 'C', nowMs: NOW, calendar: { programWeek: 6, phase: 2 }, backPainBefore: 10 }));
+  test('no back pain is written (spec v1.16), even if a caller passes it', () => {
+    const { payload } = make.sessionStarted({ templateCode: 'B', nowMs: NOW, calendar, backPainBefore: 4 });
+    assert.equal(Object.hasOwn(payload, 'backPainBefore'), false);
+    valid(make.sessionStarted({ templateCode: 'C', nowMs: NOW, calendar: { programWeek: 6, phase: 2 } }));
   });
 });
 
@@ -89,10 +89,8 @@ describe('set.edited', () => {
 describe('the rest', () => {
   test('finish, notes, delete and swap events are valid', () => {
     const fin = make.sessionFinished({ nowMs: NOW, backPainAfter: 3 });
-    assert.deepEqual(fin.payload, { finishedAt: '2026-09-29T12:00:00.000-07:00', backPainAfter: 3 });
+    assert.deepEqual(fin.payload, { finishedAt: '2026-09-29T12:00:00.000-07:00' }, 'no back pain is written (v1.16)');
     valid(fin);
-    assert.deepEqual(make.sessionFinished({ nowMs: NOW }).payload, { finishedAt: '2026-09-29T12:00:00.000-07:00' });
-    valid(make.sessionFinished({ nowMs: NOW, backPainAfter: 0 }));
     valid(make.sessionNotes('Knee felt fine.'));
     valid(make.sessionNotes(''));
     valid(make.setDeleted(), 'set_1');

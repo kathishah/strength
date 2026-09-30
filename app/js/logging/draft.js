@@ -2,20 +2,20 @@
 // the browser code saves and loads it (ui/draft-store.js).
 //
 // Logged sets are events and need no draft. The draft holds only what is not an event yet: values typed into rows that
-// are not logged, the exercises being edited, notes text, back pain after, extra sets added, and the rest timer. Every function
+// are not logged, the exercises being edited, notes text, extra sets added, and the rest timer. Every function
 // returns a new draft and leaves the old one alone.
 //
 //   { v: 1, sessionId,
 //     rows: { [exerciseId]: { [setNumber]: { weightLbs?, levelNumber?, reps?, distanceM? } } },
 //     editing: { [exerciseId]: true },     (a logged exercise reopened for changes)
 //     extra: { [exerciseId]: number },
-//     notes: string | null, backPainAfter: number | null | undefined,
+//     notes: string | null,
 //     restStartedAtMs: number | null, restSec: number | null }
 
 export const DRAFT_VERSION = 1;
 
 export const emptyDraft = (sessionId) => ({
-  v: DRAFT_VERSION, sessionId, rows: {}, editing: {}, extra: {}, notes: null, backPainAfter: undefined, restStartedAtMs: null, restSec: null,
+  v: DRAFT_VERSION, sessionId, rows: {}, editing: {}, extra: {}, notes: null, restStartedAtMs: null, restSec: null,
 });
 
 const ROW_FIELDS = ['weightLbs', 'levelNumber', 'reps', 'distanceM'];
@@ -51,9 +51,6 @@ export function parseDraft(text, sessionId) {
     }
   }
   if (typeof raw.notes === 'string') draft.notes = raw.notes.slice(0, 4000);
-  if (raw.backPainAfter === null || (Number.isInteger(raw.backPainAfter) && raw.backPainAfter >= 0 && raw.backPainAfter <= 10)) {
-    draft.backPainAfter = raw.backPainAfter;
-  }
   if (Number.isFinite(raw.restStartedAtMs)) draft.restStartedAtMs = raw.restStartedAtMs;
   if (Number.isFinite(raw.restSec)) draft.restSec = raw.restSec;
   return draft;
@@ -97,7 +94,6 @@ export function clearRow(draft, exerciseId, setNumber) {
 export const addExtraSet = (draft, exerciseId) => ({ ...draft, extra: { ...draft.extra, [exerciseId]: (draft.extra[exerciseId] ?? 0) + 1 } });
 
 export const setNotes = (draft, text) => ({ ...draft, notes: text });
-export const setBackPainAfter = (draft, value) => ({ ...draft, backPainAfter: value });
 
 // A set was logged at nowMs: the rest starts.
 export const startRest = (draft, nowMs) => ({ ...draft, restStartedAtMs: nowMs });

@@ -22,21 +22,15 @@ const done = (w, id, exerciseId, extra = {}) => {
 };
 
 describe('starting', () => {
-  test('writes session.started for the next workout with week, phase and back pain', async () => {
+  test('writes session.started for the next workout with week and phase', async () => {
     const w = await makeWorld();
-    const id = await w.actions.startSession({ backPainBefore: 2 });
+    const id = await w.actions.startSession();
     assert.match(id, /^sess_[0-9A-Z]{26}$/);
     assert.deepEqual(w.state.sessions[id], {
-      id, templateCode: 'A', startedAt: '2026-09-28T11:00:00.000-07:00', programWeek: 1, phase: 1, isDeload: false, backPainBefore: 2,
+      id, templateCode: 'A', startedAt: '2026-09-28T11:00:00.000-07:00', programWeek: 1, phase: 1, isDeload: false,
     });
     assert.equal(w.events.pendingCount(), 1);
     w.assertValid();
-  });
-
-  test('skipping back pain leaves it out', async () => {
-    const w = await makeWorld();
-    const id = await w.actions.startSession();
-    assert.equal(Object.hasOwn(w.state.sessions[id], 'backPainBefore'), false);
   });
 
   test('a second workout cannot start while one is open; after finishing, rotation moves on', async () => {
@@ -92,7 +86,7 @@ describe('Done on an exercise', () => {
     assert.equal(w.actions.draft(id).rows['goblet-squat'], undefined, 'the typed values became events');
   });
 
-  test('the first Done of the day starts the workout, with the back pain chosen, and the typed values move over', async () => {
+  test('the first Done of the day starts the workout, and the typed values move over', async () => {
     const w = await makeWorld();
     w.actions.setAll(null, 'goblet-squat', [1, 2, 3], 'weightLbs', 25);
     w.actions.setAll(null, 'db-bench-press', [1, 2, 3], 'weightLbs', 22.5);
@@ -101,9 +95,8 @@ describe('Done on an exercise', () => {
     assert.deepEqual([preview.started, preview.cards[1].rows[0].weightLbs], [false, 22.5]);
 
     const c = preview.cards[0];
-    const id = await w.actions.saveExercise(null, { exerciseId: 'goblet-squat', rows: c.rows, suggestion: c.suggestion, backPainBefore: 3 });
+    const id = await w.actions.saveExercise(null, { exerciseId: 'goblet-squat', rows: c.rows, suggestion: c.suggestion });
     assert.match(id, /^sess_/);
-    assert.equal(w.state.sessions[id].backPainBefore, 3);
     assert.equal(w.state.sessions[id].templateCode, 'A');
     assert.deepEqual(setsOf(w, id, 'goblet-squat').map((s) => s.weightLbs), [25, 25, 25]);
     assert.equal(card(w.view(id), 'db-bench-press').rows[0].weightLbs, 22.5, 'the other exercise keeps what was typed');
@@ -336,17 +329,16 @@ describe('swapping', () => {
 });
 
 describe('finishing', () => {
-  test('notes then session.finished, back pain after, and the draft is gone', async () => {
+  test('notes then session.finished, and the draft is gone', async () => {
     const w = await makeWorld();
     const id = await doWorkout(w, { finish: false });
     w.actions.typeNotes(id, '  Back felt good.  ');
-    w.actions.setBackPainAfter(id, 1);
     assert.equal(w.view(id).notes, '  Back felt good.  ');
     w.advance(30);
-    await w.actions.finish(id, { backPainAfter: 1, notes: '  Back felt good.  ' });
+    await w.actions.finish(id, { notes: '  Back felt good.  ' });
     const [notes, finished] = w.events.events().slice(-2);
     assert.deepEqual([notes.type, notes.payload], ['session.notes', { notes: 'Back felt good.' }]);
-    assert.deepEqual([finished.type, finished.payload.backPainAfter], ['session.finished', 1]);
+    assert.deepEqual([finished.type, Object.keys(finished.payload)], ['session.finished', ['finishedAt']], 'no back pain is written (v1.16)');
     assert.equal(w.state.sessions[id].finishedAt, finished.payload.finishedAt);
     assert.equal(Date.parse(finished.payload.finishedAt), w.clock.ms, 'finishedAt is the moment Finish was tapped');
     assert.deepEqual(w.actions.draft(id).rows, {});
@@ -382,22 +374,6 @@ describe('finishing', () => {
     assert.deepEqual(sets(w), []);
     assert.equal(nextTemplate(w.state), 'A');
     assert.equal(w.events.events().at(-1).payload.entityType, 'session');
-    w.assertValid();
-  });
-
-  test('a back pain rating chosen and then cleared is not saved; 0 out of 10 is a rating', async () => {
-    const w = await makeWorld();
-    const id = await doWorkout(w, { finish: false });
-    w.actions.setBackPainAfter(id, 4);
-    w.actions.setBackPainAfter(id, null);
-    assert.equal(w.view(id).backPainAfter, null);
-    await w.actions.finish(id, { backPainAfter: w.actions.draft(id).backPainAfter ?? null });
-    assert.equal(Object.hasOwn(w.state.sessions[id], 'backPainAfter'), false);
-
-    const id2 = await doWorkout(w, { finish: false });
-    w.actions.setBackPainAfter(id2, 0);
-    await w.actions.finish(id2, { backPainAfter: w.actions.draft(id2).backPainAfter ?? null });
-    assert.equal(w.state.sessions[id2].backPainAfter, 0);
     w.assertValid();
   });
 });

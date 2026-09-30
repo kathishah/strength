@@ -14,7 +14,7 @@ import { REST_STEP_SEC, dayView, dialNotches, editView, formatClock, formatNumbe
 import { EXERCISES, PLACEHOLDER_GIF } from '../seed/index.js';
 import { pacificDate } from '../time.js';
 import { createDial } from './dial.js';
-import { armedButton, fill, h, painChips } from './dom.js';
+import { armedButton, fill, h } from './dom.js';
 
 const FIELD = {
   weightLbs: { caption: 'lbs', label: 'weight in pounds', format: (v) => formatNumber(v) },
@@ -28,7 +28,7 @@ const cardKey = (c) => [
   c.swapBlockedReason, c.summaryText, c.rows.map((r) => [r.id, r.status, r.reps === null]),
 ];
 
-// ctx: { events, actions, now(), navigate(hash), notify(text, kind), header, day: { picked, forceWorkout, backPain } }
+// ctx: { events, actions, now(), navigate(hash), notify(text, kind), header, day: { picked, forceWorkout } }
 // editId: the id of a finished workout reopened to correct it (#/workout/<id>); null for Home.
 export function mountDay(container, ctx, editId = null) {
   const ui = { alt: new Map(), slide: 0 }; // alt: exercise id -> which list is open ('alternatives' | 'trx')
@@ -169,7 +169,7 @@ export function mountDay(container, ctx, editId = null) {
     const ok = h('button', {
       type: 'button', class: 'okbtn', 'aria-label': `${editing ? 'Save changes to' : 'Done with'} ${card.name}`,
       onclick: () => guard(() => ctx.actions.saveExercise(current.sessionId, {
-        exerciseId: card.exerciseId, rows: findCard(card.exerciseId).rows, suggestion: card.suggestion, backPainBefore: current.started ? null : ctx.day.backPain,
+        exerciseId: card.exerciseId, rows: findCard(card.exerciseId).rows, suggestion: card.suggestion,
       })),
     }, '✓');
     return [
@@ -225,7 +225,7 @@ export function mountDay(container, ctx, editId = null) {
       card.tags.length ? h('div', { class: 'tags' }, card.tags.map((t) => h('span', { class: 'tag', text: t }))) : null);
   }
 
-  // The last card of a workout: notes, back pain after, and Finish (there is no separate Finish screen).
+  // The last card of a workout: notes and Finish (there is no separate Finish screen).
   function buildFinishCard(view) {
     const sid = view.sessionId;
     const notes = h('textarea', {
@@ -234,7 +234,6 @@ export function mountDay(container, ctx, editId = null) {
       onchange() { guard(() => ctx.actions.saveNotes(sid, notes.value)); },
     });
     notes.value = view.notes;
-    const pain = painChips({ label: 'Back pain after', value: view.backPainAfter, onChange(v) { ctx.actions.setBackPainAfter(sid, v); } });
     const discard = armedButton(h('button', { type: 'button', class: 'btn quiet', text: 'Discard workout' }), {
       armedText: 'Tap again to discard',
       onConfirm: () => guard(() => ctx.actions.discard(sid)),
@@ -244,11 +243,10 @@ export function mountDay(container, ctx, editId = null) {
       h('div', { class: 'ex-header' }, h('div', {}, h('h3', { class: 'ex-title', text: 'Finish workout' }), h('div', { class: 'phase-chip', text: 'Last card' }))),
       h('p', { class: 'muted', text: `${view.exercisesDone} of ${view.exerciseCount} exercises done${left > 0 ? `. ${left} left; you can still finish.` : '.'}` }),
       h('label', { for: 'session-notes', text: 'Notes (optional)' }), notes,
-      h('p', { class: 'field-label', text: 'Back pain after (optional)' }), pain.el,
       h('button', {
         type: 'button', class: 'btn primary block', disabled: !view.canFinish,
         onclick: () => guard(async () => {
-          await ctx.actions.finish(sid, { backPainAfter: ctx.actions.draft(sid).backPainAfter ?? null, notes: notes.value });
+          await ctx.actions.finish(sid, { notes: notes.value });
           ctx.navigate(`#/summary/${sid}`);
         }),
       }, 'Save and finish'),
@@ -322,10 +320,8 @@ export function mountDay(container, ctx, editId = null) {
       });
     if (view === null) { ctx.navigate('#/'); return; } // the workout is gone, or not finished: Home shows what there is
     current = view;
-    if (view.started && view.mode !== 'edit') ctx.day.backPain = null; // it went into session.started
     ctx.header.setStatus(view.statusText);
     ctx.header.setDays(view.pills, view.selectedWeekday);
-    ctx.header.showBackPain(view.mode === 'workout' && !view.started, ctx.day.backPain);
 
     const key = JSON.stringify([
       view.mode, view.started, view.canFinish, view.exercisesDone, view.warningText, view.older.map((o) => [o.sessionId, o.loggedSets]),

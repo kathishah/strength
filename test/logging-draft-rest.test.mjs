@@ -36,7 +36,7 @@ describe('draft', () => {
     let d = emptyDraft('sess_1');
     d = setRowField(d, 'goblet-squat', 2, 'weightLbs', 22.5);
     d = startRest(addExtraSet(d, 'goblet-squat'), 1_789_000_000_000);
-    d = { ...d, notes: 'felt good', backPainAfter: 2, restSec: 120 };
+    d = { ...d, notes: 'felt good', restSec: 120 };
     assert.deepEqual(parseDraft(serializeDraft(d), 'sess_1'), d);
   });
 
@@ -47,18 +47,23 @@ describe('draft', () => {
     for (const junk of [null, undefined, '', '{', '[]', '"x"', '123', 'null']) assert.deepEqual(parseDraft(junk, 's'), emptyDraft('s'), String(junk));
   });
 
+  test('a draft saved before v1.16 with a back pain rating is read with the rating ignored', () => {
+    const d = parseDraft(JSON.stringify({ v: 1, sessionId: 's', notes: 'hi', backPainAfter: 3 }), 's');
+    assert.deepEqual(d, { ...emptyDraft('s'), notes: 'hi' });
+    assert.equal(Object.hasOwn(d, 'backPainAfter'), false);
+  });
+
   test('bad fields are dropped one by one and the good ones kept', () => {
     const text = JSON.stringify({
       v: 1, sessionId: 's',
       rows: { a: { 0: { reps: 5 }, 1: { reps: 'lots', weightLbs: 30 }, x: { reps: 1 } }, b: 'nope', __proto__: { c: 1 } },
       extra: { a: 2, b: -1, c: 1.5, d: 99 },
-      notes: 12, backPainAfter: 11, restStartedAtMs: 'soon', restSec: null,
+      notes: 12, restStartedAtMs: 'soon', restSec: null,
     });
     const d = parseDraft(text, 's');
     assert.deepEqual(d.rows, { a: { 1: { weightLbs: 30 } } });
     assert.deepEqual(d.extra, { a: 2 });
     assert.equal(d.notes, null);
-    assert.equal(d.backPainAfter, undefined);
     assert.equal(d.restStartedAtMs, null);
     assert.equal(Object.getPrototypeOf(d.rows), Object.prototype);
   });
