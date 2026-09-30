@@ -14,7 +14,7 @@ export const programWeek = (programStartDate, today) => programWeekInfo(programS
 
 export const phaseOf = (week) => (week <= PROGRAM.phase1Weeks ? 1 : 2);
 
-// Target reps in reserve (spec 5.1): Phase 1 about 3, Phase 2 1-2.
+// Target reps left at the end of a set (spec 5.1, "reps in reserve"): Phase 1 about 3, Phase 2 1-2. Shown in plain words.
 export const targetRir = (phase) => (phase === 1 ? { min: 3, max: 3 } : { min: 1, max: 2 });
 
 // settings: replay(...).settings; today: Pacific "yyyy-mm-dd".

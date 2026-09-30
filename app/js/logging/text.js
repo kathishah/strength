@@ -88,9 +88,10 @@ export function lastText(s) {
   return s.last ? `Last (${formatDay(s.last.date)}): ${setsText(s.last.sets, { carry: s.type === 'carry' })}` : null;
 }
 
+// "Phase 1 · stop each set with about 3 reps left". targetRir is the engine's { min, max } reps in reserve.
 export function phaseText(phase, targetRir) {
-  const rir = targetRir.min === targetRir.max ? `about ${targetRir.min}` : `${targetRir.min}–${targetRir.max}`;
-  return `Phase ${phase} · stop with ${rir} reps in reserve`;
+  const left = targetRir.min === targetRir.max ? `about ${targetRir.min}` : `${targetRir.min}–${targetRir.max}`;
+  return `Phase ${phase} · stop each set with ${left} reps left`;
 }
 
 // The no-consecutive-days warning of Home (spec 4.1). w: { kind, templateCode }

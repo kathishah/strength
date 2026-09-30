@@ -28,19 +28,28 @@ describe('which boxes an exercise shows', () => {
 });
 
 describe('a fresh exercise', () => {
-  test('one todo row per set of the phase, every weight pre-filled with the suggestion, reps empty', () => {
-    const s = gobletFresh(); // week 1: 2 sets
+  test('one todo row per set of the slot, every weight pre-filled with the suggestion, reps empty', () => {
+    const s = gobletFresh(); // week 1: the full 3 sets
     const rows = buildRows({ suggestion: s, planned: s.sets });
-    assert.equal(rows.length, 2);
-    assert.deepEqual(rows.map((r) => [r.setNumber, r.status, r.weightLbs, r.reps, r.canLog]), [[1, 'todo', 20, null, false], [2, 'todo', 20, null, false]]);
+    assert.equal(rows.length, 3);
+    assert.deepEqual(rows.map((r) => [r.setNumber, r.status, r.weightLbs, r.reps, r.canLog]), [[1, 'todo', 20, null, false], [2, 'todo', 20, null, false], [3, 'todo', 20, null, false]]);
     assert.ok(rows.every((r) => !r.weightChanged));
   });
 
-  test('a row can be logged once its reps are in; weight 0 counts as a weight', () => {
-    const s = suggest(fresh(), 'leg-press', 'B', 1); // starts at 0
+  test('a row can be logged once its reps are in', () => {
+    const s = suggest(fresh(), 'leg-press', 'B', 1);
     const [row] = buildRows({ suggestion: s, planned: 1, draftRows: { 1: { reps: 10 } } });
+    assert.equal(row.weightLbs, 50, 'no history: the first-loaded weight, not 0 (v1.14)');
+    assert.equal(row.canLog, true);
+  });
+
+  test('weight 0 counts as a weight: bodyweight back extension, or a set logged at 0', () => {
+    const [row] = buildRows({ suggestion: suggest(fresh(), 'back-extension-45', 'B', 6), planned: 1, draftRows: { 1: { reps: 10 } } });
     assert.equal(row.weightLbs, 0);
     assert.equal(row.canLog, true);
+    const [typed] = buildRows({ suggestion: suggest(fresh(), 'leg-press', 'B', 1), planned: 1, draftRows: { 1: { weightLbs: 0, reps: 10 } } });
+    assert.equal(typed.weightLbs, 0);
+    assert.equal(typed.canLog, true);
   });
 
   test('a cleared weight box cannot be logged', () => {
@@ -83,10 +92,9 @@ describe('carry-over of weight to the remaining sets', () => {
     assert.deepEqual(weights(rows), [null, null, null]);
   });
 
-  test('reps and RIR are never carried', () => {
-    const rows = buildRows({ suggestion: s(), ...three, logged: [set(1, { reps: 12, rir: 2 })] });
+  test('reps are never carried', () => {
+    const rows = buildRows({ suggestion: s(), ...three, logged: [set(1, { reps: 12 })] });
     assert.deepEqual(rows.map((r) => r.reps), [12, null, null]);
-    assert.deepEqual(rows.map((r) => r.rir), [2, null, null]);
   });
 
   test('levels carry the same way (TRX and the pushup ladder)', () => {
@@ -198,6 +206,6 @@ describe('canLog and pickValues', () => {
 
   test('pickValues drops what the exercise does not show', () => {
     const inputs = inputsFor(suggest(fresh(), 'dead-bug', 'A', 5));
-    assert.deepEqual(pickValues({ weightLbs: 20, levelNumber: 2, reps: 8, distanceM: 40, rir: 2 }, inputs), { weightLbs: null, levelNumber: null, reps: 8, distanceM: null, rir: 2 });
+    assert.deepEqual(pickValues({ weightLbs: 20, levelNumber: 2, reps: 8, distanceM: 40, rir: 2 }, inputs), { weightLbs: null, levelNumber: null, reps: 8, distanceM: null });
   });
 });

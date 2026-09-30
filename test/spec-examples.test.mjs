@@ -37,10 +37,10 @@ example('5.7', 2, '7a2e1d3a', () => {
   assert.ok(s.targetReps > 10, 'aim to add reps');
 });
 
-example('5.7', 5, '58c16824', () => {
+example('5.7', 5, '67cb7c0d', () => {
   const p = plan(makeLog(), 'A', '2026-10-06');
   assert.deepEqual([p.calendar.programWeek, p.calendar.phase], [2, 1]);
-  assert.deepEqual(p.exercises.map((e) => e.sets), [2, 2, 2, 2, 2, 2]);
+  assert.deepEqual(p.exercises.map((e) => e.sets), [3, 3, 3, 3, 2, 2]);
 });
 
 example('5.7', 12, '1835e184', () => {
@@ -54,9 +54,9 @@ example('5.7', 12, '1835e184', () => {
   assert.equal(sug(log, 'goblet-squat', '2026-11-02').fromWeightLbs, 25, 'progression uses what was logged');
 });
 
-example('5.7', 28, '8221b8de', () => {
+example('5.7', 28, '459723ef', () => {
   const pushupSets = (today) => bySlot(plan(makeLog(), 'B', today), 5);
-  assert.deepEqual([pushupSets('2026-10-06').exerciseId, pushupSets('2026-10-06').sets], ['pushup', 2]);
+  assert.deepEqual([pushupSets('2026-10-06').exerciseId, pushupSets('2026-10-06').sets], ['pushup', 3]);
   assert.equal(pushupSets('2026-10-26').sets, 3);
 });
 

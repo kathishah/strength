@@ -11,9 +11,9 @@ const plan = (log, template, today) => planSession(log.state(), { today, templat
 const setsOf = (p) => p.exercises.map((e) => e.sets);
 
 describe('planning a workout day', () => {
-  test('set counts: Phase 1 is 2 everywhere; from week 5 the table; week 11 is an ordinary week', () => {
+  test('set counts: the table in every week, Phase 1 included (v1.14); week 11 is an ordinary week', () => {
     const log = makeLog();
-    assert.deepEqual(setsOf(plan(log, 'A', '2026-10-06')), [2, 2, 2, 2, 2, 2]);
+    assert.deepEqual(setsOf(plan(log, 'A', '2026-10-06')), [3, 3, 3, 3, 2, 2]);
     assert.deepEqual(setsOf(plan(log, 'A', '2026-10-26')), [3, 3, 3, 3, 2, 2]);
     assert.deepEqual(setsOf(plan(log, 'B', '2026-10-26')), [3, 3, 3, 3, 3, 2]);
     assert.deepEqual(setsOf(plan(log, 'C', '2026-10-26')), [3, 3, 2, 3, 3]);
@@ -30,7 +30,7 @@ describe('planning a workout day', () => {
     const p = plan(makeLog().swap('A', 1, 'leg-press'), 'A', '2026-10-26');
     const first = p.exercises[0];
     assert.deepEqual([first.exerciseId, first.defaultExerciseId, first.swapped, first.sets, first.slot], ['leg-press', 'goblet-squat', true, 3, 1]);
-    assert.equal(first.weightLbs, 0);
+    assert.equal(first.weightLbs, 50); // leg press with no history: the first-loaded weight
     assert.equal(p.exercises[1].swapped, false);
   });
 
