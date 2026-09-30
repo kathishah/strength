@@ -13,12 +13,11 @@ import { mountSummary } from './summary-screen.js';
 export function mountScreens({ root, headerRoot, events, actions, notify, handlers, now = Date.now, onRoute }) {
   let current = null;
   let router = null;
-  // What the header chose: a weekday pill, "show the workout" on a recovery day, and the back pain for the workout about to start.
-  const day = { picked: null, forceWorkout: false, backPain: null };
+  // What the header chose: a weekday pill, and "show the workout" on a recovery day.
+  const day = { picked: null, forceWorkout: false };
 
   const header = mountHeader({ root: headerRoot }, {
     onPickDay(weekday) { day.picked = weekday; day.forceWorkout = false; current?.update(); },
-    onBackPain(value) { day.backPain = value; },
     onSignOut: handlers.onSignOut,
   });
 

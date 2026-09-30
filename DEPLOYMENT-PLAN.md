@@ -1,6 +1,6 @@
 # Deployment & Implementation Plan (v1)
 
-Companion to `SPEC-strength.md` (v1.15). Covers how v1 is hosted, authenticated, stored, and built. The spec says *what* the app does; this says *how it runs*.
+Companion to `SPEC-strength.md` (v1.16). Covers how v1 is hosted, authenticated, stored, and built. The spec says *what* the app does; this says *how it runs*.
 
 ## 1. Goals and constraints
 - Keep the front end a **static site with plain HTML + JS (ES modules, no build step)**.
@@ -473,3 +473,13 @@ Six changes; the design above (the v0.2 carousel and colours) stays, with these 
 **As built.** Branch `v1-edit-finished`; 504 tests pass (493 before; 11 new in `test/logging-edit-finished.test.mjs`, and one in `logging-actions.test.mjs` changed, since a finished workout now takes ticks). Nothing under `lambda/` or `infra/` changed. Checked in the browser pane at 375 px wide (a scratch page outside the repo with a memory store and a Workout B finished without its pushups): the "Finished workouts" card on Home, Edit opening the workout with five cards done and the pushups open, no Options/TRX/swap, finish card or rest bar; the tick writing three `set.logged` events into the workout with its finish time, notes and back pain untouched; Home then reading 6/6; the summary's Edit workout button; Undo (two taps) and a stale `#/workout/<id>` returning to Home.
 - *Differences from the design above.* `finishedRecent` is also on the recovery-day page. The "Last: ..." line and the dials of a reopened workout are planned from the sessions that started before it (`stateBefore` in `logging/day-view.js`), so they show what the person saw that day; planning from the whole log would have shown the workout's own sets (or a later workout's) as "last time". The 7 days are today and the six before (`FINISHED_DAYS`).
 - *Not done, by design.* No edit of notes or back pain on a finished workout, no swap, no delete (question 20 above).
+
+## 15d. Back pain rating removed (spec v1.16)
+The owner asked for the back pain rating to go from the header "and anywhere else". Like RIR in 15b, it leaves the screens and the data written, and stays in the event registry and replay so events already in the log (`backPainBefore` on `session.started`, `backPainAfter` on `session.finished`) remain valid. Branch `v1-no-back-pain`; nothing under `lambda/` or `infra/` changes.
+
+- **Screens.** The "Back pain right now" row in the header panel, the "Back pain after" row on the finish card and the two lines on the summary are gone (`ui/app-header.js`, `ui/day-screen.js`, `ui/summary-screen.js`; `painChips` in `ui/dom.js` and the `.bp` styles are deleted).
+- **Logic.** `startSession`, `saveExercise` and `finish` take no back pain; `setBackPainAfter` and the draft's `backPainAfter` are deleted (an old saved draft that still has the field is read with it ignored); `sessionStarted` and `sessionFinished` write no back pain; the session view and the summary no longer return it.
+- **Kept.** Registry validation (0-10), replay, and the `engine-log` test builder's `backPainBefore` option, so old events are still accepted and replayed. Nothing ever used the value to change a suggestion.
+- **Earlier sections** (15, 15a, 15b, 15b-2 and the event tables above) describe the rating as it was built; 15d wins. Sessions already logged keep their values in the log; they are not shown anywhere.
+
+**As built.** 504 tests pass (503 after the removals, plus one for a session logged before v1.16). Checked in the browser pane at 375 px wide (scratch page, memory store): the header panel holds only the day pills and sign-out, the finish card only notes and Save and finish, and the summary only sets, duration and what was done; no "back pain" text anywhere on the page.

@@ -192,7 +192,6 @@ export function buildView(state, { sessionId = null, session = null, templateCod
     programWeek: session?.programWeek ?? plan.calendar.programWeek,
     phase,
     phaseText: phaseText(phase, targetRir(phase)),
-    backPainBefore: session?.backPainBefore ?? null,
     groups: group(cards),
     cards: [...cards, ...orphans],
     orphans,
@@ -203,7 +202,6 @@ export function buildView(state, { sessionId = null, session = null, templateCod
     canFinish: loggedSets > 0,
     notes: draft.notes ?? session?.notes ?? '',
     savedNotes: session?.notes ?? '',
-    backPainAfter: draft.backPainAfter !== undefined ? draft.backPainAfter : session?.backPainAfter ?? null,
     rest: restStatus(draft, nowMs, state.settings),
   };
 }

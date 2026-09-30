@@ -239,12 +239,6 @@ a.btn.block { display: flex; }
 .up { color: var(--up-text); font-weight: 700; margin: 2px 0; }
 .up-badge { display: inline-block; min-width: 1.5em; text-align: center; color: var(--up-text); background: var(--up-bg); border: 1px solid var(--up-border); border-radius: 6px; font-weight: 700; }
 
-.chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 16px; }
-.chip {
-  min-width: 44px; min-height: 44px; padding: 0; font: inherit; font-weight: 600; color: var(--text);
-  background: var(--field-bg); border: 1px solid var(--border); border-radius: 10px; cursor: pointer;
-}
-.chip[aria-pressed="true"] { color: var(--accent-text); background: var(--accent); border-color: var(--accent); }
 
 /* session: the v0.2 viewer's carousel and cards (spec 0.B.1) */
 .phase-line { margin: 2px 0 12px; }
@@ -401,8 +395,6 @@ textarea {
 .pill.signout.armed { color: var(--error-text); border-color: var(--error-text); }
 .armed-text { font-size: 0.8rem; font-weight: 600; }
 .save-line { margin: 10px 0 0; color: var(--muted); }
-.bp .field-label { margin: 10px 0 6px; }
-.bp .chips { margin-bottom: 0; }
 
 /* ---- Home: the day's cards ---- */
 .page { padding-top: 12px; }
