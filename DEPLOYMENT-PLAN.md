@@ -1,6 +1,6 @@
 # Deployment & Implementation Plan (v1)
 
-Companion to `SPEC-strength.md` (v1.14). Covers how v1 is hosted, authenticated, stored, and built. The spec says *what* the app does; this says *how it runs*.
+Companion to `SPEC-strength.md` (v1.15). Covers how v1 is hosted, authenticated, stored, and built. The spec says *what* the app does; this says *how it runs*.
 
 ## 1. Goals and constraints
 - Keep the front end a **static site with plain HTML + JS (ES modules, no build step)**.
@@ -171,11 +171,12 @@ Tests run with Node's built-in runner (`node --test`), so there is still no bund
 | B. Backbone | 1–2 | Auth screen, outbox, sync, replay, seed data bundled; two-device merge test | Event written on phone appears on desktop |
 | C. Engine | 3 | Pure functions for Section 5 with tests for every 5.7 and 5.12 example (design: section 14) | All example tests pass |
 | D. Logging | 4 | Session screen, ramp sets, calibration, rest timer, draft safety, swaps, rotation, recovery guidance cards | A full Workout A is logged offline and syncs later |
+| D2. Edit a finished workout | 4 | Reopen a finished workout from Home or its summary and tick, edit or undo exercises in it (section 15c, spec v1.15) | A Workout B finished with the pushups unticked can be fixed afterwards, and the next suggestions use it |
 | E. History and polish | 5 | Exercise history, settings, export, deload controls, PWA manifest and service worker | Spec Section 11 acceptance criteria all pass |
 
 Phase C can start in parallel with A and B, since the engine has no dependencies.
 
-**Status (2026-09-30):** Phases 0 and A to D are built, tested (493 tests) and merged to `main`. The site at `https://strength.logbook.me` runs Phases B, C and D (deployed together with `scripts/deploy-app.sh`; the Lambda and `infra/` have not changed since Phase A). The owner deployed it, tried it and reports that it works. The spec is v1.14. Phase E (exercise history, settings, export, PWA polish and the service worker) is not started.
+**Status (2026-09-30):** Phases 0 and A to D are built, tested (493 tests) and merged to `main`. The site at `https://strength.logbook.me` runs Phases B, C and D (deployed together with `scripts/deploy-app.sh`; the Lambda and `infra/` have not changed since Phase A). The owner deployed it, tried it and reports that it works. The spec is v1.14. Found after that: a finished workout is locked, so a tick missed before Finish (pushups in Workout B on 2026-09-30) cannot be added. Phase D2 (section 15c, spec v1.15) fixes that on branch `v1-edit-finished` before Phase E. Phase E (exercise history, settings, export, PWA polish and the service worker) is not started; its history screen will link each past session to the same edit view.
 
 ## 10. Risks and mitigations
 | Risk | Mitigation |
@@ -202,6 +203,7 @@ Phase C can start in parallel with A and B, since the engine has no dependencies
 - The exercise catalog is fixed; no custom exercise events.
 - Spec v1.14 (owner's calls after trying the app): full set counts in weeks 1-4; leg press, hip thrust and reverse lunge pre-fill their first-loaded weight with no history; no RIR; Home is the v0.2 viewer's page (slim header, day pills, swipe cards with superset colours); logging is one tick per exercise with barrel dials in 2.5 lb notches, reps at the recommendation (sections 15b and 15b-2).
 - The app is redeployed with `scripts/deploy-app.sh` (static site only).
+- A finished workout can be reopened and corrected (spec v1.15, section 15c). It is a Phase D addition (D2), not part of Phase E; Phase E's history only adds another way in.
 
 ## 12. Open decisions
 1. **Stronger sign-in later:** replace the 6-digit PIN with a longer password or passkey before the app holds anything beyond personal test data or is shared with anyone else.
@@ -443,3 +445,27 @@ Six changes; the design above (the v0.2 carousel and colours) stays, with these 
 **Bug found and fixed on the way.** When the carousel was rebuilt, the old dials were no longer in the page but their pending timers still fired, read a scroll position of 0 and wrote the first notch (0 lbs, 1 rep) into the draft. Dials are now disposed on every rebuild, ignore anything while detached, and report only changes that follow a touch, tap, wheel, key or mouse drag.
 
 **Spec questions, updated.** *1* (reps pre-fill) is settled by the owner: reps start at the recommendation. *4* (undo a set, add a set): Undo is now for the whole exercise; there is no "add a set" control (a fourth set is not offered; say if it is wanted). *5*: back pain before is chosen in the opened header and written when the first exercise is ticked. *9*: a session is started by the first tick, so an empty session can no longer exist; an old unfinished one is listed above the cards with Discard. *10*: only the next workout in rotation is shown; a day pill on a recovery day switches to the routine, not to another workout. New: *17. Rest timer.* It starts after each tick, not each set. *18. Sets done.* One tick logs the planned number of sets at the dial values. To log fewer, tap a set's small caption ("set 3") to skip it (dimmed and struck through; tap again to bring it back); that is a control the spec does not mention.
+
+## 15c. Phase D2 design (edit a finished workout, spec v1.15)
+**Why.** `Save and finish` locks a workout: `actions.openSession` throws "That workout is finished", and nothing on screen leads back to a finished session (Home shows the open workout or the next by rotation; the summary is shown once). A missed tick (Workout B, 2026-09-30, pushups) therefore could not be added. Branch `v1-edit-finished`, from `main`. Nothing under `lambda/` or `infra/` changes: `set.logged`, `set.edited` and `entity.deleted` already exist and are accepted whatever the state of the session.
+
+**Shape.** The same cards as Home, bound to a finished session instead of the open one. No new event types, no new storage.
+
+| Piece | Change |
+|---|---|
+| Route | `#/workout/<id>` (added to `ui/router.js`; `parseRoute` accepts the same id pattern as `summary`). Mounts `mountDay` in edit mode for that session. A missing or deleted id goes to Home. |
+| `logging/day-view.js` | `dayView` also returns `finishedRecent`: finished sessions whose Pacific date is within the last 7 days of `today`, newest first, each `{ sessionId, label, dateText, exercisesDone, exerciseCount }`. New `editView(state, { sessionId, today, nowMs, draftFor })`: `buildView` for that session (plan from the session's own date, swaps as they are), `mode: 'edit'`, status line "Workout B · Wed 30 Sep · editing", no finish card, no warning, no rest timer, no swap buttons. |
+| `logging/actions.js` | `saveExercise` and `undoExercise` accept an open or a finished session (`editableSession`; a deleted or missing one still throws). `swap`, `saveNotes`, `finish` and `discard` keep `openSession` and still refuse a finished one. A tick in a finished session does not start the rest timer. `finishedAt`, notes and back pain are never touched. |
+| `ui/day-screen.js` | Edit mode draws `editView`: cards as in Workout mode; a "Back" link to Home at the top. Home draws the "Finished workouts" card (`finishedRecent`) under the cards, each row with an Edit button that navigates to `#/workout/<id>`. |
+| `ui/summary-screen.js` | An "Edit workout" button next to "Back to Home". |
+
+**Rules.**
+- *Rotation and the warning are unchanged.* `nextTemplate` and `consecutiveDayWarning` already count only `finishedAt`, which editing never changes.
+- *Next suggestions follow the edit.* History is rebuilt from sets by session (section 14, decision 3), so a set added to a finished session counts in "Last: ..." and in the scheduled-increase timer (the base load of the last session is its heaviest weight, so a corrected weight moves it).
+- *Dials on a reopened workout* start at what was suggested for the session's date (`planSession` with the session's Pacific date, as in section 15) and carry down the sets as usual (`logging/rows.js`).
+- *No rest timer, no swap, no Finish, no Discard* in edit mode. Deleting a finished workout is not offered.
+- *Drafts* use the session id like an open session's (`draft.js`), so a refresh keeps typed values; the draft is cleared when the tick is saved, as now.
+
+**Tests** (`node --test`, same style as `logging-actions.test.mjs` and `logging-view.test.mjs`): tick, edit and undo on a finished session write the right events and all pass `validateEvent`; `swap`, `finish`, `discard` and `saveNotes` on a finished session still throw; `finishedAt`, notes and back pain are unchanged after editing; `nextTemplate` and the warning do not change; a set added to a finished session changes the next suggestion for that exercise; `finishedRecent` lists only finished sessions inside 7 Pacific days, newest first, and not open or deleted ones; `editView` has no finish card and no swap controls; `parseRoute` for `#/workout/<id>`. `logging-purity` still applies. The screens are checked in the browser pane at phone width, including reopening a Workout B and ticking the pushups.
+
+**Spec questions to raise, not decide.** *19. Seven days* is the window of "Finished workouts" on Home; older workouts wait for the Phase E history screen. *20. Notes and back pain after* are not editable on a finished workout (only the tick and set values are); say if they should be.
