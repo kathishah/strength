@@ -1,6 +1,6 @@
 # Deployment & Implementation Plan (v1)
 
-Companion to `SPEC-strength.md` (v1.12). Covers how v1 is hosted, authenticated, stored, and built. The spec says *what* the app does; this says *how it runs*.
+Companion to `SPEC-strength.md` (v1.13). Covers how v1 is hosted, authenticated, stored, and built. The spec says *what* the app does; this says *how it runs*.
 
 ## 1. Goals and constraints
 - Keep the front end a **static site with plain HTML + JS (ES modules, no build step)**.
@@ -143,7 +143,10 @@ app/                      # v1, deployed to S3 + CloudFront
       outbox.js sync.js                 # push with quarantine, pull, single-flight, triggers, backoff
     seed/                 # catalog.js program.js: the v0.2 data, copied verbatim (Phase B, built)
                           # rules.js: structured numbers per exercise, slot set counts, ladder, program constants (Phase C, built)
-    ui/                   # auth-screen.js sync-panel.js format.js for now; home, session, history, settings, recovery later
+    logging/              # pure workout-logging logic, no DOM/storage/clock (Phase D, built; section 15)
+                          # rotation home input rows rest-timer draft session-events session-view summary text actions
+    ui/                   # auth-screen sync-panel format (Phase B); dom router screens home-screen session-screen summary-screen
+                          # recovery-screen (Phase D); history and settings screens arrive in Phase E
     engine/               # pure progression functions (spec Section 5), no DOM (Phase C, built; section 14)
                           # calendar config history load suggest session index
 lambda/events/            # index.mjs (both endpoints), registry.mjs (types + validators),
@@ -151,7 +154,8 @@ lambda/events/            # index.mjs (both endpoints), registry.mjs (types + va
 infra/template.yaml       # SAM template
 scripts/                  # build-events.mjs, post-events.mjs, prompt.mjs (see BUILD.md step 8)
 test/                     # node --test: lambda, registry, time, seed, rules, replay, storage, sync and two-device merge, app modules, scripts,
-                          # engine (calendar, history, suggest, plan, simulation), spec-examples + spec-coverage, engine-purity
+                          # engine (calendar, history, suggest, plan, simulation), spec-examples + spec-coverage, engine-purity,
+                          # logging (rotation, input, rows, draft-rest, events, view, actions, purity)
 test-support/             # fake S3 and test builders (outside test/ so node --test does not run them)
 private/                  # git-ignored: personal workout data, create-user.sh (holds the PIN)
 BUILD.md                  # build and deploy commands
@@ -170,7 +174,7 @@ Tests run with Node's built-in runner (`node --test`), so there is still no bund
 
 Phase C can start in parallel with A and B, since the engine has no dependencies.
 
-**Status (2026-09-29):** Phase 0 and Phase A are built and deployed as `strength-prod` at `https://strength.logbook.me` (section 13). The owner confirmed a sign-in, a test event, and a sync round trip; cold-start timings and the installed home-screen check were not recorded. Phase B is built and tested but not deployed (section 13a). Phase C is designed (section 14); Phases D and E are not started.
+**Status (2026-09-29):** Phase 0 and Phase A are built and deployed as `strength-prod` at `https://strength.logbook.me` (section 13). The owner confirmed a sign-in, a test event, and a sync round trip; cold-start timings and the installed home-screen check were not recorded. Phase B is built and tested but not deployed (section 13a). Phase C is designed (section 14); Phase D is built and tested on branch `v1-phase-d` (section 15a), not deployed; Phase E is not started.
 
 ## 10. Risks and mitigations
 | Risk | Mitigation |
@@ -379,3 +383,32 @@ The build follows the reading given.
 11. *Holds* (TRX plank, weighted bird dog) log completion only: the registry has no seconds field.
 12. *Pushup level 0* (incline) cannot be logged (registry allows 1-5); the picker offers 1-5 (engine question 9).
 13. *Superset order.* Cards are grouped by superset and listed slot by slot; the app does not interleave the rounds.
+
+## 15a. As built (Phase D, not yet deployed)
+Built on branch `v1-phase-d`. Nothing under `lambda/` or `infra/` changed and nothing was deployed. Tests: 467 (331 before Phase D); `sam validate --lint` and `sam build` pass. The pure modules and the actions run against the real event store, replay, engine and the server's own validator (`validateEvent` on every event written), including a full Workout A logged with the network down and synced afterwards through the real Lambda handler over the fake S3 (`test/logging-actions.test.mjs`). The screens were checked in the browser pane at 375 px wide, dark and light, with the network calls to AWS made to fail (a scratch server outside the repo injected the stub): Home on a Tuesday, Start with back pain, typing and the +/- buttons, carry-over, Done and the rest timer, a reload in the middle of a workout, Edit/Save, Undo, Swap to a TRX exercise with the level description, the increase highlight, a carry row, cues with the demo image, Finish with notes and back pain after, the summary, discard, and the recovery routine. Not checked: an installed iPhone home-screen app (the person's step, BUILD.md step 7).
+
+**Differences from the design above.**
+- The text helpers are `app/js/logging/text.js` (pure, tested with the view models), not `ui/session-text.js`. Extra UI files: `ui/dom.js` (element builder, two-tap confirm, back pain chips), `ui/router.js`, `ui/screens.js` (mounts the screen for the route and redraws it on every change to the log).
+- `ui/draft-store.js` was not needed: `main.js` hands `localStorage` (or nothing, if blocked) to `createDraftStore` in `logging/draft.js`, which falls back to memory.
+- Rows are keyed by set id when done and by `<exercise>:<set number>` otherwise. A logged set can be in three states on screen: done (summary, Edit, Undo), editing (boxes, Save, Cancel) and todo.
+
+**Choices made where the design was silent (confirm or change).**
+- *Steps.* Weight +/- steps by the exercise's increment (5 lbs if it has none), reps by 1, carry distance by 5 m, level by 1 (1-5).
+- *RIR* is a select with 0-5 (the registry accepts 0-10); reps accept 0-500 like the registry.
+- *A done row that was logged with a different weight* shows "weight changed from X" against the suggestion stored on that set, not against today's suggestion.
+- *Start is hidden while a workout is open* (Resume and Discard instead); Discard needs two taps, Undo one.
+- *Sets logged for an exercise that left the plan* (a swap made on another device after logging) stay visible in a "Logged under another exercise" group and still count.
+- *The Phase B sync panel* stays on Home inside a "Sync and this device" block (test note, Sync now, Sign out, the event list), hidden on the other screens. The header shows the save state on every screen ("All saved", "N events saved on this device, not uploaded yet", "Sign in to sync").
+- *Errors* from a button are shown in the notice at the top of the page and scrolled into view; the notice is cleared when the route changes.
+- *A weight of 0* reads "no added weight" (an empty sled, an empty bar or bodyweight, depending on the exercise); in "Last:" lines it is written `0`.
+- *Level exercises* say "Starting level" where weight exercises say "Starting weight".
+- *Pushups:* the target range follows the level chosen in the row (spec 5.4 table), and the info panel lists all six levels including 0, which cannot be logged (registry).
+- *Callouts on the summary* look 7 days ahead (`NEXT_TIME_DAYS` in `logging/summary.js`).
+- *Demo images* load only when a card's info is opened (or on the recovery screen), directly from the GIF hosts the CSP already allows; offline they fall back to the placeholder.
+
+**More spec questions found while building** (continuing the list in section 15).
+14. *Which day a workout that crosses midnight belongs to.* The Pacific date of its start. That date decides the plan, the "yesterday" warning and the history date; the spec only says "the date of a session" is Pacific.
+15. *The pushup target reps* shown as the placeholder are the bottom of the chosen level's range (10 at level 1, 8 above), which matches spec 5.6 ("target 10 reps per set to start") only at level 1.
+16. *Rest timer at the end of the workout.* It starts after every Done including the last set, and disappears when the workout is finished.
+
+**Known limits.** No service worker yet, so the app needs the network to load (Phase E); once loaded, logging works offline. Two tabs of the app on one device do not see each other's typing (and, as in Phase B, not each other's writes until reload). The demo images are hotlinked. Stale unfinished sessions are never closed automatically (question 9).
