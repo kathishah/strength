@@ -68,3 +68,11 @@ export function isRecoveryDay(settings, today) {
   const days = Array.isArray(settings?.recoveryDays) ? settings.recoveryDays : DEFAULT_RECOVERY_DAYS;
   return days.includes(weekdayOf(today));
 }
+
+// What kind of day a weekday (0 = Sunday) is: 'recovery' (a recoveryDays day), 'gym' (Monday, Wednesday, Friday, the usual
+// gym days) or 'rest'. Only colours the header's pills: any workout can be done any day (spec 4.1 rotates by workout).
+export function dayKind(settings, weekday) {
+  const days = Array.isArray(settings?.recoveryDays) ? settings.recoveryDays : DEFAULT_RECOVERY_DAYS;
+  if (days.includes(weekday)) return 'recovery';
+  return [1, 3, 5].includes(weekday) ? 'gym' : 'rest';
+}

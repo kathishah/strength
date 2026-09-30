@@ -9,7 +9,7 @@ import { targetRir } from '../engine/calendar.js';
 import { buildRows, inputsFor } from './rows.js';
 import { restStatus } from './rest-timer.js';
 import {
-  exerciseName, formatDay, formatTime, increaseText, lastText, phaseText, repsText, setsRepsText, sourceLabel, suggestionText,
+  exerciseName, formatDay, formatTime, increaseText, lastText, phaseText, repsText, setsRepsText, setsText, sourceLabel, suggestionText,
 } from './text.js';
 
 const isWorking = (set) => set.isRampUp !== true && set.completed !== false;
@@ -53,8 +53,10 @@ function levelInfo(suggestion, levelNumber) {
 
 function buildCard({ state, sessionId, draft, e, slot, superset, defaultExerciseId, swapped, templateCode, logged, planned }) {
   const inputs = inputsFor(e);
+  const reopened = draft.editing?.[e.exerciseId] === true && logged.length > 0;
   const rows = buildRows({
-    suggestion: e, logged, draftRows: draft.rows[e.exerciseId] ?? {}, planned, extra: draft.extra[e.exerciseId] ?? 0,
+    suggestion: e, logged, draftRows: draft.rows[e.exerciseId] ?? {}, planned, extra: draft.extra[e.exerciseId] ?? 0, editing: reopened,
+    targetRepsFor: (level) => (e.progression === 'ladder' && level !== null ? PUSHUP_LADDER[level].repMin : e.targetReps ?? null),
   }).map((row) => {
     // The pushup range follows the level chosen for the row (spec 5.4 table); everything else has one range.
     const range = e.progression === 'ladder' && row.levelNumber !== null ? PUSHUP_LADDER[row.levelNumber] : e;
@@ -67,6 +69,7 @@ function buildCard({ state, sessionId, draft, e, slot, superset, defaultExercise
     };
   });
   const loggedCount = logged.length;
+  const distinct = (field) => new Set(rows.map((r) => r[field]).filter((v) => v !== null)).size > 1;
   const options = slot === null ? [] : swapOptions(templateCode, slot, e.exerciseId);
   const swapBlocked = options.length > 1 && loggedCount > 0;
   return {
@@ -107,7 +110,16 @@ function buildCard({ state, sessionId, draft, e, slot, superset, defaultExercise
     ssClass: '',
     chipText: superset === null ? 'Finisher' : `Superset ${superset}`,
     partnerName: null,
-    done: planned > 0 && loggedCount >= planned,
+    // 'input': nothing logged yet; 'done': logged, shown as one summary line; 'editing': a logged exercise reopened.
+    mode: loggedCount === 0 ? 'input' : reopened ? 'editing' : 'done',
+    done: loggedCount > 0,
+    // The weight (or level) differs between sets, so one shared box cannot show it: the card lists a box per set.
+    setsDiffer: (inputs.weight && distinct('weightLbs')) || (inputs.level && distinct('levelNumber')),
+    summaryText: logged.length
+      ? setsText([...logged].sort((a, b) => a.setNumber - b.setNumber).map((s) => ({
+        weightLbs: s.weightLbs ?? null, reps: s.reps ?? null, levelNumber: s.levelNumber ?? null, distanceM: s.distanceM ?? null,
+      })), { carry: e.type === 'carry', unit: ' lbs' })
+      : '',
   };
 }
 
@@ -133,23 +145,21 @@ function group(cards) {
   return groups;
 }
 
-// state: replay(events). draft: the session's draft (draft.js). nowMs: the current time.
-// Returns null when the session is unknown. `finished` tells the screen to show the summary instead.
-export function sessionView(state, sessionId, draft, nowMs) {
-  const session = state.sessions[sessionId];
-  const startedMs = parseInstant(session?.startedAt);
-  if (!session || Number.isNaN(startedMs) || !Object.hasOwn(WORKOUTS, session.templateCode)) return null;
-  const date = pacificDate(startedMs);
-  const plan = planSession(state, { today: date, templateCode: session.templateCode });
+// The view of one workout. `session` is the replayed record, or null for a workout that has not been started yet (Home shows
+// the next workout's cards before anything is logged; the session is written when the first exercise is marked done).
+export function buildView(state, { sessionId = null, session = null, templateCode, date, startedMs = null }, draft, nowMs) {
+  const plan = planSession(state, { today: date, templateCode });
 
   const byExercise = new Map();
-  for (const set of Object.values(state.sets)) {
-    if (set.sessionId !== sessionId || !isWorking(set)) continue;
-    if (!byExercise.has(set.exerciseId)) byExercise.set(set.exerciseId, []);
-    byExercise.get(set.exerciseId).push(set);
+  if (sessionId !== null) {
+    for (const set of Object.values(state.sets)) {
+      if (set.sessionId !== sessionId || !isWorking(set)) continue;
+      if (!byExercise.has(set.exerciseId)) byExercise.set(set.exerciseId, []);
+      byExercise.get(set.exerciseId).push(set);
+    }
   }
 
-  const common = { state, sessionId, draft, templateCode: session.templateCode };
+  const common = { state, sessionId, draft, templateCode };
   const cards = plan.exercises.map((e) => buildCard({
     ...common, e, slot: e.slot, superset: e.superset, defaultExerciseId: e.defaultExerciseId, swapped: e.swapped,
     logged: byExercise.get(e.exerciseId) ?? [], planned: e.sets,
@@ -169,29 +179,40 @@ export function sessionView(state, sessionId, draft, nowMs) {
   }
 
   const loggedSets = [...byExercise.values()].reduce((n, list) => n + list.length, 0);
-  const rir = targetRir(session.phase ?? plan.calendar.phase);
+  const phase = session?.phase ?? plan.calendar.phase;
   return {
     sessionId,
-    finished: typeof session.finishedAt === 'string',
-    templateCode: session.templateCode,
-    label: WORKOUTS[session.templateCode].label,
+    started: sessionId !== null,
+    finished: typeof session?.finishedAt === 'string',
+    templateCode,
+    label: WORKOUTS[templateCode].label,
     date,
     dateText: formatDay(date),
-    startedText: formatTime(startedMs),
-    programWeek: session.programWeek ?? plan.calendar.programWeek,
-    phase: session.phase ?? plan.calendar.phase,
-    phaseText: phaseText(session.phase ?? plan.calendar.phase, rir),
-    backPainBefore: session.backPainBefore ?? null,
+    startedText: startedMs === null ? null : formatTime(startedMs),
+    programWeek: session?.programWeek ?? plan.calendar.programWeek,
+    phase,
+    phaseText: phaseText(phase, targetRir(phase)),
+    backPainBefore: session?.backPainBefore ?? null,
     groups: group(cards),
+    cards: [...cards, ...orphans],
     orphans,
     exerciseCount: cards.length,
     exercisesDone: cards.filter((c) => c.done).length,
     plannedSets: cards.reduce((n, c) => n + c.plannedSets, 0),
     loggedSets,
     canFinish: loggedSets > 0,
-    notes: draft.notes ?? session.notes ?? '',
-    savedNotes: session.notes ?? '',
-    backPainAfter: draft.backPainAfter !== undefined ? draft.backPainAfter : session.backPainAfter ?? null,
+    notes: draft.notes ?? session?.notes ?? '',
+    savedNotes: session?.notes ?? '',
+    backPainAfter: draft.backPainAfter !== undefined ? draft.backPainAfter : session?.backPainAfter ?? null,
     rest: restStatus(draft, nowMs, state.settings),
   };
+}
+
+// state: replay(events). draft: the session's draft (draft.js). nowMs: the current time.
+// Returns null when the session is unknown. `finished` tells the screen to show the summary instead.
+export function sessionView(state, sessionId, draft, nowMs) {
+  const session = state.sessions[sessionId];
+  const startedMs = parseInstant(session?.startedAt);
+  if (!session || Number.isNaN(startedMs) || !Object.hasOwn(WORKOUTS, session.templateCode)) return null;
+  return buildView(state, { sessionId, session, templateCode: session.templateCode, date: pacificDate(startedMs), startedMs }, draft, nowMs);
 }

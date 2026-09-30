@@ -53,3 +53,32 @@ describe('stepValue', () => {
     assert.equal(stepValue(undefined, 1, { emptyStartsAt: null }), 1);
   });
 });
+
+import { WEIGHT_NOTCH, dialNotches, notches } from '../app/js/logging/index.js';
+describe('barrel dial notches', () => {
+  test('a range in steps, rounded, with extras included and sorted', () => {
+    assert.deepEqual(notches({ start: 0, end: 10, step: 2.5 }), [0, 2.5, 5, 7.5, 10]);
+    assert.deepEqual(notches({ start: 0, end: 5, step: 2.5, include: [3, 2.5, null, NaN] }), [0, 2.5, 3, 5]);
+    assert.equal(notches({ start: 0, end: 1, step: 0.1 }).length, 11, 'no float drift');
+  });
+
+  test('weights turn in 2.5 lb notches from 0, and the range grows with what the sets hold', () => {
+    const w = dialNotches('weightLbs', [20, 20]);
+    assert.equal(WEIGHT_NOTCH, 2.5);
+    assert.deepEqual(w.slice(0, 4), [0, 2.5, 5, 7.5]);
+    assert.ok(w.includes(22.5) && w.includes(60) && w.at(-1) >= 60);
+    const press = dialNotches('weightLbs', [130]);
+    assert.ok(press.at(-1) >= 228, `leg press range reaches ${press.at(-1)}`);
+    assert.ok(dialNotches('weightLbs', [21]).includes(21), 'a weight logged off the grid can still be shown');
+  });
+
+  test('levels are 1 to 5, reps start at 1, carries step by 5 m', () => {
+    assert.deepEqual(dialNotches('levelNumber'), [1, 2, 3, 4, 5]);
+    const reps = dialNotches('reps', [8]);
+    assert.deepEqual([reps[0], reps[1], reps.at(-1)], [1, 2, 30]);
+    assert.ok(dialNotches('reps', [40]).at(-1) >= 80);
+    const d = dialNotches('distanceM', [40]);
+    assert.deepEqual([d[0], d[1], d.includes(40)], [5, 10, true]);
+    assert.throws(() => dialNotches('rir'), RangeError);
+  });
+});

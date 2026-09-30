@@ -1,7 +1,7 @@
 // The view models the screens draw (home, session, summary) and their text. Built from real replayed logs.
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
-import { emptyDraft, homeView, sessionView, setRowField, startRest, summaryView } from '../app/js/logging/index.js';
+import { dayView, emptyDraft, sessionView, setRowField, startRest, summaryView } from '../app/js/logging/index.js';
 import * as text from '../app/js/logging/text.js';
 import { atLevel, carry, lift, makeLog } from '../test-support/engine-log.mjs';
 
@@ -16,54 +16,94 @@ function open(log = makeLog(), date = '2026-10-05', templateCode = 'A', opts = {
 }
 const view = (log, draft = emptyDraft('sess_open')) => sessionView(log.state(), 'sess_open', draft, NOW);
 
-describe('home', () => {
-  test('a fresh log: Workout A next, with a preview of its six exercises', () => {
-    const h = homeView(makeLog().state(), '2026-09-28');
-    assert.equal(h.next.templateCode, 'A');
-    assert.deepEqual(h.next.exercises.map((e) => e.name), ['Goblet Squat', 'Dumbbell Bench Press', 'Dumbbell Romanian Deadlift', 'Chest-Supported Row', 'Dead Bug', 'Face Pull']);
-    assert.equal(h.next.exercises[0].prescription, '3 × 8–12');
-    assert.equal(h.next.exercises[0].suggestionText, 'Suggested: 20 lbs');
-    assert.match(h.next.phaseText, /Phase 1 · stop each set with about 3 reps left/);
-    assert.equal(h.next.warning, null);
-    assert.deepEqual(h.inProgress, []);
-    assert.equal(h.recoveryFirst, false); // a Monday
+// The Home page: dayView over a log, with the draft of whichever workout is showing.
+const home = (log, today, extra = {}) => dayView(log.state(), { today, nowMs: NOW, draftFor: (id) => emptyDraft(id), ...extra });
+
+describe('the Home page (day view)', () => {
+  test('a fresh log: Workout A is next, shown as cards with the day\'s suggestions and nothing started', () => {
+    const h = home(makeLog(), '2026-09-28');
+    assert.deepEqual([h.mode, h.templateCode, h.started, h.sessionId], ['workout', 'A', false, null]);
+    assert.deepEqual(h.cards.map((c) => c.name), ['Goblet Squat', 'Dumbbell Bench Press', 'Dumbbell Romanian Deadlift', 'Chest-Supported Row', 'Dead Bug', 'Face Pull']);
+    assert.equal(h.cards[0].prescription, '3 × 8–12');
+    assert.equal(h.cards[0].suggestionText, 'Suggested: 20 lbs');
+    assert.match(h.phaseText, /Phase 1 · stop each set with about 3 reps left/);
+    assert.equal(h.warning, null);
+    assert.deepEqual(h.older, []);
+    assert.equal(h.statusText, 'Mon · Workout A · 0/6 done');
   });
 
-  test('on Tuesday and Thursday the recovery card leads, and the workout is still offered', () => {
+  test('the status line counts exercises done and follows the weekday chosen in the header', () => {
+    const log = makeLog();
+    log.session('2026-09-28', 'A', [lift('goblet-squat', 20, [10, 10, 10])], { finished: false, id: 'sess_open', startMs: Date.parse('2026-09-28T11:00:00-07:00') });
+    const h = home(log, '2026-09-28', { pickedWeekday: 3 });
+    assert.equal(h.statusText, 'Wed · Workout A · 1/6 done');
+    assert.deepEqual([h.started, h.sessionId, h.exercisesDone], [true, 'sess_open', 1]);
+  });
+
+  test('on Tuesday and Thursday the recovery routine leads; "train instead" and an open workout show the workout', () => {
     for (const day of ['2026-09-29', '2026-10-01']) {
-      const h = homeView(makeLog().state(), day);
-      assert.equal(h.recoveryFirst, true, day);
-      assert.ok(h.next, 'workout still offered');
+      const h = home(makeLog(), day);
+      assert.equal(h.mode, 'recovery', day);
+      assert.equal(h.cards.length, 8);
+      assert.equal(h.canTrainInstead, true);
+      assert.equal(h.statusText.endsWith('Recovery routine'), true);
     }
-    assert.equal(homeView(makeLog().state(), '2026-09-30').recoveryFirst, false);
+    assert.equal(home(makeLog(), '2026-09-29', { forceWorkout: true }).mode, 'workout');
+    assert.equal(home(open(), '2026-09-29').mode, 'workout', 'a workout with sets in it is never hidden');
+    assert.equal(home(makeLog(), '2026-09-30').mode, 'workout');
+    assert.equal(home(makeLog(), '2026-09-28', { pickedWeekday: 4 }).mode, 'recovery', 'picking Thursday shows the routine');
   });
 
-  test('the warning text comes with the next workout the day after a workout', () => {
+  test('the recovery cards are the eight of spec 4.6 with prescription, cue and demo', () => {
+    const cards = home(makeLog(), '2026-09-29').cards;
+    assert.equal(cards[0].name, 'Half-Kneeling Hip Flexor Stretch');
+    assert.equal(cards[0].prescription, '30 s per side');
+    assert.equal(cards[0].chipText, 'Recovery · 1 of 8');
+    assert.match(cards[0].notes, /Squeeze the glute/);
+    assert.equal(cards[7].name, 'Dowel Hip Hinge');
+  });
+
+  test('day pills run Monday to Sunday with the recovery days and today marked', () => {
+    const pills = home(makeLog(), '2026-09-30').pills;
+    assert.deepEqual(pills.map((p) => p.label), ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']);
+    assert.deepEqual(pills.map((p) => p.kind), ['gym', 'recovery', 'gym', 'recovery', 'gym', 'rest', 'rest']);
+    assert.deepEqual(pills.map((p) => p.isToday), [false, false, true, false, false, false, false]);
+  });
+
+  test('the warning comes with the next workout the day after a workout, and only until it is started', () => {
     const log = makeLog();
     log.session('2026-09-28', 'A', [lift('goblet-squat', 20, [10])]);
-    const h = homeView(log.state(), '2026-09-29');
-    assert.equal(h.next.templateCode, 'B');
-    assert.match(h.next.warningText, /You did Workout A yesterday/);
-    assert.equal(h.last.templateCode, 'A');
+    const h = home(log, '2026-09-30', { pickedWeekday: 3 });
+    assert.equal(h.warning, null, 'two days later: no warning');
+    const next = home(log, '2026-09-29', { forceWorkout: true });
+    assert.equal(next.templateCode, 'B');
+    assert.match(next.warningText, /You did Workout A yesterday/);
+    log.session('2026-09-29', 'B', [], { finished: false, id: 'sess_open' });
+    assert.equal(home(log, '2026-09-29').warning, null);
   });
 
-  test('an open session replaces the Start card with Resume', () => {
-    const h = homeView(open().state(), '2026-10-05');
-    assert.equal(h.next, null);
-    assert.equal(h.inProgress.length, 1);
-    assert.equal(h.inProgress[0].sessionId, 'sess_open');
-    assert.equal(h.inProgress[0].label, 'Workout A – Full body');
-    assert.equal(h.inProgress[0].dateText, 'Mon, Oct 5');
+  test('older unfinished workouts are listed after the newest, which is the one shown', () => {
+    const log = makeLog();
+    log.session('2026-09-28', 'A', [lift('goblet-squat', 20, [10])], { finished: false, id: 'sess_old' });
+    log.session('2026-10-05', 'B', [], { finished: false, id: 'sess_open' });
+    const h = home(log, '2026-10-05');
+    assert.deepEqual([h.sessionId, h.templateCode], ['sess_open', 'B']);
+    assert.deepEqual(h.older.map((o) => [o.sessionId, o.loggedSets, o.label]), [['sess_old', 1, 'Workout A – Full body']]);
   });
 
-  test('a due scheduled increase shows in the preview', () => {
+  test('a due scheduled increase shows on the card', () => {
     const log = makeLog();
     log.session('2026-09-28', 'A', [lift('goblet-squat', 25, [12, 12])]);
     log.session('2026-09-30', 'B', [lift('leg-press', 50, [10, 10])]);
     log.session('2026-10-02', 'C', [lift('incline-db-press', 20, [10, 10])]);
-    const h = homeView(log.state(), '2026-10-19'); // Workout A again, 21 days after its first session
-    const squat = h.next.exercises.find((e) => e.exerciseId === 'goblet-squat');
-    assert.equal(squat.increaseText, '↑ +5 lbs from 25 · Scheduled');
+    const h = home(log, '2026-10-19'); // Workout A again, 21 days after its first session
+    assert.equal(h.cards.find((c) => c.exerciseId === 'goblet-squat').increaseText, '↑ +5 lbs from 25 · Scheduled');
+  });
+
+  test('a workout not started yet takes what was typed from the pending draft', () => {
+    const typed = setRowField(emptyDraft('pending'), 'goblet-squat', 1, 'weightLbs', 30);
+    const h = home(makeLog(), '2026-09-28', { draftFor: () => typed });
+    assert.deepEqual(h.cards[0].rows.map((r) => r.weightLbs), [30, 30, 30]);
   });
 });
 
@@ -138,7 +178,7 @@ describe('session view', () => {
     log.session('2026-10-19', 'A', [lift('goblet-squat', 30, [10, 10])]); // took the scheduled increase
     log.session('2026-10-21', 'B', [lift('leg-press', 50, [10, 10])]);
     log.session('2026-10-23', 'C', [lift('incline-db-press', 20, [10, 10])]);
-    const squat = homeView(log.state(), '2026-10-26').next.exercises.find((e) => e.exerciseId === 'goblet-squat');
+    const squat = home(log, '2026-10-26').cards.find((e) => e.exerciseId === 'goblet-squat');
     assert.equal(squat.increaseText, null);
     assert.equal(squat.suggestionText, 'Suggested: 30 lbs');
   });
@@ -221,12 +261,23 @@ describe('session view', () => {
     assert.equal(card(view(open()), 'goblet-squat').swappedFromName, null);
   });
 
-  test('a card is done when every planned set is logged; the view counts them', () => {
+  test('a card is done once its sets are logged (one Done per exercise); reopened it is editing; the view counts them', () => {
     const log = makeLog();
     log.session('2026-10-05', 'A', [lift('goblet-squat', 20, [10, 10, 10]), lift('db-bench-press', 20, [10])], { finished: false, id: 'sess_open' });
     const v = view(log);
-    assert.deepEqual([card(v, 'goblet-squat').done, card(v, 'db-bench-press').done], [true, false]);
-    assert.deepEqual([v.exercisesDone, v.exerciseCount, v.loggedSets, v.plannedSets], [1, 6, 4, 16]);
+    assert.deepEqual([card(v, 'goblet-squat').mode, card(v, 'db-bench-press').mode, card(v, 'face-pull').mode], ['done', 'done', 'input']);
+    assert.equal(card(v, 'goblet-squat').summaryText, '20 lbs × 10, 10, 10');
+    assert.deepEqual([v.exercisesDone, v.exerciseCount, v.loggedSets, v.plannedSets], [2, 6, 4, 16]);
+    const reopened = { ...emptyDraft('sess_open'), editing: { 'goblet-squat': true } };
+    assert.equal(card(view(log, reopened), 'goblet-squat').mode, 'editing');
+    assert.deepEqual(card(view(log, reopened), 'goblet-squat').rows.map((r) => r.status), ['editing', 'editing', 'editing']);
+  });
+
+  test('when the sets have different weights the card says so (it needs a chip per set)', () => {
+    const log = makeLog();
+    log.session('2026-10-05', 'A', [lift('goblet-squat', 20, [10]), lift('goblet-squat', 25, [10])], { finished: false, id: 'sess_open' });
+    assert.equal(card(view(log), 'goblet-squat').setsDiffer, true);
+    assert.equal(card(view(open()), 'goblet-squat').setsDiffer, false);
   });
 
   test('a slot with nothing to swap to has no swap button (none in the seed has zero, but the rule holds)', () => {
