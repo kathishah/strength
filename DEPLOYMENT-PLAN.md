@@ -142,13 +142,16 @@ app/                      # v1, deployed to S3 + CloudFront
       events.js replay.js               # event store (append, ingest, outbox mirror) and replay (field-level reducers)
       outbox.js sync.js                 # push with quarantine, pull, single-flight, triggers, backoff
     seed/                 # catalog.js program.js: the v0.2 data, copied verbatim (Phase B, built)
+                          # rules.js: structured numbers per exercise, slot set counts, ladder, program constants (Phase C, built)
     ui/                   # auth-screen.js sync-panel.js format.js for now; home, session, history, settings, recovery later
-    engine/               # pure progression functions (spec Section 5), no DOM       (planned)
+    engine/               # pure progression functions (spec Section 5), no DOM (Phase C, built; section 14)
+                          # calendar config history load suggest session index
 lambda/events/            # index.mjs (both endpoints), registry.mjs (types + validators),
                           # object-store.mjs (S3 interface + adapter), time.mjs (Pacific time)
 infra/template.yaml       # SAM template
 scripts/                  # build-events.mjs, post-events.mjs, prompt.mjs (see BUILD.md step 8)
-test/                     # node --test: lambda, registry, time, seed, replay, storage, sync and two-device merge, app modules, scripts
+test/                     # node --test: lambda, registry, time, seed, rules, replay, storage, sync and two-device merge, app modules, scripts,
+                          # engine (calendar, history, suggest, plan, simulation), spec-examples + spec-coverage, engine-purity
 test-support/             # fake S3 and test builders (outside test/ so node --test does not run them)
 private/                  # git-ignored: personal workout data, create-user.sh (holds the PIN)
 BUILD.md                  # build and deploy commands
@@ -161,13 +164,13 @@ Tests run with Node's built-in runner (`node --test`), so there is still no bund
 | 0. Freeze | 0.C | Tag the current `index.html` as the frozen v0.2 viewer; create `app/` with an empty shell and the S3 + CloudFront deploy step | Both sites load; Pages unchanged |
 | A. Spike | 1 | Deploy SAM stack; login from the page via fetch; `POST`/`GET /events` with a test event; measure cold start | Works from an installed iPhone PWA and desktop; cold start acceptable |
 | B. Backbone | 1–2 | Auth screen, outbox, sync, replay, seed data bundled; two-device merge test | Event written on phone appears on desktop |
-| C. Engine | 3 | Pure functions for Section 5 with tests for every 5.7 and 5.12 example | All example tests pass |
+| C. Engine | 3 | Pure functions for Section 5 with tests for every 5.7 and 5.12 example (design: section 14) | All example tests pass |
 | D. Logging | 4 | Session screen, ramp sets, calibration, rest timer, draft safety, swaps, rotation, recovery guidance cards | A full Workout A is logged offline and syncs later |
 | E. History and polish | 5 | Exercise history, settings, export, deload controls, PWA manifest and service worker | Spec Section 11 acceptance criteria all pass |
 
 Phase C can start in parallel with A and B, since the engine has no dependencies.
 
-**Status (2026-09-29):** Phase 0 and Phase A are built and deployed as `strength-prod` at `https://strength.logbook.me` (section 13). The owner confirmed a sign-in, a test event, and a sync round trip; cold-start timings and the installed home-screen check were not recorded. Phase B is built and tested but not deployed (section 13a). Phases C to E are not started.
+**Status (2026-09-29):** Phase 0 and Phase A are built and deployed as `strength-prod` at `https://strength.logbook.me` (section 13). The owner confirmed a sign-in, a test event, and a sync round trip; cold-start timings and the installed home-screen check were not recorded. Phase B is built and tested but not deployed (section 13a). Phase C is designed (section 14); Phases D and E are not started.
 
 ## 10. Risks and mitigations
 | Risk | Mitigation |
@@ -234,8 +237,68 @@ Built on branch `v1-phase-b`; nothing here has been deployed, and the Lambda and
 - *Sync runs after any local write* (debounced 2 s), since the store cannot tell a completed set from another write.
 - *`entity.deleted`* only affects sessions and sets; a tombstone for `settings` or an unknown id changes nothing.
 
-**Not settled by the plan or spec (needs a decision before the phase that uses it):**
+**Not settled by the plan or spec (the first three are decided in section 14):**
 - `entityId` for `swap.*` and `deload.*` events (only the payload is used by replay today; tests use `swap_A_1`, `deload_12`).
 - What `deload.postponed` means for the original week. Replay stores raw records, `deloads[programWeek] = { programWeek, source?, postponedFromWeek? }`; the event carries no `source`, and spec 5.8 ("schedule restarts from it", "once per scheduled deload") needs the engine to say when a scheduled deload is written as an event at all.
 - The seed is the v0.2 display data. Spec section 8 wants numeric `repMin`, `repMax`, `loadIncrementLbs`, `startingWeightLbs`, `firstLoadedWeightLbs`, `startingLevel` and `loadsBack`; v0.2 has text (`sets: "3"`, `reps: "8–12"`, `start: "20 lbs per hand"`) and no increments or `loadsBack`. The pushup ladder and TRX level text are present. Phase C needs a structured catalog.
 - Two tabs of the app on one device do not see each other's writes until reload (no `BroadcastChannel`); both would upload, and the server de-duplicates.
+
+## 14. Phase C design (engine)
+Spec Section 5 is the rulebook and wins over this section; this section fixes what the spec leaves to the implementation. Work on branch `v1-phase-c`; the session's rules from Phase B apply (tests, small commits, ask before any AWS command, don't read `private/`).
+
+**Scope (cut in spec v1.13).** The first Phase C build implemented all of Section 5 (452 tests). The app only needs to show last time's weights, pre-fill an editable suggestion, and prompt a load increase after a few weeks, so the engine was cut down to that. **Removed** (struck through in the spec, code and tests deleted): earned increases and reductions (5.2 rules 1 and 2), all progression for bodyweight-based exercises (5.4: dead bug, back extension, TRX levels, pushup ladder), ramp-up sets (5.5), calibration (5.6), deload weeks (5.8), the back pain gate (5.9), stall detection (5.10), expected pace (5.11). **Kept:** phases and set counts (5.1, 4.3), the base load (5.2), increments (5.3, now 2.5 lb per dumbbell for two-dumbbell exercises and 5 lb for goblet squat and box squat), first-loaded weights (5.4), starting weights (5.6), the scheduled increase (5.12). The first build is in git history (commits up to `f1db902`) if any of it is wanted back.
+
+**Goal.** Pure functions that turn the replayed state (section 4, `store/replay.js`), the bundled seed and "today" into what the session screen needs: per exercise the suggested weight or level, set count, rep range, last session's sets, and when the next scheduled increase is due. No DOM, no storage, no network, no clock: `today` (a Pacific `yyyy-mm-dd`) and everything else are arguments. Phase D only draws these results and writes events.
+
+**Inputs and outputs.**
+- Input: `replay(events)` state (`sessions`, `sets`, `settings`, `swaps`), the seed, `today`. Setting keys are in the registry: `programStartDate`, `trapBarWeightLbs`, `scheduledIncreasesEnabled`, `scheduledIncreaseDays`, and per exercise `startingWeight:<id>`, `firstLoadedWeight:<id>`, `loadIncrement:<id>`, `scheduledIncrease:<id>`. Deload records in the log are ignored.
+- Output (`app/js/engine/index.js`):
+  ```
+  suggestExercise(state, { exerciseId, templateCode, slot, today }) ->
+  { exerciseId, type,
+    progression,                 // load | loadable | bodyweight | ladder | suspension | hold | none
+    sets, repMin, repMax, perSide, holdSeconds, targetDistanceM,   // sets null without a slot; reps null for holds and carries
+    weightLbs, level,            // the pre-fill for the edit box: weightLbs for loads (null: no weight, or an unseeded swap),
+                                 // level for TRX and the pushup ladder
+    targetReps,
+    source,                      // starting | hold | scheduled | null   (a subset of the registry's suggestionSource)
+    fromWeightLbs, fromLevel,    // last session's base load / level, null with no history
+    increased,                   // weightLbs is above fromWeightLbs: the "up arrow" highlight, text "Scheduled"
+    incrementLbs, firstLoadedWeightLbs,
+    hints: [{ code, text }],     // enter-weight, trx-pair
+    lastIncreaseDate, nextScheduledDate,   // Pacific yyyy-mm-dd or null
+    scheduledIncrease,           // 'on' | 'off' | 'n/a'
+    last }                       // { date, sets: [{ weightLbs, reps, levelNumber, distanceM }] } of the last session, or null
+
+  planSession(state, { today, templateCode }) ->
+  { templateCode, today, calendar: { programStartDate, programWeek, beforeStart, phase, targetRir: { min, max } },
+    exercises: [{ slot, superset, defaultExerciseId, swapped, ...suggestExercise result }] }
+  loggedDefaults(suggestion) -> { suggestedWeightLbs, suggestedLevel, suggestionSource }   // fields for set.logged
+  ```
+  Phase D writes `isRampUp: false` and `isCalibration: false` on every set (the registry still requires them) and `isDeload: false` on sessions. Unused registry surface: `deload.started` / `deload.postponed`, `calibrationFeel`, the suggestion sources `calibration`, `earned`, `reduction`, `deload`, `gated`.
+- Layout: `app/js/engine/` has `calendar`, `config` (settings and slot inheritance), `history`, `load`, `suggest`, `session` (`planSession`, `loggedDefaults`), `index`. `app/js/seed/rules.js` is the structured catalog. All day arithmetic is in `app/js/time.js`.
+
+**Decisions.**
+1. **Structured catalog.** `app/js/seed/rules.js` holds the numeric fields spec section 8 lists per exercise id, numeric Phase 2 set counts per template slot, the pushup ladder ranges (display) and program constants. `catalog.js` and `program.js` stay untouched. Values come from spec 4.3, 4.5.1, 5.3 and the 5.6 table; `trapBarWeightLbs` is the trap bar's starting weight. `test/rules.test.mjs` reads those tables out of `SPEC-strength.md`.
+2. **`entityId` conventions:** `swap_<template>_<slot>` (for example `swap_A_3`) for `swap.*`. Replay does not use them.
+3. **History.** A session counts when it has `finishedAt`; its date is the Pacific date of `startedAt`; only working sets (not `isRampUp`, not `completed: false`, with reps or, for a carry, a distance). Order by instant.
+4. **Progression uses what was logged.** The base load is the heaviest weight logged in the last completed session. The scheduled timer is the date of the latest session whose base load is above the session before it, else the date of the exercise's first completed session; an increase is due when `today` is at least `scheduledIncreaseDays` after it, and stays due until a heavier weight is logged. Exactly one increment: from 0 the first-loaded weight, otherwise the exercise's increment.
+5. **Program week** = `floor(days since programStartDate / 7) + 1`, by calendar-day arithmetic on `yyyy-mm-dd` strings (no offset involved, so daylight saving cannot shift a week). `pacificDate(ms)` is next to `pacificIso` in `time.js`, with a parity test against `lambda/events/time.mjs`.
+6. **Bodyweight-based exercises** (progression `loadable`, `bodyweight`, `ladder`, `suspension`) have no progression: the box is pre-filled with the last weight or level used, else the starting value (back extension 0, TRX level 2, pushup level 1, with that level's rep range).
+
+**Tests** (`node --test`, 331 tests; `sam validate --lint` and `sam build` pass; nothing under `lambda/` or `infra/` changed).
+- `spec-examples.test.mjs`: the examples of 5.7 and test cases of 5.12 that were not struck (5 + 5), named `5.7 #12: ...`, `5.12 #8: ...`. The number is the bullet's position in the spec, struck ones included. `spec-coverage.test.mjs` reads `SPEC-strength.md` and fails if a live bullet has no test, a struck one still has one, or a bullet was added, removed or edited (each test carries a fingerprint of its bullet's text).
+- `rules.test.mjs` (spec tables against `rules.js`), `calendar`, `history`, `suggest` (scheduled-increase edges, increments by exercise, no progression for bodyweight-based exercises, random-history invariants, shuffled and duplicated events), `plan`, `simulation` (26 weeks of a strong and a weak lifter get identical suggestions), `time` (pacificDate and day arithmetic), `engine-purity` (no `Date`, `document`, `window`, `localStorage`, `fetch` or `indexedDB` in `app/js/engine/`).
+- `test-support/engine-log.mjs` builds logs from real events and runs each through the server validator.
+
+**Spec questions to raise, not decide.** The engine follows the reading given.
+1. *Program week before `programStartDate`:* week 1, with `calendar.beforeStart = true`.
+2. *Timer with no increase yet:* the exercise's first completed session (5.12 said the last calibration session; there is no calibration now). Edited in the spec.
+3. *Base load* is the heaviest weight in the last session (5.2), so one heavier set at the end sets the base for the next increase.
+4. *Alternatives' rep range and sets:* an alternative with no range of its own takes the range, per-side flag, carry distance and set count of its slot. The spec gives ranges only for slot exercises, TRX and (in the catalog) the pallof press, fixed at 10 per side.
+5. *Alternatives' increments:* one-dumbbell (goblet squat, box squat, +5) versus two-dumbbell (+2.5): box squat is treated as goblet-style, the split squats and step-up as two dumbbells. Barbell types +10 (landmine press too), machine/cable +10 (leg press too, although plates are 25 per side), carries +5 per hand as before.
+6. *Swapped-in alternative with no seeded weight:* no pre-fill and an `enter-weight` hint; a `startingWeight:<id>` setting wins over the seed, and a setting cleared to null falls back to the seed.
+7. *Hold target reps* (not defined): one more than the weakest set at the base load, inside the range; the bottom of the range after an increase and for a first session.
+8. *A session with fewer sets than prescribed* counts; sets with `completed: false` or with nothing recorded are ignored.
+9. *Pushup level 0* (incline pushup, in the 5.4 reference table) cannot be logged: the registry accepts `levelNumber` and `suggestedLevel` from 1 to 5 only. Not blocking now (the ladder has no progression), but Phase D's pushup level picker cannot offer level 0 until the registry allows it.
+10. *Sets and phases:* the deload set halving is gone, so week 11 has the normal Phase 2 set counts.
