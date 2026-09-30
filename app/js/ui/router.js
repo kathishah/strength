@@ -1,10 +1,10 @@
-// Hash routes: #/ (home: the day's cards) and #/summary/<id>. Anything else, including the old #/session/<id> and #/recovery, is
-// home. A refresh keeps the route and the back button works.
+// Hash routes: #/ (home: the day's cards), #/summary/<id> and #/workout/<id> (a finished workout reopened to correct it, spec 6.3).
+// Anything else, including the old #/session/<id> and #/recovery, is home. A refresh keeps the route and the back button works.
 
 export function parseRoute(hash) {
   const parts = String(hash ?? '').replace(/^#\/?/, '').split('/').filter(Boolean);
   const [name, id] = parts;
-  if (name === 'summary' && /^[A-Za-z0-9_.:-]{1,80}$/.test(id ?? '')) return { name, id };
+  if ((name === 'summary' || name === 'workout') && /^[A-Za-z0-9_.:-]{1,80}$/.test(id ?? '')) return { name, id };
   return { name: 'home' };
 }
 

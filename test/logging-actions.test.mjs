@@ -205,11 +205,10 @@ describe('Done on an exercise', () => {
     w.assertValid();
   });
 
-  test('only an open workout takes sets', async () => {
+  test('an unknown workout takes no sets (a finished one does, spec 6.3 v1.15: see logging-edit-finished.test.mjs)', async () => {
     const w = await makeWorld();
     const id = await doWorkout(w);
     const c = card(w.view(id), 'goblet-squat');
-    await assert.rejects(w.actions.saveExercise(id, { exerciseId: 'goblet-squat', rows: c.rows, suggestion: c.suggestion }), /finished/);
     await assert.rejects(w.actions.saveExercise('sess_nope', { exerciseId: 'goblet-squat', rows: c.rows, suggestion: c.suggestion }), /does not exist/);
   });
 });

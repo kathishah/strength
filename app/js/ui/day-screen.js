@@ -10,7 +10,7 @@
 // Rendering. A change in structure (an exercise done, a swap, a list opening) rebuilds the carousel and puts it back where it was.
 // Anything else only moves the dials. Typed values live in the draft, so a refresh loses nothing.
 
-import { REST_STEP_SEC, dayView, dialNotches, formatClock, formatNumber, restStatus } from '../logging/index.js';
+import { REST_STEP_SEC, dayView, dialNotches, editView, formatClock, formatNumber, restStatus } from '../logging/index.js';
 import { EXERCISES, PLACEHOLDER_GIF } from '../seed/index.js';
 import { pacificDate } from '../time.js';
 import { createDial } from './dial.js';
@@ -29,7 +29,8 @@ const cardKey = (c) => [
 ];
 
 // ctx: { events, actions, now(), navigate(hash), notify(text, kind), header, day: { picked, forceWorkout, backPain } }
-export function mountDay(container, ctx) {
+// editId: the id of a finished workout reopened to correct it (#/workout/<id>); null for Home.
+export function mountDay(container, ctx, editId = null) {
   const ui = { alt: new Map(), slide: 0 }; // alt: exercise id -> which list is open ('alternatives' | 'trx')
   let current = null; // the latest view
   let structure = null;
@@ -60,7 +61,7 @@ export function mountDay(container, ctx) {
     updateRest();
   }
   function updateRest() {
-    const status = current?.started ? restStatus(ctx.actions.draft(current.sessionId), ctx.now(), ctx.events.state.settings) : null;
+    const status = current?.started && current.mode !== 'edit' ? restStatus(ctx.actions.draft(current.sessionId), ctx.now(), ctx.events.state.settings) : null;
     restEl.hidden = status === null;
     if (status === null) { wasOver = false; return; }
     restText.textContent = status.over ? 'Rest over. Ready for the next exercise.' : `Rest ${formatClock(status.remainingSec)}`;
@@ -269,13 +270,22 @@ export function mountDay(container, ctx) {
         armedButton(h('button', { type: 'button', class: 'btn quiet', text: 'Discard' }), { armedText: 'Tap again', onConfirm: () => guard(() => ctx.actions.discard(o.sessionId)) }))));
   }
 
+  // Home, below the cards: the workouts finished in the last 7 days, each with Edit (spec 6.2).
+  function finishedCard(view) {
+    return h('section', { class: 'card finished-recent', 'aria-label': 'Finished workouts' },
+      h('h3', { text: 'Finished workouts' }),
+      view.finishedRecent.map((f) => h('div', { class: 'older-row' },
+        h('span', { text: `${f.label}, ${f.dateText} · ${f.exercisesDone}/${f.exerciseCount} done` }),
+        h('button', { type: 'button', class: 'btn', 'aria-label': `Edit ${f.label}, ${f.dateText}`, onclick: () => ctx.navigate(`#/workout/${f.sessionId}`) }, 'Edit'))));
+  }
+
   // ---- the whole page ----
   function build(view) {
     for (const { dial } of dials) dial.dispose(); // the old dials are leaving the page: none of them may report a value again
     dials = [];
     const slides = view.mode === 'recovery'
       ? [...view.cards.map(buildRecoveryCard), trainInsteadCard()]
-      : [...view.cards.map(buildCard), view.started ? buildFinishCard(view) : null];
+      : [...view.cards.map(buildCard), view.started && view.mode !== 'edit' ? buildFinishCard(view) : null];
     const track = h('div', { class: 'track', role: 'region', tabindex: '0', 'aria-label': 'Exercises. Swipe sideways for the next one.' }, slides);
     // A swipe to another card returns the page to the top, so the new card starts at its title.
     let settle = null;
@@ -294,23 +304,32 @@ export function mountDay(container, ctx) {
     fill(body,
       view.warningText ? h('p', { class: 'notice day-notice', role: 'note', text: view.warningText }) : null,
       view.older.length ? olderCard(view) : null,
-      view.mode === 'workout' ? h('p', { class: 'phase-line muted small', text: `Week ${view.programWeek} · ${view.phaseText}` }) : h('p', { class: 'phase-line muted small', text: `${view.label}. Guidance only: nothing to check off.` }),
-      track);
+      view.mode === 'edit' ? h('div', { class: 'edit-bar' },
+        h('a', { class: 'back', href: '#/' }, '← Home'),
+        h('p', { class: 'muted small', text: `Finished workout. What you tick or change is added to it. Week ${view.programWeek} · ${view.phaseText}` })) : null,
+      view.mode === 'workout' ? h('p', { class: 'phase-line muted small', text: `Week ${view.programWeek} · ${view.phaseText}` }) : null,
+      view.mode === 'recovery' ? h('p', { class: 'phase-line muted small', text: `${view.label}. Guidance only: nothing to check off.` }) : null,
+      track,
+      view.finishedRecent.length ? finishedCard(view) : null);
     return track;
   }
 
   function render() {
-    const view = dayView(ctx.events.state, {
-      today: pacificDate(ctx.now()), nowMs: ctx.now(), draftFor: (id) => ctx.actions.draft(id), pickedWeekday: ctx.day.picked, forceWorkout: ctx.day.forceWorkout,
-    });
+    const view = editId !== null
+      ? editView(ctx.events.state, { sessionId: editId, nowMs: ctx.now(), draftFor: (id) => ctx.actions.draft(id) })
+      : dayView(ctx.events.state, {
+        today: pacificDate(ctx.now()), nowMs: ctx.now(), draftFor: (id) => ctx.actions.draft(id), pickedWeekday: ctx.day.picked, forceWorkout: ctx.day.forceWorkout,
+      });
+    if (view === null) { ctx.navigate('#/'); return; } // the workout is gone, or not finished: Home shows what there is
     current = view;
-    if (view.started) ctx.day.backPain = null; // it went into session.started
+    if (view.started && view.mode !== 'edit') ctx.day.backPain = null; // it went into session.started
     ctx.header.setStatus(view.statusText);
     ctx.header.setDays(view.pills, view.selectedWeekday);
     ctx.header.showBackPain(view.mode === 'workout' && !view.started, ctx.day.backPain);
 
     const key = JSON.stringify([
       view.mode, view.started, view.canFinish, view.exercisesDone, view.warningText, view.older.map((o) => [o.sessionId, o.loggedSets]),
+      view.finishedRecent.map((f) => [f.sessionId, f.exercisesDone]),
       view.mode === 'recovery' ? view.cards.length : view.cards.map(cardKey), [...ui.alt],
     ]);
     if (key !== structure) {
