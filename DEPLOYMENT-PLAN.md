@@ -144,15 +144,16 @@ app/                      # v1, deployed to S3 + CloudFront
     seed/                 # catalog.js program.js: the v0.2 data, copied verbatim (Phase B, built)
                           # rules.js: structured numbers per exercise, slot set counts, ladder, program constants (Phase C, built)
     logging/              # pure workout-logging logic, no DOM/storage/clock (Phase D, built; section 15)
-                          # rotation home input rows rest-timer draft session-events session-view summary text actions
-    ui/                   # auth-screen sync-panel format (Phase B); dom router screens home-screen session-screen summary-screen
-                          # recovery-screen (Phase D); history and settings screens arrive in Phase E
+                          # rotation day-view input rows rest-timer draft session-events session-view summary text actions
+    ui/                   # auth-screen sync-panel format (Phase B); dom router screens app-header day-screen dial theme
+                          # summary-screen (Phase D, 15b); history and settings screens arrive in Phase E
+    theme-boot.js         # plain script in the head: applies the chosen theme before the first paint
     engine/               # pure progression functions (spec Section 5), no DOM (Phase C, built; section 14)
                           # calendar config history load suggest session index
 lambda/events/            # index.mjs (both endpoints), registry.mjs (types + validators),
                           # object-store.mjs (S3 interface + adapter), time.mjs (Pacific time)
 infra/template.yaml       # SAM template
-scripts/                  # build-events.mjs, post-events.mjs, prompt.mjs (see BUILD.md step 8)
+scripts/                  # deploy-app.sh, aws-env.sh (BUILD.md step 7); build-events.mjs, post-events.mjs, prompt.mjs (step 8)
 test/                     # node --test: lambda, registry, time, seed, rules, replay, storage, sync and two-device merge, app modules, scripts,
                           # engine (calendar, history, suggest, plan, simulation), spec-examples + spec-coverage, engine-purity,
                           # logging (rotation, input, rows, draft-rest, events, view, actions, purity)
@@ -174,7 +175,7 @@ Tests run with Node's built-in runner (`node --test`), so there is still no bund
 
 Phase C can start in parallel with A and B, since the engine has no dependencies.
 
-**Status (2026-09-29, updated 2026-09-30):** Phase 0 and Phase A are built and deployed as `strength-prod` at `https://strength.logbook.me` (section 13). The owner confirmed a sign-in, a test event, and a sync round trip; cold-start timings and the installed home-screen check were not recorded. Phase B is built and tested but not deployed (section 13a). Phase C is designed (section 14); Phase D is built and tested on branch `v1-phase-d` (section 15a), not deployed; Phase E is not started.
+**Status (2026-09-30):** Phases 0 and A to D are built, tested (493 tests) and merged to `main`. The site at `https://strength.logbook.me` runs Phases B, C and D (deployed together with `scripts/deploy-app.sh`; the Lambda and `infra/` have not changed since Phase A). The owner deployed it, tried it and reports that it works. The spec is v1.14. Phase E (exercise history, settings, export, PWA polish and the service worker) is not started.
 
 ## 10. Risks and mitigations
 | Risk | Mitigation |
@@ -199,6 +200,8 @@ Phase C can start in parallel with A and B, since the engine has no dependencies
 - The v1 site is served at `https://strength.logbook.me` (CloudFront alias, DNS at GoDaddy, ACM certificate in `us-east-1`).
 - All dates and times are US Pacific (`America/Los_Angeles`) with explicit offsets, including the month of each event file.
 - The exercise catalog is fixed; no custom exercise events.
+- Spec v1.14 (owner's calls after trying the app): full set counts in weeks 1-4; leg press, hip thrust and reverse lunge pre-fill their first-loaded weight with no history; no RIR; Home is the v0.2 viewer's page (slim header, day pills, swipe cards with superset colours); logging is one tick per exercise with barrel dials in 2.5 lb notches, reps at the recommendation (sections 15b and 15b-2).
+- The app is redeployed with `scripts/deploy-app.sh` (static site only).
 
 ## 12. Open decisions
 1. **Stronger sign-in later:** replace the 6-digit PIN with a longer password or passkey before the app holds anything beyond personal test data or is shared with anyone else.
@@ -223,8 +226,8 @@ Deployment facts and behaviours the sections above left open. `BUILD.md` has the
 
 **Client (Phase A spike).** Sign-in and refresh use `fetch` (`auth.js`); the refresh token is in `localStorage`, the ID token in memory. Sync saves the cursor only after the returned events are stored locally. The spike kept events in `localStorage` as a cache; Phase B replaced that with IndexedDB and the outbox (13a). `ids.js` makes ULIDs and hybrid-clock `ts` values that the server accepts.
 
-## 13a. As built (Phase B, not yet deployed)
-Built on branch `v1-phase-b`; nothing here has been deployed, and the Lambda and `infra/` are unchanged. `test/merge.test.mjs` runs 2-3 devices (the real app store, outbox and sync) against the real Lambda handler over the fake S3.
+## 13a. As built (Phase B)
+Built on branch `v1-phase-b` and merged; deployed to the site together with Phase D. The Lambda and `infra/` are unchanged. `test/merge.test.mjs` runs 2-3 devices (the real app store, outbox and sync) against the real Lambda handler over the fake S3.
 
 **Local store.** IndexedDB database `strength` (`events`, `outbox`, `meta`, `rejected`); one transaction per local write (event and outbox entry) and per pull (events and cursor), so the cursor never moves past events that were not stored. Without IndexedDB the app falls back to memory and says so on screen. The IndexedDB adapter cannot run under `node --test`; `test-support/storage-contract.mjs` is the same 13 cases for every adapter, run in Node against memory and in a browser against IndexedDB. The spike's `localStorage` cache is deleted on first start; the first sync refetches from the server.
 
@@ -386,8 +389,8 @@ The build follows the reading given.
 12. *Pushup level 0* (incline) cannot be logged (registry allows 1-5); the picker offers 1-5 (engine question 9).
 13. *Superset order.* Cards are grouped by superset and listed slot by slot; the app does not interleave the rounds.
 
-## 15a. As built (Phase D, not yet deployed)
-Built on branch `v1-phase-d`. Nothing under `lambda/` or `infra/` changed and nothing was deployed. Tests: 467 (331 before Phase D); `sam validate --lint` and `sam build` pass. The pure modules and the actions run against the real event store, replay, engine and the server's own validator (`validateEvent` on every event written), including a full Workout A logged with the network down and synced afterwards through the real Lambda handler over the fake S3 (`test/logging-actions.test.mjs`). The screens were checked in the browser pane at 375 px wide, dark and light, with the network calls to AWS made to fail (a scratch server outside the repo injected the stub): Home on a Tuesday, Start with back pain, typing and the +/- buttons, carry-over, Done and the rest timer, a reload in the middle of a workout, Edit/Save, Undo, Swap to a TRX exercise with the level description, the increase highlight, a carry row, cues with the demo image, Finish with notes and back pain after, the summary, discard, and the recovery routine. Not checked: an installed iPhone home-screen app (the person's step, BUILD.md step 7).
+## 15a. As built (Phase D, first pass; 15b changes parts of it)
+Built on branch `v1-phase-d`, merged to `main` and deployed. Nothing under `lambda/` or `infra/` changed. Tests at the end of the first pass: 467 (331 before Phase D); `sam validate --lint` and `sam build` pass. The pure modules and the actions run against the real event store, replay, engine and the server's own validator (`validateEvent` on every event written), including a full Workout A logged with the network down and synced afterwards through the real Lambda handler over the fake S3 (`test/logging-actions.test.mjs`). The screens were checked in the browser pane at 375 px wide, dark and light, with the network calls to AWS made to fail (a scratch server outside the repo injected the stub): Home on a Tuesday, Start with back pain, typing and the +/- buttons, carry-over, Done and the rest timer, a reload in the middle of a workout, Edit/Save, Undo, Swap to a TRX exercise with the level description, the increase highlight, a carry row, cues with the demo image, Finish with notes and back pain after, the summary, discard, and the recovery routine. Not checked: an installed iPhone home-screen app (the person's step, BUILD.md step 7).
 
 **Differences from the design above.**
 - The text helpers are `app/js/logging/text.js` (pure, tested with the view models), not `ui/session-text.js`. Extra UI files: `ui/dom.js` (element builder, two-tap confirm, back pain chips), `ui/router.js`, `ui/screens.js` (mounts the screen for the route and redraws it on every change to the log).
