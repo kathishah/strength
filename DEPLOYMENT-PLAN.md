@@ -176,7 +176,7 @@ Tests run with Node's built-in runner (`node --test`), so there is still no bund
 
 Phase C can start in parallel with A and B, since the engine has no dependencies.
 
-**Status (2026-09-30):** Phases 0 and A to D are built, tested (493 tests) and merged to `main`. The site at `https://strength.logbook.me` runs Phases B, C and D (deployed together with `scripts/deploy-app.sh`; the Lambda and `infra/` have not changed since Phase A). The owner deployed it, tried it and reports that it works. The spec is v1.14. Found after that: a finished workout is locked, so a tick missed before Finish (pushups in Workout B on 2026-09-30) cannot be added. Phase D2 (section 15c, spec v1.15, 504 tests) fixes that: merged to `main` and deployed on 2026-09-30 with `scripts/deploy-app.sh` (static site only). It went in before Phase E. Phase E (exercise history, settings, export, PWA polish and the service worker) is not started; its history screen will link each past session to the same edit view.
+**Status (2026-09-30):** Phases 0 and A to D are built, tested (493 tests) and merged to `main`. The site at `https://strength.logbook.me` runs Phases B, C and D (deployed together with `scripts/deploy-app.sh`; the Lambda and `infra/` have not changed since Phase A). The owner deployed it, tried it and reports that it works. The spec is v1.16 (v1.15 edit a finished workout, v1.16 no back pain rating). Found after that: a finished workout is locked, so a tick missed before Finish (pushups in Workout B on 2026-09-30) cannot be added. Phase D2 (section 15c, spec v1.15, 504 tests) fixes that: merged to `main` and deployed on 2026-09-30 with `scripts/deploy-app.sh` (static site only). It went in before Phase E. Phase E (exercise history, settings, export, PWA polish and the service worker) is not started; its history screen will link each past session to the same edit view.
 
 ## 10. Risks and mitigations
 | Risk | Mitigation |
@@ -483,3 +483,5 @@ The owner asked for the back pain rating to go from the header "and anywhere els
 - **Earlier sections** (15, 15a, 15b, 15b-2 and the event tables above) describe the rating as it was built; 15d wins. Sessions already logged keep their values in the log; they are not shown anywhere.
 
 **As built.** 504 tests pass (503 after the removals, plus one for a session logged before v1.16). Checked in the browser pane at 375 px wide (scratch page, memory store): the header panel holds only the day pills and sign-out, the finish card only notes and Save and finish, and the summary only sets, duration and what was done; no "back pain" text anywhere on the page.
+
+Merged to `main` and deployed on 2026-09-30 with `scripts/deploy-app.sh` (static site only).
