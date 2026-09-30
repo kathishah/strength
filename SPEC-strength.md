@@ -1,8 +1,10 @@
-# Recomp Tracker — Product Spec (v1.14)
+# Recomp Tracker — Product Spec (v1.15)
 
 A personal, mobile-first web app for logging gym workouts in a body recomposition program (build lean mass, reduce visceral fat, strengthen the back) and telling the user what to lift next. Used at the gym on a phone and at home on a desktop, with data synced across devices. Activity tracking (steps, Bollyx, hikes, mobility) and body metrics (DEXA, waist, weight) are out of scope: activity is tracked on an Apple Watch, and body metrics are not tracked in this app.
 
 ## Changelog
+- **v1.15**
+  - A finished workout can be reopened and corrected (6.2, 6.3): a missed tick, a wrong weight or rep count. Home lists the workouts finished in the last 7 days, and the summary screen has an edit button. Found when a Workout B was finished with the pushups not ticked and there was no way back to them.
 - **v1.14**
   - Set counts: Phase 1 (weeks 1–4) uses the full set counts of Section 4.3 (it was 2 sets per exercise). The phases now differ only in target effort (5.1).
   - Exercises that start at 0 and have a first-loaded weight (leg press, hip thrust, reverse lunge) pre-fill that weight when there is no history (5.6). What was logged last time still wins.
@@ -623,6 +625,7 @@ Test cases:
 ### 6.2 Home / Today screen
 - Home is the v0.2 viewer's page (v1.14, 0.B.1): a slim header (one status line such as "Wed · Workout B · 0/6 done", which opens to the day pills Monday to Sunday, the save state, the back pain rating for the workout about to start, and sign out; a dot for whether the work is saved; a theme button) over the day's swipe carousel of cards. There is no Start button: the next workout (A/B/C by rotation) is shown as cards, and it starts when the first exercise is marked done. The no-consecutive-days warning shows above the cards if applicable.
 - On Tuesdays and Thursdays the cards are the recovery routine (4.6), with a last card to show the workout instead (a workout is never blocked). Picking a day pill shows that day's cards.
+- **Finished workouts (v1.15).** Below the cards, a "Finished workouts" card lists the workouts finished in the last 7 days (Pacific dates), newest first: workout, day, exercises done of the total, and an **Edit** button that opens the workout as in 6.3. It is hidden when there are none. A finished workout never changes which workout is next (rotation, 4.1).
 - ~~Deload banner during a deload week (5.8), and the Start deload / Postpone controls.~~
 
 ### 6.3 Workout session (most important screen; phone-first)
@@ -638,7 +641,8 @@ Test cases:
 - Swap exercise (Section 4.5). Tap exercise name for cues.
 - Optional session fields: back pain rating 0–10 (before and after), notes.
 - **Draft safety:** an in-progress session must survive a page refresh, app switch, or dropped gym Wi-Fi. Persist the draft locally and save to the backend on finish (and opportunistically during the session).
-- Finish → summary screen showing total working sets, session duration, and any "weight increase next time" callouts.
+- Finish → summary screen showing total working sets, session duration, and any "weight increase next time" callouts. The summary has an **Edit workout** button (6.3, v1.15).
+- **Editing a finished workout (v1.15).** A finished workout can be reopened from Home (6.2) or its summary. It shows the same cards as during the workout, for that workout's day: the same exercises (swaps as they were), what was ticked with its summary line and Edit and Undo, and the rest with their dials at what was suggested for that day. Ticking an exercise logs its sets into the workout; Edit and Undo change or remove the logged sets. The workout keeps its date, start and finish times, back pain and notes; the rest timer does not run; swapping an exercise, Finish and Discard are not offered (a swap is for the next workout, and a finished workout is not deleted). Weights and reps logged this way count for the next suggestions like any others (5.2, 5.12), because they are sets of that workout.
 
 ### 6.4 Activity log — removed
 Steps, Bollyx, hikes, and mobility are tracked on the Apple Watch. Nothing is logged in this app.
@@ -647,7 +651,7 @@ Steps, Bollyx, hikes, and mobility are tracked on the Apple Watch. Nothing is lo
 DEXA, waist, and body weight are not tracked in this app.
 
 ### 6.6 Exercise history
-- Per exercise: table of past sessions and a chart of top-set weight and working-set volume over time (ramp sets excluded).
+- Per exercise: table of past sessions and a chart of top-set weight and working-set volume over time (ramp sets excluded). Each past session in the table opens that workout for editing (6.3, v1.15).
 - Shows date of last increase, next scheduled increase date (or "off"), and marks each increase on the chart.
 
 ### 6.7 Settings
@@ -708,7 +712,7 @@ Seed data: exercise catalog with cues, starting weights, first-loaded weights, a
 1. **Scaffold + auth + deploy:** sign-in, empty home screen, event sync endpoints, deployed and reachable from phone (see DEPLOYMENT-PLAN.md).
 2. **Event store + seed data:** local outbox, sync, replay into state, catalog/templates/routines bundled in the app.
 3. **Progression engine:** pure functions for Section 5 as cut in v1.13 (starting weights, last-time data, first-loaded weight, scheduled increases) with unit tests covering every example in 5.7 and 5.12 that is not struck.
-4. **Workout logging:** pushup ladder in Workout B, session screen, rest timer, draft safety, swaps, summary, rotation logic, recovery routine guidance cards.
+4. **Workout logging:** pushup ladder in Workout B, session screen, rest timer, draft safety, swaps, summary, rotation logic, recovery routine guidance cards. Reopening a finished workout to correct it (v1.15) follows as a small addition before milestone 5.
 5. **Exercise history, settings, data export, PWA polish.**
 
 ## 11. Acceptance criteria (v1 done when)
@@ -716,6 +720,7 @@ Seed data: exercise catalog with cues, starting weights, first-loaded weights, a
 - I can complete a full gym session (Workout A) on my phone without the app losing data, and the next Workout A shows correct suggested weights per Section 5.
 - On a Tuesday, the home screen offers the recovery routine.
 - Pushups appear in Workout B (no progression suggestions, v1.13).
+- If I finish a workout and find an exercise was not ticked or was logged wrongly, I can reopen that workout from Home or its summary and fix it, and the next suggestions use the corrected numbers (6.3, v1.15).
 - On a new exercise, the starting weight is pre-filled, I can log a different weight, and the next session's suggestion is based on what I actually lifted.
 - An exercise whose weight hasn't gone up in 3 weeks shows an increased, clearly highlighted suggestion labeled "Scheduled" at its next session.
 - Export produces a complete JSON file of my data.
