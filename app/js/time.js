@@ -28,6 +28,49 @@ export function pacificIso(ms) {
   return `${p.year}-${p.month}-${p.day}T${p.hour}:${p.minute}:${p.second}.${millis}${sign}${hh}:${mm}`;
 }
 
+// 1789000000123 -> "2026-09-29": the Pacific calendar day containing ms.
+export const pacificDate = (ms) => pacificIso(ms).slice(0, 10);
+
+// ---- calendar days ("yyyy-mm-dd" strings) ----
+// Day arithmetic works on whole days from the calendar, with no clock or offset in it, so daylight saving cannot
+// move a program week. Used by the progression engine (app/js/engine), which does no date handling of its own.
+
+const DAY_MS = 86400000;
+const DATE_RE = /^(\d{4})-(\d{2})-(\d{2})$/;
+
+// Days since 1970-01-01 for a "yyyy-mm-dd" string; NaN if malformed or impossible (2026-02-30).
+export function dayNumber(date) {
+  const m = typeof date === 'string' ? DATE_RE.exec(date) : null;
+  if (!m) return NaN;
+  const [y, mo, d] = m.slice(1).map(Number);
+  const ms = Date.UTC(y, mo - 1, d);
+  const back = new Date(ms);
+  if (back.getUTCFullYear() !== y || back.getUTCMonth() !== mo - 1 || back.getUTCDate() !== d) return NaN;
+  return ms / DAY_MS;
+}
+
+// Whole days from one calendar day to another (negative if `to` is earlier).
+export function daysBetween(from, to) {
+  const a = dayNumber(from);
+  const b = dayNumber(to);
+  if (Number.isNaN(a) || Number.isNaN(b)) throw new RangeError(`not a yyyy-mm-dd date: ${Number.isNaN(a) ? from : to}`);
+  return b - a;
+}
+
+// "2026-09-28" plus 21 days -> "2026-10-19".
+export function addDays(date, days) {
+  const n = dayNumber(date);
+  if (Number.isNaN(n)) throw new RangeError(`not a yyyy-mm-dd date: ${date}`);
+  return new Date((n + days) * DAY_MS).toISOString().slice(0, 10);
+}
+
+// The Pacific calendar day of an ISO time with any offset ("2026-09-28T11:03:00.000-07:00" -> "2026-09-28");
+// null if the time is malformed.
+export function pacificDateOf(iso) {
+  const ms = parseInstant(iso);
+  return Number.isNaN(ms) ? null : pacificDate(ms);
+}
+
 // ---- parsing and ordering (same rules as lambda/events/registry.mjs; test/time.test.mjs checks parity) ----
 
 const INSTANT_RE = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.(\d{1,3}))?(Z|[+-]\d{2}:\d{2})$/;
