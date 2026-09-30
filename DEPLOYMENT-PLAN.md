@@ -1,6 +1,6 @@
 # Deployment & Implementation Plan (v1)
 
-Companion to `SPEC-strength.md` (v1.16). Covers how v1 is hosted, authenticated, stored, and built. The spec says *what* the app does; this says *how it runs*.
+Companion to `SPEC-strength.md` (v1.17). Covers how v1 is hosted, authenticated, stored, and built. The spec says *what* the app does; this says *how it runs*.
 
 ## 1. Goals and constraints
 - Keep the front end a **static site with plain HTML + JS (ES modules, no build step)**.
@@ -133,7 +133,7 @@ There is one stack, **`strength-prod`**, in `us-west-2`; a dev stack is not need
 ```
 index.html                # FROZEN v0.2 viewer, served by GitHub Pages (bug fixes only)
 app/                      # v1, deployed to S3 + CloudFront
-  index.html, manifest.webmanifest, css/app.css, icons/     # sw.js arrives in Phase E
+  index.html, manifest.webmanifest, sw.js, css/app.css, icons/     # sw.js is Phase E (section 15e)
   js/
     config.js ids.js time.js main.js    # shared: deployment values, ULIDs and the hybrid clock, Pacific time and ts ordering, page start-up
     store/                # local event log and sync (Phase B, built)
@@ -146,7 +146,7 @@ app/                      # v1, deployed to S3 + CloudFront
     logging/              # pure workout-logging logic, no DOM/storage/clock (Phase D, built; section 15)
                           # rotation day-view input rows rest-timer draft session-events session-view summary text actions
     ui/                   # auth-screen sync-panel format (Phase B); dom router screens app-header day-screen dial theme
-                          # summary-screen (Phase D, 15b); history and settings screens arrive in Phase E
+                          # summary-screen (Phase D, 15b); history-screen, exercise-screen, settings-screen, chart (Phase E, 15e)
     theme-boot.js         # plain script in the head: applies the chosen theme before the first paint
     engine/               # pure progression functions (spec Section 5), no DOM (Phase C, built; section 14)
                           # calendar config history load suggest session index
@@ -172,11 +172,11 @@ Tests run with Node's built-in runner (`node --test`), so there is still no bund
 | C. Engine | 3 | Pure functions for Section 5 with tests for every 5.7 and 5.12 example (design: section 14) | All example tests pass |
 | D. Logging | 4 | Session screen, ramp sets, calibration, rest timer, draft safety, swaps, rotation, recovery guidance cards | A full Workout A is logged offline and syncs later |
 | D2. Edit a finished workout | 4 | Reopen a finished workout from Home or its summary and tick, edit or undo exercises in it (section 15c, spec v1.15) | A Workout B finished with the pushups unticked can be fixed afterwards, and the next suggestions use it |
-| E. History and polish | 5 | Exercise history, settings, export, deload controls, PWA manifest and service worker | Spec Section 11 acceptance criteria all pass |
+| E. History and polish | 5 | History (by exercise and by date), the sync screen in Settings, an export script, the service worker (design: section 15e) | Spec Section 11 acceptance criteria all pass |
 
 Phase C can start in parallel with A and B, since the engine has no dependencies.
 
-**Status (2026-09-30):** Phases 0 and A to D are built, tested (493 tests) and merged to `main`. The site at `https://strength.logbook.me` runs Phases B, C and D (deployed together with `scripts/deploy-app.sh`; the Lambda and `infra/` have not changed since Phase A). The owner deployed it, tried it and reports that it works. The spec is v1.16 (v1.15 edit a finished workout, v1.16 no back pain rating). Found after that: a finished workout is locked, so a tick missed before Finish (pushups in Workout B on 2026-09-30) cannot be added. Phase D2 (section 15c, spec v1.15, 504 tests) fixes that: merged to `main` and deployed on 2026-09-30 with `scripts/deploy-app.sh` (static site only). It went in before Phase E. Phase E (exercise history, settings, export, PWA polish and the service worker) is not started; its history screen will link each past session to the same edit view.
+**Status (2026-09-30):** Phases 0 and A to D are built, tested (493 tests) and merged to `main`. The site at `https://strength.logbook.me` runs Phases B, C and D (deployed together with `scripts/deploy-app.sh`; the Lambda and `infra/` have not changed since Phase A). The owner deployed it, tried it and reports that it works. The spec is v1.16 (v1.15 edit a finished workout, v1.16 no back pain rating). Found after that: a finished workout is locked, so a tick missed before Finish (pushups in Workout B on 2026-09-30) cannot be added. Phase D2 (section 15c, spec v1.15, 504 tests) fixes that: merged to `main` and deployed on 2026-09-30 with `scripts/deploy-app.sh` (static site only). It went in before Phase E. Phase E (scope cut after mock-ups, spec v1.17: History by exercise and by date, sync-only Settings, an export script, the service worker; design in section 15e) is starting on branch `v1-phase-e`.
 
 ## 10. Risks and mitigations
 | Risk | Mitigation |
@@ -203,7 +203,8 @@ Phase C can start in parallel with A and B, since the engine has no dependencies
 - The exercise catalog is fixed; no custom exercise events.
 - Spec v1.14 (owner's calls after trying the app): full set counts in weeks 1-4; leg press, hip thrust and reverse lunge pre-fill their first-loaded weight with no history; no RIR; Home is the v0.2 viewer's page (slim header, day pills, swipe cards with superset colours); logging is one tick per exercise with barrel dials in 2.5 lb notches, reps at the recommendation (sections 15b and 15b-2).
 - The app is redeployed with `scripts/deploy-app.sh` (static site only).
-- A finished workout can be reopened and corrected (spec v1.15, section 15c). It is a Phase D addition (D2), not part of Phase E; Phase E's history only adds another way in.
+- A finished workout can be reopened and corrected (spec v1.15, section 15c). It is a Phase D addition (D2), not part of Phase E; Phase E's History by date is now the way in (section 15e).
+- Phase E scope (spec v1.17, from mock-ups): History by exercise and by date, Settings = sync only, export as a script, no install-help screen, no settings screens (defaults stay; the engine still honours `setting.changed` events), service worker kept.
 
 ## 12. Open decisions
 1. **Stronger sign-in later:** replace the 6-digit PIN with a longer password or passkey before the app holds anything beyond personal test data or is shared with anyone else.
@@ -485,3 +486,40 @@ The owner asked for the back pain rating to go from the header "and anywhere els
 **As built.** 504 tests pass (503 after the removals, plus one for a session logged before v1.16). Checked in the browser pane at 375 px wide (scratch page, memory store): the header panel holds only the day pills and sign-out, the finish card only notes and Save and finish, and the summary only sets, duration and what was done; no "back pain" text anywhere on the page.
 
 Merged to `main` and deployed on 2026-09-30 with `scripts/deploy-app.sh` (static site only).
+
+## 15e. Phase E design (History, sync-only Settings, export script, service worker; spec v1.17)
+Spec 6.2, 6.6, 6.7 and 9 are the rulebook; this section fixes what they leave to the implementation. Mock-ups were agreed first (header icons, History by exercise and by date, Settings = sync). Branch `v1-phase-e`. Nothing under `lambda/` or `infra/` changes: no new events. No change to the engine.
+
+### Screens and routes
+| Route | Screen |
+|---|---|
+| `#/history` | **History, by exercise.** Switch at the top (By exercise / By date). Rows under Workout A, B, C. |
+| `#/history/date` | **History, by date.** Finished workouts newest first, grouped by week and month, each with Edit. |
+| `#/history/exercise/<id>` | **Exercise detail:** stats, chart (Top set / Volume), sessions table. |
+| `#/settings` | **Settings:** the sync panel (status, last sync, waiting, counts, storage, set-aside list, recent events, Sync now, Add test note). |
+| `#/workout/<id>` | The edit view of a finished workout (15c). Its "Back" link now goes to `#/history/date`. |
+| `#/summary/<id>`, `#/` | As before. Unknown routes are Home. |
+
+**Header.** `ui/app-header.js` adds two icon buttons, History and Settings, after the day pills and before sign-out, behind a thin divider, on every screen (`handlers.onNavigate(hash)`; the screens set the status line: "History", "Settings", the exercise name). The pills row wraps on a narrow phone. **Home** loses the "Finished workouts" card (15c): `finishedRecent` and `FINISHED_DAYS` are deleted from `logging/day-view.js`, with their tests.
+
+### Pure module `logging/history-view.js` (no DOM, tested with `node --test`)
+- `historyByExercise(state, today)` -> `[{ templateCode, label, rows: [{ exerciseId, name, superset, lastText, lastDate, due }] }]`. Rows are each slot's current exercise (swaps included, via the engine's `exerciseForSlot`), then any other exercise logged in a session of that template. `lastText` is "Mon, Sep 28 · 25 lbs × 10, 10, 9" (from `text.js`) or "Not logged yet"; `due` is `suggestExercise(...).increased`.
+- `exerciseDetail(state, exerciseId, today)` -> `{ exerciseId, name, kind: 'weight' | 'level' | 'distance' | 'done', stats: { lastIncreaseDate, nextScheduledDate, scheduledText }, points: [{ sessionId, date, templateCode, sets, top, volume, increase }], rows: newest first with `setsText` }`. A session counts when it is finished and has working sets of the exercise (not ramp-up, not `completed: false`); holds (no reps, no distance) count as "done". `top` is the base load (`weight`), the highest level (`level`) or the longest distance (`distance`); `volume` is the sum of (weight, or 1 when there is none) x (reps, or distance); `increase` is true when `top` is above the previous session's (the engine's definition, 5.12). `scheduledText`: "Off" when the exercise's scheduled increase is off, "Not used" for bodyweight-based exercises, else the date.
+- `historyByDate(state, today)` -> `[{ label: 'This week' | 'Last week' | 'September' | ..., rows: [{ sessionId, templateCode, dateText, exercisesDone, exerciseCount, missing, sets, durationText }] }]`. Finished sessions, newest first by instant. Weeks start on Monday (Pacific dates, `time.js`); months carry the year only when it is not the current one. `missing = max(0, slots of the template - exercises with working sets)`.
+
+### UI files (`app/js/ui/`)
+`history-screen.js` (switch plus both lists), `exercise-screen.js` (stats, chart switch, table), `settings-screen.js` (the heading; the sync panel element is shown under it), `chart.js` (inline SVG line chart, no library: axis labels, dots, a green dashed line and label at each increase, `role="img"` with an `aria-label` that says the range). `ui/screens.js` mounts them by route; `ui/router.js` parses `history` (`view`, optional exercise id) and `settings`.
+
+**Settings and the sync panel.** `index.html`'s `#device` block becomes a plain card (no `<details>`), shown only on `#/settings`. Its Sign out button goes (the header has it); the rest stays: status, waiting, events, replayed state, storage, cursor, last round trip, set-aside list, events list, Sync now and Add test note.
+
+### Export script
+`scripts/export-data.mjs <email> [out-dir]` (out-dir defaults to `private/export/`, git-ignored): asks for the PIN (hidden, as `post-events.mjs`), signs in, pages through `GET /events` until `more` is false, and writes `strength-events-<date>.json` (`{ exportedAt, count, events }`, as stored) and `strength-sets-<date>.csv` (one row per logged working set of a finished or open session, after replay, so edits and deletes are applied). The pure part is `scripts/export-lib.mjs` (`eventsToCsv(events)`), tested over `makeLog` events. CSV columns: `date, workout, programWeek, phase, sessionId, exerciseId, exercise, setNumber, weightLbs, levelNumber, reps, distanceM, suggestedWeightLbs, suggestionSource, setId`. Read-only: nothing is sent to the API but the two GETs. BUILD.md gets a step for it.
+
+### Service worker (`app/sw.js`)
+Offline load, not offline sync (sync is unchanged). Install caches the shell (index, css, manifest, icons, every module under `js/`; the list is in `sw.js`, and a test fails if it differs from the files in `app/`). Fetch for same-origin GETs is **network first, cache fallback**: online you always get the deployed files (so `deploy-app.sh` still takes effect on the next load), offline you get what was cached; each successful response refreshes the cache. Cross-origin requests (Cognito, the API, the GIF hosts) are never handled. `skipWaiting` and `clients.claim`, and old caches are deleted on activate. `main.js` registers it after load (skipped without `navigator.serviceWorker`). CSP gets `worker-src 'self'`. A bad worker cannot strand the page while online, since the network answer wins.
+
+### Tests
+`history-view` (by exercise rows and due badge, detail kinds weight, level, distance and done, increase marks, volume, by-date grouping across a week and a month boundary, missing counts, empty states), `router` (history and settings routes), `app-header` has no test (DOM) but the screens are checked in the browser pane at phone width, `export-lib` (CSV escaping, edits and deletes applied, order), `sw` (shell list matches `app/`). The Home tests lose the finished-workouts cases.
+
+### Spec questions to raise, not decide
+*21. Volume for a carry* is weight x distance (so it grows with both). *22. Holds* show "done" rows and no chart. *23. Months* only appear for sessions older than last week. *24. Nothing in Settings changes a setting*; the old keys stay in the registry.
