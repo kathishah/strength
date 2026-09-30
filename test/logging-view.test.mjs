@@ -306,9 +306,9 @@ describe('session view', () => {
     assert.equal(card(view(open(makeLog(), '2026-10-05', 'B')), 'back-extension-45').cues.notes.startsWith('Start bodyweight only'), true);
   });
 
-  test('draft values and the rest timer show up in the view; notes and back pain fall back to the log', () => {
+  test('draft values and the rest timer show up in the view; notes fall back to the log', () => {
     const log = makeLog();
-    log.session('2026-10-05', 'A', [], { finished: false, id: 'sess_open', backPainBefore: 3 });
+    log.session('2026-10-05', 'A', [], { finished: false, id: 'sess_open' });
     let d = setRowField(emptyDraft('sess_open'), 'goblet-squat', 1, 'weightLbs', 25);
     d = { ...startRest(d, NOW - 30_000), notes: 'typing…' };
     const v = view(log, d);
@@ -316,8 +316,7 @@ describe('session view', () => {
     assert.equal(v.rest.remainingSec, 60);
     assert.equal(v.notes, 'typing…');
     assert.equal(v.savedNotes, '');
-    assert.equal(v.backPainBefore, 3);
-    assert.equal(v.backPainAfter, null);
+    assert.equal(Object.hasOwn(v, 'backPainBefore') || Object.hasOwn(v, 'backPainAfter'), false, 'no back pain in the view (v1.16)');
     assert.equal(view(log).rest, null);
   });
 });
@@ -333,6 +332,16 @@ describe('summary', () => {
     assert.deepEqual(s.exercises.map((e) => [e.name, e.count, e.text]), [
       ['Goblet Squat', 2, '25 × 12, 12'], ['Dead Bug', 2, '0 × 8, 8'], ['Farmer Carry', 1, '35 lbs × 40 m'],
     ]);
+  });
+
+  test('a session logged before v1.16 with back pain ratings still replays and summarises, and the ratings are not shown', () => {
+    const log = makeLog();
+    log.session('2026-09-28', 'A', [lift('goblet-squat', 25, [12])], { id: 'sess_old', backPainBefore: 3 });
+    const state = log.state();
+    assert.equal(state.sessions.sess_old.backPainBefore, 3, 'the log keeps it');
+    const s = summaryView(state, 'sess_old');
+    assert.equal(s.totalSets, 1);
+    assert.equal(Object.hasOwn(s, 'backPainBefore') || Object.hasOwn(s, 'backPainAfter'), false);
   });
 
   test('unfinished or unknown sessions have no summary', () => {

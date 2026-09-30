@@ -7,7 +7,6 @@ export function mountSummary(container, ctx, sessionId) {
   function render() {
     ctx.header.setStatus('Workout summary');
     ctx.header.setDays([], null);
-    ctx.header.showBackPain(false, null);
     const s = summaryView(ctx.events.state, sessionId);
     if (!s) {
       fill(container,
@@ -21,9 +20,7 @@ export function mountSummary(container, ctx, sessionId) {
       h('p', { class: 'muted', text: `${s.label} · ${s.dateText}` }),
       h('dl', { class: 'stats summary-stats' },
         h('dt', { text: 'Working sets' }), h('dd', { text: String(s.totalSets) }),
-        h('dt', { text: 'Duration' }), h('dd', { text: s.durationText ?? 'unknown' }),
-        s.backPainBefore !== null ? [h('dt', { text: 'Back pain before' }), h('dd', { text: `${s.backPainBefore} / 10` })] : null,
-        s.backPainAfter !== null ? [h('dt', { text: 'Back pain after' }), h('dd', { text: `${s.backPainAfter} / 10` })] : null),
+        h('dt', { text: 'Duration' }), h('dd', { text: s.durationText ?? 'unknown' })),
       s.callouts.length
         ? h('section', { class: 'card callouts', 'aria-labelledby': 'callouts-title' },
           h('h3', { id: 'callouts-title', text: 'Weight increase next time' }),

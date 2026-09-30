@@ -1,8 +1,10 @@
-# Recomp Tracker — Product Spec (v1.15)
+# Recomp Tracker — Product Spec (v1.16)
 
 A personal, mobile-first web app for logging gym workouts in a body recomposition program (build lean mass, reduce visceral fat, strengthen the back) and telling the user what to lift next. Used at the gym on a phone and at home on a desktop, with data synced across devices. Activity tracking (steps, Bollyx, hikes, mobility) and body metrics (DEXA, waist, weight) are out of scope: activity is tracked on an Apple Watch, and body metrics are not tracked in this app.
 
 ## Changelog
+- **v1.16**
+  - Back pain rating removed from the app: not asked before or after a workout, not on the header, the finish card or the summary. The `backPainBefore` and `backPainAfter` fields stay in the data model, unused, so events already logged stay valid (6.2, 6.3, 8).
 - **v1.15**
   - A finished workout can be reopened and corrected (6.2, 6.3): a missed tick, a wrong weight or rep count. Home lists the workouts finished in the last 7 days, and the summary screen has an edit button. Found when a Workout B was finished with the pushups not ticked and there was no way back to them.
 - **v1.14**
@@ -562,7 +564,7 @@ Not built; there are no deload weeks, banners or controls. The original text is 
 
 ### ~~5.9 Back pain gate~~ — removed (v1.13)
 
-Not built. Back pain before/after stay as optional session fields (6.3) and change no suggestion. The original text is kept for reference.
+Not built. The back pain rating is gone from the app altogether (v1.16). The original text is kept for reference.
 
 - ~~At session start, prompt for back pain before (0–10, one tap, skippable).~~
 - ~~Exercises flagged `loadsBack = true` (seed: goblet squat, dumbbell Romanian deadlift, trap bar deadlift, 45° back extension, farmer carry): if back pain before is **above 3**, the suggestion never increases load for that session; it stays at the base load (reductions still apply). Show a note on those exercises offering the back-friendly swap (4.5).~~
@@ -623,7 +625,7 @@ Test cases:
 - Data syncs across phone and desktop via the backend.
 
 ### 6.2 Home / Today screen
-- Home is the v0.2 viewer's page (v1.14, 0.B.1): a slim header (one status line such as "Wed · Workout B · 0/6 done", which opens to the day pills Monday to Sunday, the save state, the back pain rating for the workout about to start, and sign out; a dot for whether the work is saved; a theme button) over the day's swipe carousel of cards. There is no Start button: the next workout (A/B/C by rotation) is shown as cards, and it starts when the first exercise is marked done. The no-consecutive-days warning shows above the cards if applicable.
+- Home is the v0.2 viewer's page (v1.14, 0.B.1): a slim header (one status line such as "Wed · Workout B · 0/6 done", which opens to the day pills Monday to Sunday, the save state, and sign out; a dot for whether the work is saved; a theme button) over the day's swipe carousel of cards. There is no Start button: the next workout (A/B/C by rotation) is shown as cards, and it starts when the first exercise is marked done. The no-consecutive-days warning shows above the cards if applicable.
 - On Tuesdays and Thursdays the cards are the recovery routine (4.6), with a last card to show the workout instead (a workout is never blocked). Picking a day pill shows that day's cards.
 - **Finished workouts (v1.15).** Below the cards, a "Finished workouts" card lists the workouts finished in the last 7 days (Pacific dates), newest first: workout, day, exercises done of the total, and an **Edit** button that opens the workout as in 6.3. It is hidden when there are none. A finished workout never changes which workout is next (rotation, 4.1).
 - ~~Deload banner during a deload week (5.8), and the Start deload / Postpone controls.~~
@@ -635,14 +637,14 @@ Test cases:
 - For suspension exercises, the weight field is replaced by a level stepper (1–5) with the exercise's level description shown on tap.
 - **Increase highlight:** when the suggested weight is higher than the previous session's base load, the weight field and exercise header use a distinct accent color and bold weight, with an up-arrow badge and text such as "↑ +5 lbs from 25 · Scheduled". Meaning must not rely on color alone (arrow + text always shown). The highlight stays for that session only.
 - ~~Calibration prompt after each working set during an exercise's first 2 sessions (5.6).~~
-- Back pain before is an optional field asked at session start (one tap, skippable); it changes no suggestion.
+- ~~Back pain before is an optional field asked at session start (one tap, skippable); it changes no suggestion.~~ Removed (v1.16).
 - ~~Deload banner and halved set counts during deload weeks (5.8).~~
 - Rest timer (default 90 s, adjustable) that starts when an exercise is marked done.
 - Swap exercise (Section 4.5). Tap exercise name for cues.
-- Optional session fields: back pain rating 0–10 (before and after), notes.
+- Optional session field: notes. (~~Back pain rating 0–10, before and after~~: removed, v1.16.)
 - **Draft safety:** an in-progress session must survive a page refresh, app switch, or dropped gym Wi-Fi. Persist the draft locally and save to the backend on finish (and opportunistically during the session).
 - Finish → summary screen showing total working sets, session duration, and any "weight increase next time" callouts. The summary has an **Edit workout** button (6.3, v1.15).
-- **Editing a finished workout (v1.15).** A finished workout can be reopened from Home (6.2) or its summary. It shows the same cards as during the workout, for that workout's day: the same exercises (swaps as they were), what was ticked with its summary line and Edit and Undo, and the rest with their dials at what was suggested for that day. Ticking an exercise logs its sets into the workout; Edit and Undo change or remove the logged sets. The workout keeps its date, start and finish times, back pain and notes; the rest timer does not run; swapping an exercise, Finish and Discard are not offered (a swap is for the next workout, and a finished workout is not deleted). Weights and reps logged this way count for the next suggestions like any others (5.2, 5.12), because they are sets of that workout.
+- **Editing a finished workout (v1.15).** A finished workout can be reopened from Home (6.2) or its summary. It shows the same cards as during the workout, for that workout's day: the same exercises (swaps as they were), what was ticked with its summary line and Edit and Undo, and the rest with their dials at what was suggested for that day. Ticking an exercise logs its sets into the workout; Edit and Undo change or remove the logged sets. The workout keeps its date, start and finish times and notes; the rest timer does not run; swapping an exercise, Finish and Discard are not offered (a swap is for the next workout, and a finished workout is not deleted). Weights and reps logged this way count for the next suggestions like any others (5.2, 5.12), because they are sets of that workout.
 
 ### 6.4 Activity log — removed
 Steps, Bollyx, hikes, and mobility are tracked on the Apple Watch. Nothing is logged in this app.
@@ -685,7 +687,7 @@ All records belong to an owner (the signed-in user). Storage is an append-only e
 - **SlotOverride**: templateSlotId, exerciseId (the user's persistent swap)
 - **Routine**: code (SITTING_RECOVERY), name, rounds
 - **RoutineItem**: routineId, order, exerciseId, prescription (text), sets/holds, reps, holdSeconds, perSide
-- **WorkoutSession**: date, templateCode, startedAt, finishedAt, phase, programWeek, isDeload, backPainBefore, backPainAfter, notes
+- **WorkoutSession**: date, templateCode, startedAt, finishedAt, phase, programWeek, isDeload, backPainBefore, backPainAfter, notes (v1.16: the two back pain fields are no longer written by the app; old values stay valid in the log)
 - **ExerciseLevel** (for bodyweight_ladder): exerciseId, level, name, repMin, repMax, cue
 - **SetLog**: sessionId, exerciseId, levelNumber (nullable; ladder and suspension exercises), suggestedLevel (nullable), setNumber, isRampUp, isCalibration, suggestedWeightLbs (nullable), suggestionSource (starting | hold | scheduled | null in v1.13; the registry still accepts calibration, earned, reduction, deload and gated), weightLbs (nullable; actual, drives progression), reps (nullable), distanceM (nullable, carries), rir (nullable; not asked in the UI since v1.14), calibrationFeel (too_easy | about_right | too_hard | null), completed
 - ~~**DeloadWeek**: programWeek, source (scheduled | manual), postponedFromWeek (nullable)~~ (removed, v1.13; the event types stay in the registry, unused)

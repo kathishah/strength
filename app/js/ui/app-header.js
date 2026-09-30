@@ -1,13 +1,13 @@
 // The header of the v0.2 viewer (spec 0.B.1): collapsed it is one line (the status, for example "Wed · Workout B · 0/6 done", with a
-// chevron, a dot for whether the work is saved, and the theme button); tapping the status opens the day pills, the save state, the back
-// pain rating for the workout about to start, and the sign-out icon after Sunday. Picking a day or scrolling down closes it again.
+// chevron, a dot for whether the work is saved, and the theme button); tapping the status opens the day pills, the save state and the
+// sign-out icon after Sunday. Picking a day or scrolling down closes it again.
 
-import { armedIconButton, h, painChips, svgIcon } from './dom.js';
+import { armedIconButton, h, svgIcon } from './dom.js';
 import { THEME_ICONS, THEME_NAMES, cycleTheme, currentTheme } from './theme.js';
 
 const LOGOUT_PATHS = ['M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4', 'M16 17l5-5-5-5', 'M21 12H9'];
 
-// handlers: { onPickDay(weekday), onSignOut(), onBackPain(value) }. Returns the controls the screens use.
+// handlers: { onPickDay(weekday), onSignOut() }. Returns the controls the screens use.
 export function mountHeader({ root }, handlers) {
   let expanded = false;
   let lastY = 0;
@@ -21,9 +21,7 @@ export function mountHeader({ root }, handlers) {
   const theme = h('button', { type: 'button', class: 'theme-btn', onclick() { cycleTheme(); paintTheme(); } });
   const pills = h('div', { class: 'pills', role: 'group', 'aria-label': 'Day' });
   const saveLine = h('p', { class: 'save-line small' });
-  const pain = painChips({ label: 'Back pain now', value: null, onChange: (v) => handlers.onBackPain(v) });
-  const painBox = h('div', { class: 'bp', hidden: true }, h('p', { class: 'field-label small', text: 'Back pain right now (optional)' }), pain.el);
-  const panel = h('div', { class: 'hdr-panel', id: 'hdr-panel', hidden: true }, pills, saveLine, painBox);
+  const panel = h('div', { class: 'hdr-panel', id: 'hdr-panel', hidden: true }, pills, saveLine);
   root.replaceChildren(h('div', { class: 'hdr-bar' }, status, chip, theme), panel);
 
   function paintTheme() {
@@ -70,10 +68,6 @@ export function mountHeader({ root }, handlers) {
       chip.setAttribute('aria-label', sentence);
       count.textContent = pending > 0 ? String(pending) : '';
       saveLine.textContent = sentence;
-    },
-    showBackPain(visible, value) {
-      painBox.hidden = !visible;
-      pain.set(value);
     },
     show(visible) { root.hidden = !visible; if (!visible) setExpanded(false); },
   };

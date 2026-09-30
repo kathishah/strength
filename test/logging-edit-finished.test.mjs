@@ -19,14 +19,14 @@ async function bWithoutPushups() {
   const w = await makeWorld();
   await doWorkout(w);
   w.set('2026-09-30T11:00:00-07:00');
-  const id = await w.actions.startSession({ backPainBefore: 2 });
+  const id = await w.actions.startSession();
   for (const c of w.view(id).cards) {
     if (c.exerciseId === 'pushup') continue;
     w.advance(120);
     await w.actions.saveExercise(id, { exerciseId: c.exerciseId, rows: c.rows, suggestion: c.suggestion });
   }
   w.advance(60);
-  await w.actions.finish(id, { backPainAfter: 1, notes: 'Felt fine.' });
+  await w.actions.finish(id, { notes: 'Felt fine.' });
   return { w, id };
 }
 
@@ -44,7 +44,7 @@ describe('ticking, editing and undoing in a finished workout', () => {
     const logged = setsOf(w, id, 'pushup');
     assert.equal(logged.length, 3);
     assert.ok(logged.every((s) => s.sessionId === id && s.completed === true && s.levelNumber === 1));
-    assert.deepEqual(w.state.sessions[id], before, 'date, start and finish times, back pain and notes are as they were');
+    assert.deepEqual(w.state.sessions[id], before, 'date, start and finish times and notes are as they were');
     assert.equal(nextTemplate(w.state), 'C', 'rotation does not move');
     assert.equal(edit(w, id).exercisesDone, 6);
     assert.equal(cardOf(edit(w, id), 'pushup').mode, 'done');

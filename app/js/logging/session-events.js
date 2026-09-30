@@ -7,7 +7,7 @@ import { loggedDefaults } from '../engine/index.js';
 const present = (x) => x !== null && x !== undefined;
 
 // session.started. calendar: planSession(...).calendar.
-export function sessionStarted({ templateCode, nowMs, calendar, backPainBefore = null }) {
+export function sessionStarted({ templateCode, nowMs, calendar }) {
   const payload = {
     templateCode,
     startedAt: pacificIso(nowMs),
@@ -15,7 +15,6 @@ export function sessionStarted({ templateCode, nowMs, calendar, backPainBefore =
     phase: calendar.phase,
     isDeload: false,
   };
-  if (present(backPainBefore)) payload.backPainBefore = backPainBefore;
   return { type: 'session.started', payload };
 }
 
@@ -45,11 +44,7 @@ export const sessionDeleted = () => ({ type: 'entity.deleted', payload: { entity
 
 export const sessionNotes = (text) => ({ type: 'session.notes', payload: { notes: text } });
 
-export function sessionFinished({ nowMs, backPainAfter = null }) {
-  const payload = { finishedAt: pacificIso(nowMs) };
-  if (present(backPainAfter)) payload.backPainAfter = backPainAfter;
-  return { type: 'session.finished', payload };
-}
+export const sessionFinished = ({ nowMs }) => ({ type: 'session.finished', payload: { finishedAt: pacificIso(nowMs) } });
 
 // swap.set, or swap.cleared when the default exercise is chosen again.
 export function swapChanged({ templateCode, slotNumber, exerciseId, defaultExerciseId }) {
