@@ -272,7 +272,7 @@ export function mountSession(container, ctx, sessionId) {
         h('button', {
           type: 'button', class: 'btn primary grow',
           onclick: () => guard(async () => {
-            await ctx.actions.finish(sessionId, { backPainAfter: ctx.actions.draft(sessionId).backPainAfter ?? view.backPainAfter, notes: notes.value });
+            await ctx.actions.finish(sessionId, { backPainAfter: ctx.actions.draft(sessionId).backPainAfter ?? null, notes: notes.value });
             ctx.navigate(`#/summary/${sessionId}`);
           }),
         }, 'Save and finish'),

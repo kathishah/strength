@@ -24,6 +24,7 @@ export function homeView(state, today) {
   if (inProgress.length === 0) {
     const templateCode = nextTemplate(state);
     const plan = planSession(state, { today, templateCode });
+    const warning = consecutiveDayWarning(state, today);
     next = {
       templateCode,
       label: WORKOUTS[templateCode].label,
@@ -31,8 +32,8 @@ export function homeView(state, today) {
       phase: plan.calendar.phase,
       phaseText: phaseText(plan.calendar.phase, plan.calendar.targetRir),
       beforeStart: plan.calendar.beforeStart,
-      warning: consecutiveDayWarning(state, today),
-      warningText: warningText(consecutiveDayWarning(state, today)),
+      warning,
+      warningText: warningText(warning),
       exercises: plan.exercises.map((e) => ({
         slot: e.slot,
         superset: e.superset,

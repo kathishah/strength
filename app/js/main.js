@@ -30,6 +30,8 @@ function notify(text, kind = 'info') {
   el.notice.textContent = text;
   el.notice.className = kind === 'info' ? 'notice' : `notice ${kind}`;
   el.notice.hidden = !text;
+  // The notice sits at the top of the page; an error from a button far down the session screen has to be seen.
+  if (text && kind === 'error') el.notice.scrollIntoView?.({ block: 'nearest' });
 }
 
 function dropSpikeCache() {
@@ -65,7 +67,10 @@ async function start() {
   let screensStarted = false;
   const screens = mountScreens({
     root: el.screen, events, actions, notify,
-    onRoute(route) { el.device.hidden = route.name !== 'home'; },
+    onRoute(route) {
+      el.device.hidden = route.name !== 'home';
+      notify('');
+    },
   });
 
   // Whether the person's work is safe, in the header, on every screen.

@@ -1,4 +1,4 @@
-# Build and deploy (v1, through Phase B)
+# Build and deploy (v1, through Phase D)
 
 Everything here is run by you, from the repo root. Nothing in this repo deploys itself.
 Stack region is `us-west-2`; the CloudFront certificate must be in `us-east-1` (it already is).
@@ -145,7 +145,15 @@ aws cloudfront create-invalidation --distribution-id "$DIST_ID" --paths '/*'
 ```
 
 Then open `SiteUrl` and sign in. The page syncs on open.
+For the Phase D check (workout logging), see the list after this paragraph. The Phase B two-device check below still works: the sync panel is under **Sync and this device** at the bottom of Home.
 For the Phase B check, use two devices (say the desktop and the phone, ideally the installed home-screen app): press **Add test note** on one, and within a few seconds it shows on that device as uploaded; open the app on the other (or press **Sync now**) and the same note appears there. Turn on airplane mode, add a note, and it stays in **Waiting to upload** until you are back online. To install on the iPhone: Share, Add to Home Screen. **Last round trip** shows the cold-start time.
+Phase D check, on the installed phone app (airplane mode is the real test):
+1. Home shows the next workout (B after the loaded Workout A), a recovery card first on Tuesday and Thursday, and a warning if you did a workout yesterday.
+2. Pick a back pain number if you like, tap **Start**, set a weight on set 1 (the later sets follow), type reps, tap **Done**. The rest timer runs; lock the screen and unlock it and it is still right.
+3. Swipe the app away and reopen it in the middle of the workout: Home offers **Resume** and the sets you logged and the numbers you typed are back.
+4. Turn on airplane mode, log a whole workout, **Finish**. The header says how many events are saved on this device; turn the network back on and it changes to **All saved** within a few seconds. Open the desktop: the workout is there.
+5. The **Recovery routine** page opens from Home (its demo images need a connection).
+
 The first start after this update discards the Phase A spike's `localStorage` copy of the events (it was only a cache) and downloads them again into IndexedDB.
 
 ## 8. Load Monday's workout (optional, once the API works)

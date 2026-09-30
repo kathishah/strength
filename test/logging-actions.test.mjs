@@ -412,3 +412,21 @@ describe('the Phase D done-when: a full Workout A is logged offline and syncs la
     assert.equal(nextTemplate(onDesktop), 'B');
   });
 });
+
+describe('back pain after', () => {
+  test('a rating that was chosen and then cleared is not saved; the one left in the draft is', async () => {
+    const w = await makeWorld();
+    const id = await doWorkout(w, { finish: false });
+    w.actions.setBackPainAfter(id, 4);
+    w.actions.setBackPainAfter(id, null); // tapped again to clear
+    assert.equal(w.view(id).backPainAfter, null);
+    await w.actions.finish(id, { backPainAfter: w.actions.draft(id).backPainAfter ?? null });
+    assert.equal(Object.hasOwn(w.state.sessions[id], 'backPainAfter'), false);
+
+    const id2 = await doWorkout(w, { finish: false });
+    w.actions.setBackPainAfter(id2, 0);
+    await w.actions.finish(id2, { backPainAfter: w.actions.draft(id2).backPainAfter ?? null });
+    assert.equal(w.state.sessions[id2].backPainAfter, 0, '0 out of 10 is a rating, not "skipped"');
+    w.assertValid();
+  });
+});
