@@ -1,5 +1,5 @@
-// The signed-in screen for now: what is stored on this device, what is waiting to upload, and buttons to
-// write a test note and sync. Phase C to E replace this with Home, the session screen and history.
+// The sync panel of the Settings screen (spec 6.7): what is stored on this device, what is waiting to upload, and buttons to
+// write a test note and sync.
 
 import { describeEvent, describeRoundTrip, describeState, describeSync, timeOfDay } from './format.js';
 
@@ -19,10 +19,10 @@ function row(kindText, metaText) {
   return li;
 }
 
-// handlers: { onAddNote, onSync, onSignOut }. Returns { render }, which also runs on every change.
+// handlers: { onAddNote, onSync }. Returns { render }, which also runs on every change.
 export function mountSyncPanel({ events, sync }, handlers) {
   const el = {
-    addNote: $('note-button'), sync: $('sync-button'), signOut: $('signout-button'),
+    addNote: $('note-button'), sync: $('sync-button'),
     syncState: $('sync-state'), pending: $('pending'), count: $('count'), stateSummary: $('state-summary'),
     storage: $('storage'), cursor: $('cursor'), rtt: $('rtt'),
     rejected: $('rejected'), rejectedList: $('rejected-list'),
@@ -30,7 +30,6 @@ export function mountSyncPanel({ events, sync }, handlers) {
   };
   el.addNote.addEventListener('click', handlers.onAddNote);
   el.sync.addEventListener('click', handlers.onSync);
-  el.signOut.addEventListener('click', handlers.onSignOut);
 
   function render() {
     const status = sync.status();

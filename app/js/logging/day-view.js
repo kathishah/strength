@@ -5,15 +5,13 @@
 // the first exercise is marked done (actions.saveExercise), so until then the cards are a preview with the day's suggestions.
 
 import { EXERCISES, RECOVERY, RECOVERY_LABEL } from '../seed/index.js';
-import { addDays, pacificDate, parseInstant, weekdayOf } from '../time.js';
-import { emptyDraft } from './draft.js';
+import { pacificDate, parseInstant, weekdayOf } from '../time.js';
 import { buildView } from './session-view.js';
 import { consecutiveDayWarning, dayKind, inProgressSessions, listSessions, nextTemplate } from './rotation.js';
 import { formatDay, formatTime, warningText } from './text.js';
 import { WORKOUTS } from '../seed/index.js';
 
 export const PENDING = 'pending'; // the draft's id before the session exists
-export const FINISHED_DAYS = 7; // "Finished workouts" on Home: today and the six days before (spec 6.2)
 
 const WEEK = [1, 2, 3, 4, 5, 6, 0]; // Monday first, as in the viewer
 const NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -58,15 +56,6 @@ const viewOfFinished = (state, s, draft, nowMs) => buildView(
   stateBefore(state, s.startedMs), { sessionId: s.id, session: state.sessions[s.id], templateCode: s.templateCode, date: s.date, startedMs: s.startedMs }, draft, nowMs,
 );
 
-// Home's "Finished workouts": finished in the last FINISHED_DAYS Pacific days, newest first.
-export function finishedRecent(state, today, nowMs) {
-  const from = addDays(today, -(FINISHED_DAYS - 1));
-  return listSessions(state).filter((s) => s.finished && s.date >= from && s.date <= today).reverse().map((s) => {
-    const v = viewOfFinished(state, s, emptyDraft(s.id), nowMs);
-    return { sessionId: s.id, label: WORKOUTS[s.templateCode].label, dateText: formatDay(s.date), exercisesDone: v.exercisesDone, exerciseCount: v.exerciseCount };
-  });
-}
-
 // A finished workout reopened (spec 6.3, v1.15). null when the id is unknown, not finished, or unusable. No swapping, no finish card,
 // no rest timer: the cards are the open workout's, for that workout's day.
 export function editView(state, { sessionId, nowMs, draftFor }) {
@@ -89,7 +78,6 @@ export function editView(state, { sessionId, nowMs, draftFor }) {
     older: [],
     warning: null,
     warningText: null,
-    finishedRecent: [],
     canTrainInstead: false,
     rest: null,
   };
@@ -115,7 +103,6 @@ export function dayView(state, { today, nowMs, draftFor, pickedWeekday = null, f
       label: RECOVERY_LABEL,
       cards: recoveryCards(),
       older: [],
-      finishedRecent: finishedRecent(state, today, nowMs),
       warning: null,
       warningText: null,
       canTrainInstead: true,
@@ -140,7 +127,6 @@ export function dayView(state, { today, nowMs, draftFor, pickedWeekday = null, f
     older: open.slice(1).map((s) => ({
       sessionId: s.id, label: WORKOUTS[s.templateCode].label, dateText: formatDay(s.date), startedText: formatTime(s.startedMs), loggedSets: s.loggedSets,
     })),
-    finishedRecent: finishedRecent(state, today, nowMs),
     warning,
     warningText: warningText(warning),
     canTrainInstead: false,

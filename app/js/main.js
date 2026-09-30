@@ -1,6 +1,6 @@
-// The page: sign in, then Home (the day's cards, in the v0.2 viewer's layout) and the summary (Phase D, DEPLOYMENT-PLAN.md sections 15 and
-// 15b), over the local event store. Everything the person does is written to IndexedDB first (store/events.js); uploading and
-// downloading happen in the background (store/sync.js). History, settings and export arrive in Phase E.
+// The page: sign in, then Home (the day's cards, in the v0.2 viewer's layout), the summary, History and Settings (DEPLOYMENT-PLAN.md
+// sections 15, 15b and 15e), over the local event store. Everything the person does is written to IndexedDB first (store/events.js); uploading and
+// downloading happen in the background (store/sync.js).
 
 import { isConfigured } from './config.js';
 import { hasRefreshToken, signIn, signOut } from './store/auth.js';
@@ -74,7 +74,7 @@ async function start() {
   const screens = mountScreens({
     root: el.screen, headerRoot: el.header, events, actions, notify, handlers: { onSignOut: signOutNow },
     onRoute(route) {
-      el.device.hidden = route.name !== 'home';
+      el.device.hidden = route.name !== 'settings';
       notify('');
     },
   });
@@ -136,7 +136,6 @@ async function start() {
       notify('');
       sync.sync().catch(() => {});
     },
-    onSignOut: signOutNow,
   });
 
   // A session that cannot be refreshed sends the person back to the form; nothing is lost, the outbox stays.
@@ -159,3 +158,8 @@ async function start() {
 }
 
 start();
+
+// Offline load (plan section 15e): the worker caches the app shell. Sync and logging already work offline once the page is loaded.
+if ('serviceWorker' in navigator) {
+  addEventListener('load', () => { navigator.serviceWorker.register('sw.js').catch((err) => console.warn('No service worker:', err)); });
+}

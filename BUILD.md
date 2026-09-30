@@ -152,14 +152,20 @@ aws cloudfront create-invalidation --distribution-id "$DIST_ID" --paths '/*'
 ```
 
 Then open `SiteUrl` and sign in. The page syncs on open.
-For the Phase D check (workout logging), see the list after this paragraph. The Phase B two-device check below still works: the sync panel is under **Sync and this device** at the bottom of Home.
+For the Phase D check (workout logging), see the list after this paragraph. The Phase B two-device check below still works: the sync panel is on the Settings screen (the gear icon in the header).
 For the Phase B check, use two devices (say the desktop and the phone, ideally the installed home-screen app): press **Add test note** on one, and within a few seconds it shows on that device as uploaded; open the app on the other (or press **Sync now**) and the same note appears there. Turn on airplane mode, add a note, and it stays in **Waiting to upload** until you are back online. To install on the iPhone: Share, Add to Home Screen. **Last round trip** shows the cold-start time.
 Phase D check, on the installed phone app (airplane mode is the real test):
-1. Home is the day's cards under a slim header (B after the loaded Workout A; the recovery routine on Tuesday and Thursday; tap the status line to open the day pills, the save state and the sign-out icon). A note above the cards warns if you did a workout yesterday.
-2. Optionally open the header and pick a back pain number. On an exercise card, turn the dials (each set's weight is already the suggestion, the reps the recommendation), then tap the tick. Swipe sideways to the next exercise (the left edge of each card is colour-coded by superset). The rest timer runs after each tick; lock the screen and unlock it and it is still right.
+1. Home is the day's cards under a slim header (B after the loaded Workout A; the recovery routine on Tuesday and Thursday; tap the status line to open the day pills, the History, Settings and sign-out icons, and the save state). A note above the cards warns if you did a workout yesterday.
+2. On an exercise card, turn the dials (each set's weight is already the suggestion, the reps the recommendation), then tap the tick. Swipe sideways to the next exercise (the left edge of each card is colour-coded by superset). The rest timer runs after each tick; lock the screen and unlock it and it is still right.
 3. Swipe the app away and reopen it in the middle of the workout: the exercises you ticked are still done and any dial you had turned is where you left it.
 4. Turn on airplane mode, log a whole workout, then on the last card tap **Save and finish**. The dot in the header turns amber with a count of events saved on this device; turn the network back on and it turns green within a few seconds. Open the desktop: the workout is there.
 5. Open the header and pick Tuesday or Thursday: the recovery routine cards (their demo images need a connection).
+
+Phase E check (History, Settings, offline):
+1. Header, History icon: **By exercise** lists Workouts A, B and C with each exercise's last session (a green "↑ due" when a scheduled increase is pending). Tap an exercise: last and next increase, the chart (**Top set** / **Volume**, a green line at each increase) and its sessions.
+2. **By date** lists every finished workout newest first. One with an exercise you did not tick has an amber "1 missing" tag. **Edit** opens it; tick what is missing, go back: the tag is gone.
+3. Header, Settings icon: the sync panel (**Sync now**, **Add test note**, what is waiting, recent events). Sign out is the last icon in the header.
+4. Offline load: open the installed app once online, then turn on airplane mode, swipe the app away and open it again. It opens, and you can log a workout (it uploads when you are back online). After a deploy, the first load online fetches the new files.
 
 The first start after this update discards the Phase A spike's `localStorage` copy of the events (it was only a cache) and downloads them again into IndexedDB.
 
@@ -173,6 +179,17 @@ node scripts/post-events.mjs private/2026-09-28-workout-a.events.json "$EMAIL"  
 ```
 
 The PIN prompt does not echo. After a successful post the script writes `<file>.posted` and refuses to send that file again unless you pass `--force`. Event ids are derived from the workout's date, device and contents, so rebuilding an unchanged workout gives identical ids and the server de-duplicates a re-post; a workout you *edit* (different reps, say) gets new ids for changed sets and would add to, not replace, what was posted. Corrections belong in `set.edited` events, not a re-post.
+
+## 9. Export your data (optional, any time)
+
+Export is a script, not a screen. It signs in (the PIN prompt does not echo), reads every event with `GET /events` (read-only), and writes two files into `private/export/` (git-ignored):
+
+```bash
+node scripts/export-data.mjs "$EMAIL"               # or: node scripts/export-data.mjs "$EMAIL" some/other/folder
+```
+
+- `strength-events-<date>.json`: `{ exportedAt, count, events }`, the log as stored. Replaying it rebuilds everything.
+- `strength-sets-<date>.csv`: one row per logged working set (date, workout, week, phase, exercise, set number, weight, level, reps, distance, what was suggested), with edits applied and deleted sets left out.
 
 ## Notes
 
