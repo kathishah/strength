@@ -61,8 +61,6 @@ export function summaryView(state, sessionId) {
     totalSets: sets.length,
     durationMs: finishedMs >= startedMs ? finishedMs - startedMs : null,
     durationText: formatDuration(finishedMs - startedMs),
-    backPainBefore: session.backPainBefore ?? null,
-    backPainAfter: session.backPainAfter ?? null,
     notes: session.notes ?? '',
     exercises: ids.map((exerciseId) => ({
       exerciseId,

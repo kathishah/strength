@@ -34,8 +34,8 @@ export async function makeWorld({ start = '2026-09-28T11:00:00-07:00', deviceId 
 
 // Logs a whole workout the way the screen does: every card gets its typed changes, then one Done for the exercise. `plan` overrides
 // per exercise: { weightLbs, level, reps: [..] per set | number, distanceM } (anything left out is the pre-filled value).
-export async function doWorkout(world, { sessionId = null, plan = {}, backPainBefore = null, finish = true, secondsPerExercise = 180 } = {}) {
-  const id = sessionId ?? (await world.actions.startSession({ backPainBefore }));
+export async function doWorkout(world, { sessionId = null, plan = {}, finish = true, secondsPerExercise = 180 } = {}) {
+  const id = sessionId ?? (await world.actions.startSession());
   for (const startCard of world.view(id).cards) {
     const { exerciseId } = startCard;
     const p = plan[exerciseId] ?? {};

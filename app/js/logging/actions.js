@@ -7,7 +7,7 @@ import { exerciseForSlot } from '../engine/session.js';
 import { WORKOUTS } from '../seed/index.js';
 import { pacificDate } from '../time.js';
 import {
-  addExtraSet, clearExercise, clearRest, setBackPainAfter, setNotes, setRestLength, setRowField, startEditing, startRest,
+  addExtraSet, clearExercise, clearRest, setNotes, setRestLength, setRowField, startEditing, startRest,
 } from './draft.js';
 import { PENDING } from './day-view.js';
 import { adjustedRestLength } from './rest-timer.js';
@@ -42,19 +42,19 @@ export function createActions({ events, drafts, now, newId }) {
   }
 
   // Starts the next workout by rotation. Resolves with the new session id.
-  async function startSession({ backPainBefore = null, sessionId = `sess_${newId(now())}` } = {}) {
+  async function startSession({ sessionId = `sess_${newId(now())}` } = {}) {
     const state = events.state;
     if (inProgressSessions(state).length > 0) throw new Error('A workout is already in progress.');
     const nowMs = now();
     const templateCode = nextTemplate(state);
     const { calendar } = planSession(state, { today: pacificDate(nowMs), templateCode });
-    await write(make.sessionStarted({ templateCode, nowMs, calendar, backPainBefore }), sessionId);
+    await write(make.sessionStarted({ templateCode, nowMs, calendar }), sessionId);
     return sessionId;
   }
 
   // The workout an exercise is logged into: the open one, or a new one when the cards on screen are still the preview (no session
   // yet). What was typed into the preview (its draft, under PENDING) moves to the new session.
-  async function ensureSession(sessionId, backPainBefore) {
+  async function ensureSession(sessionId) {
     if (sessionId && sessionId !== PENDING) {
       editableSession(sessionId); // a finished workout takes ticks too (spec 6.3, v1.15)
       return sessionId;
@@ -64,7 +64,7 @@ export function createActions({ events, drafts, now, newId }) {
     const id = `sess_${newId(now())}`;
     drafts.save({ ...typed, sessionId: id });
     try {
-      await startSession({ backPainBefore, sessionId: id });
+      await startSession({ sessionId: id });
     } catch (err) {
       drafts.save(typed);
       throw err;
@@ -84,7 +84,6 @@ export function createActions({ events, drafts, now, newId }) {
     cancelEdit: (sessionId, exerciseId) => update(sessionId, (d) => clearExercise(d, exerciseId)),
     addSet: (sessionId, exerciseId) => update(sessionId ?? PENDING, (d) => addExtraSet(d, exerciseId)),
     typeNotes: (sessionId, text) => update(sessionId, (d) => setNotes(d, text)),
-    setBackPainAfter: (sessionId, value) => update(sessionId, (d) => setBackPainAfter(d, value)),
     skipRest: (sessionId) => update(sessionId, clearRest),
     adjustRest(sessionId, delta) {
       return update(sessionId, (d) => setRestLength(d, adjustedRestLength(d, events.state.settings, delta)));
@@ -95,8 +94,8 @@ export function createActions({ events, drafts, now, newId }) {
     // Done on an exercise (of an open or a finished workout, spec 6.3): log every set that has its numbers, or, for an exercise reopened with Edit, save the changes. rows: the card's
     // rows as on screen ({ setNumber, setId, weightLbs, levelNumber, reps, distanceM }). A set with no reps (or distance) is left out,
     // so doing two sets of three is fine; nothing is written unless at least one set is complete. The first Done of the day starts the
-    // workout (sessionId null), with the back pain rating chosen in the header. Resolves with the session id.
-    async saveExercise(sessionId, { exerciseId, rows, suggestion, backPainBefore = null }) {
+    // workout (sessionId null). Resolves with the session id.
+    async saveExercise(sessionId, { exerciseId, rows, suggestion }) {
       const inputs = inputsFor(suggestion);
       const edits = [];
       const adds = [];
@@ -111,7 +110,7 @@ export function createActions({ events, drafts, now, newId }) {
       }
       if (edits.length === 0 && adds.length === 0) throw new RangeError('Enter the reps for at least one set.');
 
-      const id = await ensureSession(sessionId, backPainBefore);
+      const id = await ensureSession(sessionId);
       const state = events.state;
       let logged = 0;
       for (const { setNumber, values } of adds) {
@@ -173,12 +172,12 @@ export function createActions({ events, drafts, now, newId }) {
     },
 
     // Finish: notes if changed, then session.finished. A workout with no logged set can only be discarded.
-    async finish(sessionId, { backPainAfter = null, notes } = {}) {
+    async finish(sessionId, { notes } = {}) {
       const session = openSession(sessionId);
       const logged = Object.values(events.state.sets).some((s) => s.sessionId === sessionId && isWorking(s));
       if (!logged) throw new Error('Log at least one set to finish, or discard the workout.');
       if (typeof notes === 'string' && notes.trim() !== (session.notes ?? '')) await write(make.sessionNotes(notes.trim()), sessionId);
-      await write(make.sessionFinished({ nowMs: now(), backPainAfter }), sessionId);
+      await write(make.sessionFinished({ nowMs: now() }), sessionId);
       drafts.clear(sessionId);
     },
 
