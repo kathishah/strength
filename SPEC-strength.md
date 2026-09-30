@@ -1,8 +1,13 @@
-# Recomp Tracker — Product Spec (v1.12)
+# Recomp Tracker — Product Spec (v1.13)
 
 A personal, mobile-first web app for logging gym workouts in a body recomposition program (build lean mass, reduce visceral fat, strengthen the back) and telling the user what to lift next. Used at the gym on a phone and at home on a desktop, with data synced across devices. Activity tracking (steps, Bollyx, hikes, mobility) and body metrics (DEXA, waist, weight) are out of scope: activity is tracked on an Apple Watch, and body metrics are not tracked in this app.
 
 ## Changelog
+- **v1.13**
+  - Progression scope cut to what the app needs: show the weights used last time, pre-fill an editable suggestion, and prompt an increase after a few weeks (scheduled increase, 5.12). Struck-through text in Section 5 (and where it is mentioned elsewhere) is removed and is not built; it is kept for reference.
+  - Removed: ramp-up sets (5.5), calibration (5.6), earned increases and reductions (5.2 rules 1 and 2), deload weeks (5.8), back pain gate (5.9), stall detection (5.10), expected pace (5.11), and all progression for bodyweight-based exercises (5.4: bodyweight, loadable, TRX levels, pushup ladder). Those exercises still show sets, reps, last time and an editable box; nothing is suggested to change.
+  - Load increments (5.3): dumbbell exercises that use two dumbbells go up 2.5 lbs per dumbbell; goblet squat and box squat (one dumbbell) go up 5 lbs. First-loaded weights stay.
+  - Scheduled-increase timer with no increase yet now starts at the exercise's first completed session (there is no calibration to end).
 - **v1.12**
   - Time zone: all dates and times use US Pacific time (`America/Los_Angeles`, PDT/PST), including days of the week, program weeks, and the monthly event-file boundary (Section 9, DEPLOYMENT-PLAN.md).
   - Sign-in is email plus a single permanent 6-digit PIN (Section 6.1).
@@ -244,7 +249,7 @@ Weight/rep/level logging, progression, calibration, scheduled increases, deloads
 
 **What the app must do well**
 - Make logging a gym session fast enough to do between sets on a phone.
-- Tell the user what weight to use next time, including ramp-up sets, based on the progression rules in Section 5.
+- Tell the user what weight to use next time, based on the progression rules in Section 5.
 - Show per-exercise history so progress is visible (6.6).
 
 ---
@@ -297,7 +302,7 @@ Units throughout: **lbs** for mass.
 - Target gym session length: ~45 minutes.
 
 ### 4.2 Gym warm-up — not in the app
-A warm-up (about 5 min of easy-to-brisk cardio, then the McGill Big 3: curl-up, side plank, bird dog) is still recommended, but the app does not show, time, or log it. Ramp-up sets (5.5) are part of the workout, not the warm-up.
+A warm-up (about 5 min of easy-to-brisk cardio, then the McGill Big 3: curl-up, side plank, bird dog) is still recommended, but the app does not show, time, or log it. ~~Ramp-up sets (5.5) are part of the workout, not the warm-up.~~
 
 ### 4.3 Workouts
 
@@ -400,7 +405,9 @@ Band pull-aparts here are light activation, not a training stimulus; no progress
 
 ## 5. Progression rules (the core logic)
 
-Implement as **pure functions** with unit tests. These rules drive the "suggested weight", "suggested sets", and "ramp-up sets" shown when a session starts.
+Implement as **pure functions** with unit tests. These rules drive the "suggested weight" and "suggested sets" shown when a session starts, next to the weights used last time.
+
+**v1.13 scope.** The app shows last session's sets, pre-fills the suggestion in an editable box, and after a few weeks prompts a load increase (5.12). Struck-through text is removed and not built.
 
 ### 5.1 Phases
 - **Phase 1 (program weeks 1–4):** 2 working sets per exercise. Target effort: stop with ~3 reps in reserve (RIR 3).
@@ -408,30 +415,33 @@ Implement as **pure functions** with unit tests. These rules drive the "suggeste
 - Program week = weeks elapsed since `programStartDate` (stored on UserProfile; user-editable), counted in Pacific-time calendar days. Initial value: **2026-09-28** (a Monday, the first Workout A), so that day is program week 1, Phase 1.
 - Display the current phase and target RIR on the session screen.
 
-### 5.2 Double progression (weighted exercises)
-For each exercise, look at the most recent completed session containing that exercise (working sets only; ignore ramp-up sets and deload sessions). If that session's working sets used different weights (e.g. during calibration or a manual override), evaluate only the sets at the heaviest weight used; that weight is the base load:
-1. If **every working set** reached the **top of the rep range** → suggest increasing the load next time and target the bottom of the rep range.
-2. Else if reps fell **below the bottom of the range** on at least one set in **each of the last 2 sessions** → suggest reducing load ~10% (rounded to available increment).
-3. Else → suggest the same load, and aim to add reps. (A scheduled increase, Section 5.12, may override this hold.)
+### 5.2 Base load and suggestion (weighted exercises)
+For each exercise, look at the most recent completed session containing that exercise (working sets only). If that session's working sets used different weights (e.g. a manual override), the heaviest weight used is the base load.
+- The suggestion is the base load (hold), or the base load plus one increment when a scheduled increase is due (5.12). The screen shows last session's sets ("Last: 35 × 12, 12, 11") next to the suggestion, and the weight box is editable.
+- ~~1. If **every working set** reached the **top of the rep range** → suggest increasing the load next time and target the bottom of the rep range.~~
+- ~~2. Else if reps fell **below the bottom of the range** on at least one set in **each of the last 2 sessions** → suggest reducing load ~10% (rounded to available increment).~~
+- ~~3. Else → suggest the same load, and aim to add reps.~~
 
 For per-side exercises (reverse lunge, Pallof press, dead bug), reps are per side.
 
 ### 5.3 Load increments (defaults, user-editable per exercise)
 | Type | Increment |
 |---|---|
-| Dumbbell | +5 lbs (per dumbbell) |
+| Dumbbell, one dumbbell (goblet squat, box squat) | +5 lbs |
+| Dumbbell, one in each hand (all other dumbbell exercises) | +2.5 lbs per dumbbell |
 | Barbell / trap bar | +10 lbs total |
 | Machine / cable | +10 lbs (or next stack plate); face pull +5 lbs |
-| Carry | +5 lbs per hand, when all sets completed at full distance |
-| Bodyweight loadable | +5 lbs (plate held to chest) |
+| Carry | +5 lbs per hand |
+| ~~Bodyweight loadable~~ | ~~+5 lbs (plate held to chest)~~ (no progression, see 5.4) |
 
 ### 5.4 Bodyweight exercises
-- **Bodyweight (dead bug):** no load. When all sets hit the top of the range, show a text hint suggesting a harder variation or slower tempo (no auto-change).
-- **Bodyweight loadable (45° back extension):** load starts at 0 (bodyweight). Apply double progression (5.2); when all sets hit the top of the range, suggest adding the increment (0 → 5 lbs → 10 lbs …). Never suggest a negative load; a reduction from 5 lbs goes to 0.
-- **First-loaded weight:** any exercise whose current load is 0 and has `firstLoadedWeightLbs` set jumps to that value on its first increase instead of the normal increment (e.g. hip thrust 0 → 45 lb empty bar; reverse lunge 0 → 10 lbs per hand). A reduction below `firstLoadedWeightLbs` goes to 0.
+**v1.13: no progression logic for bodyweight-based exercises** (dead bug, 45° back extension, TRX/suspension levels, pushup ladder). They show sets, reps and last time, and the weight or level box is pre-filled with the last value used (or the starting value) and stays editable; the app never suggests a change. The rules below are struck except first-loaded weights (which apply to the weighted exercises that start empty) and the recovery routine note.
+- ~~**Bodyweight (dead bug):** no load. When all sets hit the top of the range, show a text hint suggesting a harder variation or slower tempo (no auto-change).~~
+- ~~**Bodyweight loadable (45° back extension):** load starts at 0 (bodyweight). Apply double progression (5.2); when all sets hit the top of the range, suggest adding the increment (0 → 5 lbs → 10 lbs …). Never suggest a negative load; a reduction from 5 lbs goes to 0.~~
+- **First-loaded weight:** any exercise whose current load is 0 and has `firstLoadedWeightLbs` set jumps to that value on its first increase instead of the normal increment (e.g. hip thrust 0 → 45 lb empty bar; reverse lunge 0 → 10 lbs per hand). ~~A reduction below `firstLoadedWeightLbs` goes to 0.~~
 - **Recovery routine items** are guidance only; no progression.
-- **Suspension (TRX):** load is the level (1–5), not weight. Apply double progression (5.2) with levels in place of load: when every working set reaches the top of the rep range, suggest the next level (max 5) at the bottom of the range; if reps fall below the bottom of the range on a set in each of the last 2 sessions, suggest dropping one level (min 1). At level 5 and top of range, show a hint to add slower lowering (3 s) or switch back to the loaded gym exercise. The level field replaces the weight field in the set-logging UI (stepper 1–5), pre-filled with the suggested level and always editable. No ramp-up sets, no calibration prompts, not affected by the back pain gate (not flagged loadsBack). Suspension holds (TRX plank) follow the hold rules: completion only.
-- **Bodyweight ladder (pushup):** progress by reps, then by variation. Each variation has its own rep range. When every working set reaches the top of the current level's range, suggest moving up one level at the bottom of the next level's range, with the increase highlight from 6.3 (label "↑ Next level · Earned"). If reps fall below the bottom of the range in each of the last 2 sessions at a new level, suggest dropping back one level. Scheduled increases (5.12) do not apply. The user can pick any level manually.
+- ~~**Suspension (TRX):** load is the level (1–5), not weight. Apply double progression (5.2) with levels in place of load: when every working set reaches the top of the rep range, suggest the next level (max 5) at the bottom of the range; if reps fall below the bottom of the range on a set in each of the last 2 sessions, suggest dropping one level (min 1). At level 5 and top of range, show a hint to add slower lowering (3 s) or switch back to the loaded gym exercise. The level field replaces the weight field in the set-logging UI (stepper 1–5), pre-filled with the suggested level and always editable. No ramp-up sets, no calibration prompts, not affected by the back pain gate (not flagged loadsBack). Suspension holds (TRX plank) follow the hold rules: completion only.~~
+- ~~**Bodyweight ladder (pushup):** progress by reps, then by variation. Each variation has its own rep range. When every working set reaches the top of the current level's range, suggest moving up one level at the bottom of the next level's range, with the increase highlight from 6.3 (label "↑ Next level · Earned"). If reps fall below the bottom of the range in each of the last 2 sessions at a new level, suggest dropping back one level. Scheduled increases (5.12) do not apply. The user can pick any level manually.~~
 
   | Level | Variation | Reps | Cue |
   |---|---|---|---|
@@ -443,14 +453,17 @@ For per-side exercises (reverse lunge, Pallof press, dead bug), reps are per sid
   | 5 | Weighted pushup | 8–15 | Weight vest or loaded backpack; then progress load by +5 lbs using double progression (5.2). |
 
 
-### 5.5 Ramp-up sets
-- Generated before the **first exercise of Superset 1 and Superset 2** (slots 1 and 3) when that exercise has a suggested working weight.
-- Ramp set 1: 50% of working weight × 8 reps. Ramp set 2: 75% × 4 reps.
-- Round each to the exercise's load increment (nearest; exact ties round up). Omit a ramp set if it rounds to 0 or equals the working weight.
-- No ramp sets for bodyweight, bodyweight_loadable, or carry types, when the working weight is 0, or during an exercise's calibration sessions (5.6).
-- Ramp sets are logged with `isRampUp = true` and excluded from progression and volume stats.
+### ~~5.5 Ramp-up sets~~ — removed (v1.13)
 
-### 5.6 Starting weights and calibration
+Not built. The original text is kept for reference.
+
+- ~~Generated before the **first exercise of Superset 1 and Superset 2** (slots 1 and 3) when that exercise has a suggested working weight.~~
+- ~~Ramp set 1: 50% of working weight × 8 reps. Ramp set 2: 75% × 4 reps.~~
+- ~~Round each to the exercise's load increment (nearest; exact ties round up). Omit a ramp set if it rounds to 0 or equals the working weight.~~
+- ~~No ramp sets for bodyweight, bodyweight_loadable, or carry types, when the working weight is 0, or during an exercise's calibration sessions (5.6).~~
+- ~~Ramp sets are logged with `isRampUp = true` and excluded from progression and volume stats.~~
+
+### 5.6 Starting weights ~~and calibration~~
 
 **Starting weights.** Every exercise has a seeded `startingWeightLbs`, used as the suggested weight when the exercise has no history. The suggestion is **pre-filled as the default in every set's weight field, and the user can always log a different weight**. The logged (actual) weight, not the suggestion, drives all future progression. Starting weights are editable in Settings. Values are conservative for a detrained 50-year-old with a sensitive lower back; back-loading hinges start lightest on purpose.
 
@@ -479,107 +492,116 @@ Dumbbell values are per hand. Leg press values are added plates, excluding the s
 
 Swapped-in alternatives without a seeded value: no pre-fill; prompt the user to enter a weight they could lift for the top of the range with ~3 reps to spare.
 
-**Calibration.** An exercise's first 2 completed sessions are calibration sessions (`isCalibration` on its SetLogs). During calibration, after each working set of a weighted exercise, show a one-tap prompt: "How did that feel?"
-- **Too easy** (could do 5+ more reps than the top of the range) → next set's pre-filled weight goes up one increment (or to `firstLoadedWeightLbs` from 0).
-- **About right** → no change.
-- **Too hard** (couldn't reach the bottom of the range with good form) → next set's pre-filled weight goes down one increment (minimum 0).
+~~Calibration~~ — removed (v1.13). The first sessions of an exercise are not special; the starting weight is only a pre-fill. Original text, struck:
 
-The prompt is skippable. After calibration ends, normal double progression (5.2) applies.
+~~**Calibration.** An exercise's first 2 completed sessions are calibration sessions (`isCalibration` on its SetLogs). During calibration, after each working set of a weighted exercise, show a one-tap prompt: "How did that feel?"~~
+- ~~**Too easy** (could do 5+ more reps than the top of the range) → next set's pre-filled weight goes up one increment (or to `firstLoadedWeightLbs` from 0).~~
+- ~~**About right** → no change.~~
+- ~~**Too hard** (couldn't reach the bottom of the range with good form) → next set's pre-filled weight goes down one increment (minimum 0).~~
+
+~~The prompt is skippable. After calibration ends, normal double progression (5.2) applies.~~
 
 ### 5.7 Examples (use as unit test cases)
-Unless stated otherwise, assume no scheduled increase (5.12) is due.
+Struck examples belong to removed rules (v1.13). Unless stated otherwise, assume no scheduled increase (5.12) is due.
 
-- Goblet squat, range 8–12, last session 3×12 at 35 lbs → suggest 40 lbs, target 8 reps.
+- ~~Goblet squat, range 8–12, last session 3×12 at 35 lbs → suggest 40 lbs, target 8 reps.~~
 - Goblet squat, last session 12, 11, 10 at 35 lbs → suggest 35 lbs, add reps.
-- Lat pulldown, range 10–12, last two sessions each had a set of 8 at 100 lbs → suggest 90 lbs.
-- Reverse lunge 8 per leg (repMin = repMax = 8), 2×8 achieved → suggest +5 lbs.
+- ~~Lat pulldown, range 10–12, last two sessions each had a set of 8 at 100 lbs → suggest 90 lbs.~~
+- ~~Reverse lunge 8 per leg (repMin = repMax = 8), 2×8 achieved → suggest +5 lbs.~~
 - Phase 1 week 2 → Workout A shows 2 sets for all exercises.
-- Back extension, last session 2×15 at 0 lbs → suggest 5 lbs, target 10 reps.
-- Back extension at 5 lbs, below 10 reps on a set in each of the last 2 sessions → suggest 0 lbs.
-- Trap bar deadlift working weight 135 lbs (increment 10) → ramp sets 70 × 8 (67.5 rounds to 70) and 100 × 4 (101.25 rounds to 100).
-- Goblet squat working weight 15 lbs (increment 5) → ramp sets 10 × 8 (7.5 rounds to 10) and 10 × 4 (11.25 rounds to 10); both kept since neither is 0 or 15.
-- Hip thrust with no history → no ramp sets.
-- Face pull (slot 6) → never gets ramp sets.
+- ~~Back extension, last session 2×15 at 0 lbs → suggest 5 lbs, target 10 reps.~~
+- ~~Back extension at 5 lbs, below 10 reps on a set in each of the last 2 sessions → suggest 0 lbs.~~
+- ~~Trap bar deadlift working weight 135 lbs (increment 10) → ramp sets 70 × 8 (67.5 rounds to 70) and 100 × 4 (101.25 rounds to 100).~~
+- ~~Goblet squat working weight 15 lbs (increment 5) → ramp sets 10 × 8 (7.5 rounds to 10) and 10 × 4 (11.25 rounds to 10); both kept since neither is 0 or 15.~~
+- ~~Hip thrust with no history → no ramp sets.~~
+- ~~Face pull (slot 6) → never gets ramp sets.~~
 - Goblet squat, no history → pre-filled 20 lbs on every set; user logs 25 instead → 25 is stored as actual, 20 as suggested.
-- Goblet squat calibration, set 1 at 20 lbs rated "Too easy" → set 2 pre-filled at 25 lbs.
-- Dumbbell RDL calibration, set 1 at 15 lbs rated "Too hard" → set 2 pre-filled at 10 lbs.
-- Hip thrust, last session 2×12 at 0 lbs (range 10–12) → suggest 45 lbs, target 10 reps.
-- Reverse lunge, last session 2×8 at 0 lbs → suggest 10 lbs.
-- Goblet squat suggested 40, user logs 35 and completes 3×12 → next suggestion is 40 (progression uses actual weight).
-- Program week 11 → deload: Workout A shows 2 sets for 3-set exercises and 1 set for 2-set exercises, at the base load, no increases.
-- Program weeks 11 and 18 are scheduled deloads; weeks 10 and 12 are not.
-- Manual deload started in program week 9 → next scheduled deload is week 16.
-- Back pain before = 5; Dumbbell RDL base 25 lbs with all sets at top of range → suggest 25 (gated); Dumbbell bench press in the same session still progresses normally.
-- Back pain before not entered → no gate applied.
-- Lat pulldown with the reduction rule firing in week 8 and again in week 14 → "stalled" flag (2 reductions within 9 weeks).
-- Pushup level 1, last session 20, 20, 20 → suggest level 2 (tempo), target 8 reps, highlighted "Next level".
-- Pushup level 1, last session 14, 12, 10 → stay at level 1.
-- Pushup level 2, below 8 reps on a set in each of the last 2 sessions → suggest level 1.
-- Pushup at level 1 for 5 weeks without reaching 3×20 → no scheduled increase (ladder exercises excluded).
-- Workout B in Phase 1 → pushups show 2 sets; in Phase 2, 3 sets; in a deload week, 2 sets.
-- Pushup is never flagged loadsBack and never gets ramp-up sets.
-- TRX row at level 2, last session 3×15 → suggest level 3, target 10 reps, highlighted "↑ Level 3 · Earned".
-- TRX row at level 3, reps not at top, 21 days since last level increase → suggest level 4, "Scheduled".
-- TRX chest press at level 1, below the bottom of the range in each of the last 2 sessions → stays at level 1 (minimum).
-- TRX row at level 5 with 3×15 → stays at level 5; show the slower-lowering hint.
-- Swapping Chest-supported row → TRX row pre-fills level 2 with no history; no ramp-up sets.
+- ~~Goblet squat calibration, set 1 at 20 lbs rated "Too easy" → set 2 pre-filled at 25 lbs.~~
+- ~~Dumbbell RDL calibration, set 1 at 15 lbs rated "Too hard" → set 2 pre-filled at 10 lbs.~~
+- ~~Hip thrust, last session 2×12 at 0 lbs (range 10–12) → suggest 45 lbs, target 10 reps.~~
+- ~~Reverse lunge, last session 2×8 at 0 lbs → suggest 10 lbs.~~
+- ~~Goblet squat suggested 40, user logs 35 and completes 3×12 → next suggestion is 40 (progression uses actual weight).~~
+- ~~Program week 11 → deload: Workout A shows 2 sets for 3-set exercises and 1 set for 2-set exercises, at the base load, no increases.~~
+- ~~Program weeks 11 and 18 are scheduled deloads; weeks 10 and 12 are not.~~
+- ~~Manual deload started in program week 9 → next scheduled deload is week 16.~~
+- ~~Back pain before = 5; Dumbbell RDL base 25 lbs with all sets at top of range → suggest 25 (gated); Dumbbell bench press in the same session still progresses normally.~~
+- ~~Back pain before not entered → no gate applied.~~
+- ~~Lat pulldown with the reduction rule firing in week 8 and again in week 14 → "stalled" flag (2 reductions within 9 weeks).~~
+- ~~Pushup level 1, last session 20, 20, 20 → suggest level 2 (tempo), target 8 reps, highlighted "Next level".~~
+- ~~Pushup level 1, last session 14, 12, 10 → stay at level 1.~~
+- ~~Pushup level 2, below 8 reps on a set in each of the last 2 sessions → suggest level 1.~~
+- ~~Pushup at level 1 for 5 weeks without reaching 3×20 → no scheduled increase (ladder exercises excluded).~~
+- Workout B in Phase 1 → pushups show 2 sets; in Phase 2, 3 sets; ~~in a deload week, 2 sets~~.
+- ~~Pushup is never flagged loadsBack and never gets ramp-up sets.~~
+- ~~TRX row at level 2, last session 3×15 → suggest level 3, target 10 reps, highlighted "↑ Level 3 · Earned".~~
+- ~~TRX row at level 3, reps not at top, 21 days since last level increase → suggest level 4, "Scheduled".~~
+- ~~TRX chest press at level 1, below the bottom of the range in each of the last 2 sessions → stays at level 1 (minimum).~~
+- ~~TRX row at level 5 with 3×15 → stays at level 5; show the slower-lowering hint.~~
+- Swapping Chest-supported row → TRX row pre-fills level 2 with no history; ~~no ramp-up sets~~.
 
-### 5.8 Deload weeks
-- Schedule: the first deload is program week 11 (after Phase 1 plus 6 Phase 2 weeks). After any deload, the next is scheduled 7 program weeks later (6 training weeks + 1 deload). Phase 1 has no deload.
-- In a deload week, every session uses: working sets = ceil(normal set count ÷ 2); weight = the exercise's base load (no increase); target RIR 3–4. Ramp-up sets still apply. No calibration prompts.
-- Deload sessions are stored with `isDeload = true` and excluded from progression (5.2), stall detection (5.10), and the "weight increase next time" callouts.
-- User controls on Home and in Settings: **Start deload week now** (marks the current program week as a deload; the schedule restarts from it) and **Postpone 1 week** (allowed once per scheduled deload).
-- Show a banner on Home and the session screen during a deload week: "Deload week: same weights, half the sets. Let your joints and back catch up."
+### ~~5.8 Deload weeks~~ — removed (v1.13)
 
-### 5.9 Back pain gate
-- At session start, prompt for back pain before (0–10, one tap, skippable).
-- Exercises flagged `loadsBack = true` (seed: goblet squat, dumbbell Romanian deadlift, trap bar deadlift, 45° back extension, farmer carry): if back pain before is **above 3**, the suggestion never increases load for that session; it stays at the base load (reductions still apply). Show a note on those exercises offering the back-friendly swap (4.5).
-- Other exercises progress normally.
+Not built; there are no deload weeks, banners or controls. The original text is kept for reference.
 
-### 5.10 Stall detection
-- Because scheduled increases (5.12) raise load at least every 3 weeks, a stall shows up as repeated reductions rather than a flat load.
-- An exercise is **stalled** if the reduction rule (5.2 rule 2) has fired **2 or more times within the last 9 weeks**.
-- Show a "stalled" badge on the exercise and in exercise history with tips: "Weight is going up faster than your reps can follow. Check sleep and protein, or consider turning off scheduled increases for this exercise." No automatic change.
-- Clears after 9 weeks without a reduction.
+- ~~Schedule: the first deload is program week 11 (after Phase 1 plus 6 Phase 2 weeks). After any deload, the next is scheduled 7 program weeks later (6 training weeks + 1 deload). Phase 1 has no deload.~~
+- ~~In a deload week, every session uses: working sets = ceil(normal set count ÷ 2); weight = the exercise's base load (no increase); target RIR 3–4. Ramp-up sets still apply. No calibration prompts.~~
+- ~~Deload sessions are stored with `isDeload = true` and excluded from progression (5.2), stall detection (5.10), and the "weight increase next time" callouts.~~
+- ~~User controls on Home and in Settings: **Start deload week now** (marks the current program week as a deload; the schedule restarts from it) and **Postpone 1 week** (allowed once per scheduled deload).~~
+- ~~Show a banner on Home and the session screen during a deload week: "Deload week: same weights, half the sets. Let your joints and back catch up."~~
 
-### 5.11 Expected pace (display only)
-Each exercise is performed about once a week (A/B/C rotation). "Earned" increases come from performance (5.2); scheduled increases (5.12) fill in every 3 weeks otherwise. Show this guide in exercise history so the user can judge progress:
+### ~~5.9 Back pain gate~~ — removed (v1.13)
 
-| Exercise group | Typical load increase in the first 3 months |
+Not built. Back pain before/after stay as optional session fields (6.3) and change no suggestion. The original text is kept for reference.
+
+- ~~At session start, prompt for back pain before (0–10, one tap, skippable).~~
+- ~~Exercises flagged `loadsBack = true` (seed: goblet squat, dumbbell Romanian deadlift, trap bar deadlift, 45° back extension, farmer carry): if back pain before is **above 3**, the suggestion never increases load for that session; it stays at the base load (reductions still apply). Show a note on those exercises offering the back-friendly swap (4.5).~~
+- ~~Other exercises progress normally.~~
+
+### ~~5.10 Stall detection~~ — removed (v1.13)
+
+Not built. The original text is kept for reference.
+
+- ~~Because scheduled increases (5.12) raise load at least every 3 weeks, a stall shows up as repeated reductions rather than a flat load.~~
+- ~~An exercise is **stalled** if the reduction rule (5.2 rule 2) has fired **2 or more times within the last 9 weeks**.~~
+- ~~Show a "stalled" badge on the exercise and in exercise history with tips: "Weight is going up faster than your reps can follow. Check sleep and protein, or consider turning off scheduled increases for this exercise." No automatic change.~~
+- ~~Clears after 9 weeks without a reduction.~~
+
+### ~~5.11 Expected pace~~ — removed (v1.13)
+
+Not built. The original text is kept for reference.
+
+~~Each exercise is performed about once a week (A/B/C rotation). "Earned" increases come from performance (5.2); scheduled increases (5.12) fill in every 3 weeks otherwise. Show this guide in exercise history so the user can judge progress:~~
+
+| ~~Exercise group~~ | ~~Typical load increase in the first 3 months~~ |
 |---|---|
-| Leg press, trap bar deadlift, hip thrust | Every 1–3 weeks |
-| Machine/cable upper body (pulldown, rows, face pull) | Every 2–4 weeks |
-| Dumbbell exercises (a 5-lb jump is a large % change) | Every 3–5 weeks |
-| Back extension, carries | Every 3–6 weeks |
+| ~~Leg press, trap bar deadlift, hip thrust~~ | ~~Every 1–3 weeks~~ |
+| ~~Machine/cable upper body (pulldown, rows, face pull)~~ | ~~Every 2–4 weeks~~ |
+| ~~Dumbbell exercises (a 5-lb jump is a large % change)~~ | ~~Every 3–5 weeks~~ |
+| ~~Back extension, carries~~ | ~~Every 3–6 weeks~~ |
 
-Note to display: "Progress slows after the first few months. Adding reps counts as progress too."
+~~Note to display: "Progress slows after the first few months. Adding reps counts as progress too."~~
 
 ### 5.12 Scheduled increases (every 3 weeks, per exercise)
 Tracked independently for each exercise.
-- **Timer start:** the date of the exercise's last load increase (from any source: earned, scheduled, calibration, or a manual override to a heavier weight). If there has been no increase yet, the timer starts on the date of its last calibration session (5.6).
-- **Trigger:** at the first non-deload session on or after timer start + `scheduledIncreaseDays` (default 21), the suggested weight = base load + one increment (or `firstLoadedWeightLbs` from 0). Readiness is not checked and no warning is shown. Target reps = bottom of the rep range.
-- If an earned increase (5.2 rule 1) is already due, apply only that one increase (never two increments at once).
-- **Precedence (highest first):**
-  1. Deload week (5.8): no increase; a due scheduled increase waits for the first session after the deload.
-  2. Reduction (5.2 rule 2): if the reduction rule fires, it wins and the scheduled increase is skipped. The timer keeps counting from the last increase.
-  3. Back pain gate (5.9): if gated, the increase is deferred to the exercise's next session.
-  4. Earned or scheduled increase.
-  5. Hold.
+- **Timer start:** the date of the exercise's last load increase (a session whose heaviest weight is above the previous session's, whether it followed a suggestion or a manual override to a heavier weight). If there has been no increase yet, the timer starts on the date of its first completed session.
+- **Trigger:** at the first session on or after timer start + `scheduledIncreaseDays` (default 21), the suggested weight = base load + one increment (or `firstLoadedWeightLbs` from 0). Readiness is not checked and no warning is shown. Target reps = bottom of the rep range.
+- ~~If an earned increase (5.2 rule 1) is already due, apply only that one increase (never two increments at once).~~ An increase is always exactly one increment.
+- **Precedence:** a due scheduled increase is applied; otherwise the suggestion holds at the base load. (Removed: ~~1. deload week~~, ~~2. reduction~~, ~~3. back pain gate~~.)
 - The increase applies to the suggestion only. The weight field stays editable; if the user logs the old weight instead, the timer does not reset (it resets only when a heavier weight is actually logged), so the next session suggests the increase again.
-- Not applied to bodyweight (no load) exercises, bodyweight ladder exercises, holds, or during calibration. For suspension exercises, a scheduled increase is +1 level (max 5).
-- Ramp-up sets (5.5) are calculated from the increased weight.
+- Not applied to bodyweight-based exercises (5.4: no progression), holds, or exercises with no starting weight and no history. ~~For suspension exercises, a scheduled increase is +1 level (max 5).~~
+- ~~Ramp-up sets (5.5) are calculated from the increased weight.~~
 - Settings: global on/off and interval (days); per-exercise on/off.
 
 Test cases:
 - Lat pulldown last increased on Oct 1 to 70 lbs, reps not at top of range; next session Oct 22 → suggest 80 lbs, source "scheduled".
 - Same exercise, session on Oct 20 → suggest 70 lbs (hold).
-- Goblet squat all sets at top of range and scheduled increase also due → suggest +5 only, source "earned".
-- Scheduled increase due but reduction rule fires → suggest the reduced weight, source "reduction".
-- Scheduled increase due, back pain before = 5 on a loadsBack exercise → hold this session, increase suggested next session.
-- Scheduled increase due in program week 11 (deload) → no increase; applied at first session of week 12.
+- ~~Goblet squat all sets at top of range and scheduled increase also due → suggest +5 only, source "earned".~~
+- ~~Scheduled increase due but reduction rule fires → suggest the reduced weight, source "reduction".~~
+- ~~Scheduled increase due, back pain before = 5 on a loadsBack exercise → hold this session, increase suggested next session.~~
+- ~~Scheduled increase due in program week 11 (deload) → no increase; applied at first session of week 12.~~
 - Suggested 80 (scheduled), user logs 70 → next session suggests 80 again.
-- Hip thrust at 0 lbs, 21 days since calibration ended → suggest 45 lbs.
-- Scheduled increases turned off for an exercise → only earned increases apply.
+- Hip thrust at 0 lbs, 21 days since its first completed session → suggest 45 lbs.
+- Scheduled increases turned off for an exercise → no increase is suggested; the suggestion holds at the base load.
 
 ---
 
@@ -592,17 +614,17 @@ Test cases:
 ### 6.2 Home / Today screen
 - Next workout (A/B/C) with a "Start" button and the no-consecutive-days warning if applicable.
 - On Tuesdays and Thursdays, show the recovery routine (4.6) as today's primary card (still allow starting a workout).
-- Deload banner during a deload week (5.8), and the Start deload / Postpone controls.
+- ~~Deload banner during a deload week (5.8), and the Start deload / Postpone controls.~~
 
 ### 6.3 Workout session (most important screen; phone-first)
-- **Exercises grouped by superset**, each showing: suggested weight, target reps, set count for the current phase, and last session's result (e.g. "Last: 35 × 12, 12, 11"). Ramp-up sets shown above the first working set for slots 1 and 3, visually distinct.
+- **Exercises grouped by superset**, each showing: suggested weight, target reps, set count for the current phase, and last session's result (e.g. "Last: 35 × 12, 12, 11"). ~~Ramp-up sets shown above the first working set for slots 1 and 3, visually distinct.~~
 - Per set: weight (pre-filled with the suggestion or starting weight, always editable) and reps; optional RIR. Large tap targets; numeric keypad inputs; quick +/− buttons that step by the exercise's increment. When the logged weight differs from the suggestion, show a subtle "changed from X" indicator. Carries log load and distance.
 - Changing the weight (or TRX level) on one set pre-fills it into the remaining sets of the same exercise in this session.
 - For suspension exercises, the weight field is replaced by a level stepper (1–5) with the exercise's level description shown on tap.
-- **Increase highlight:** when the suggested weight is higher than the previous session's base load, the weight field and exercise header use a distinct accent color and bold weight, with an up-arrow badge and text such as "↑ +5 lbs from 25 · Scheduled" or "↑ +5 lbs from 25 · Earned". Meaning must not rely on color alone (arrow + text always shown). The highlight stays for that session only.
-- Calibration prompt after each working set during an exercise's first 2 sessions (5.6).
-- Back pain before is asked at session start; gated exercises show the note from 5.9.
-- Deload banner and halved set counts during deload weeks (5.8).
+- **Increase highlight:** when the suggested weight is higher than the previous session's base load, the weight field and exercise header use a distinct accent color and bold weight, with an up-arrow badge and text such as "↑ +5 lbs from 25 · Scheduled". Meaning must not rely on color alone (arrow + text always shown). The highlight stays for that session only.
+- ~~Calibration prompt after each working set during an exercise's first 2 sessions (5.6).~~
+- Back pain before is an optional field asked at session start (one tap, skippable); it changes no suggestion.
+- ~~Deload banner and halved set counts during deload weeks (5.8).~~
 - Rest timer (default 90 s, adjustable) that starts when a set is marked done.
 - Swap exercise (Section 4.5). Tap exercise name for cues.
 - Optional session fields: back pain rating 0–10 (before and after), notes.
@@ -617,13 +639,13 @@ DEXA, waist, and body weight are not tracked in this app.
 
 ### 6.6 Exercise history
 - Per exercise: table of past sessions and a chart of top-set weight and working-set volume over time (ramp sets excluded).
-- Shows date of last increase, next scheduled increase date (or "off"), and marks each increase on the chart as earned or scheduled.
+- Shows date of last increase, next scheduled increase date (or "off"), and marks each increase on the chart.
 
 ### 6.7 Settings
 - Program start date (initially 2026-09-28), rest timer default, recovery days (default Tue/Thu), units display (lbs fixed for v1).
 - Per exercise: starting weight, first-loaded weight, load increment.
 - Trap bar weight (default 45 lbs).
-- Deload: show next scheduled deload week; Start deload week now; Postpone 1 week.
+- ~~Deload: show next scheduled deload week; Start deload week now; Postpone 1 week.~~
 - Scheduled increases: on/off, interval in days (default 21); per-exercise on/off.
 - Export all data as JSON (and CSV of logged sets).
 
@@ -644,7 +666,7 @@ DEXA, waist, and body weight are not tracked in this app.
 All records belong to an owner (the signed-in user). Storage is an append-only event log (one event per change, edits are later events on the same entity, state is derived by replaying events); see DEPLOYMENT-PLAN.md. The static seed data below ships with the app code; only user-generated records (sessions, set logs, settings, swaps, deloads) are stored as events.
 
 - **UserProfile**: programStartDate (initial value 2026-09-28), restTimerDefaultSec, recoveryDays (default [Tue, Thu]), trapBarWeightLbs (default 45), scheduledIncreasesEnabled (default true), scheduledIncreaseDays (default 21)
-- **Exercise**: name, type (dumbbell | barbell | machine | cable | bodyweight | bodyweight_loadable | bodyweight_ladder | suspension | carry | hold | mobility), repMin, repMax, perSide (bool), holdSeconds (nullable), loadIncrementLbs, startingWeightLbs (nullable), firstLoadedWeightLbs (nullable), startingNote (nullable), startingLevel (nullable; suspension, default 2), levelDescription (nullable; suspension), loadsBack (bool), scheduledIncreasesEnabled (default true), cues (optional text)
+- **Exercise**: name, type (dumbbell | barbell | machine | cable | bodyweight | bodyweight_loadable | bodyweight_ladder | suspension | carry | hold | mobility), repMin, repMax, perSide (bool), holdSeconds (nullable), loadIncrementLbs, startingWeightLbs (nullable), firstLoadedWeightLbs (nullable), startingNote (nullable), startingLevel (nullable; suspension, default 2), levelDescription (nullable; suspension), ~~loadsBack (bool)~~, scheduledIncreasesEnabled (default true), cues (optional text)
 - **WorkoutTemplate**: code (A | B | C), name
 - **TemplateSlot**: templateId, slotNumber (1–6), supersetGroup (1 | 2 | 3 | null), exerciseId, phase2Sets, alternativeExerciseIds[]
 - **SlotOverride**: templateSlotId, exerciseId (the user's persistent swap)
@@ -652,10 +674,10 @@ All records belong to an owner (the signed-in user). Storage is an append-only e
 - **RoutineItem**: routineId, order, exerciseId, prescription (text), sets/holds, reps, holdSeconds, perSide
 - **WorkoutSession**: date, templateCode, startedAt, finishedAt, phase, programWeek, isDeload, backPainBefore, backPainAfter, notes
 - **ExerciseLevel** (for bodyweight_ladder): exerciseId, level, name, repMin, repMax, cue
-- **SetLog**: sessionId, exerciseId, levelNumber (nullable; ladder and suspension exercises), suggestedLevel (nullable), setNumber, isRampUp, isCalibration, suggestedWeightLbs (nullable), suggestionSource (starting | calibration | hold | earned | scheduled | reduction | deload | gated | null), weightLbs (nullable; actual, drives progression), reps (nullable), distanceM (nullable, carries), rir (nullable), calibrationFeel (too_easy | about_right | too_hard | null), completed
-- **DeloadWeek**: programWeek, source (scheduled | manual), postponedFromWeek (nullable)
+- **SetLog**: sessionId, exerciseId, levelNumber (nullable; ladder and suspension exercises), suggestedLevel (nullable), setNumber, isRampUp, isCalibration, suggestedWeightLbs (nullable), suggestionSource (starting | hold | scheduled | null in v1.13; the registry still accepts calibration, earned, reduction, deload and gated), weightLbs (nullable; actual, drives progression), reps (nullable), distanceM (nullable, carries), rir (nullable), calibrationFeel (too_easy | about_right | too_hard | null), completed
+- ~~**DeloadWeek**: programWeek, source (scheduled | manual), postponedFromWeek (nullable)~~ (removed, v1.13; the event types stay in the registry, unused)
 
-Seed data: exercise catalog with cues, starting weights, first-loaded weights, and loadsBack flags (Sections 4 and 5), templates A/B/C with slots and alternatives (including TRX alternatives with starting levels and level descriptions, Section 4.5.1), the recovery routine (Section 4.6), and pushup ladder levels (Section 5.4). Seed data is bundled with the app, so there is nothing to seed into storage.
+Seed data: exercise catalog with cues, starting weights, first-loaded weights, and ~~loadsBack flags~~ (Sections 4 and 5), templates A/B/C with slots and alternatives (including TRX alternatives with starting levels and level descriptions, Section 4.5.1), the recovery routine (Section 4.6), and pushup ladder levels (Section 5.4). Seed data is bundled with the app, so there is nothing to seed into storage.
 
 ---
 
@@ -676,16 +698,15 @@ Seed data: exercise catalog with cues, starting weights, first-loaded weights, a
 0. **Static viewer releases (Section 0):** App v0.1 program viewer (done, 0.A); App v0.2 viewer aligned to spec v1.6 (done, 0.B).
 1. **Scaffold + auth + deploy:** sign-in, empty home screen, event sync endpoints, deployed and reachable from phone (see DEPLOYMENT-PLAN.md).
 2. **Event store + seed data:** local outbox, sync, replay into state, catalog/templates/routines bundled in the app.
-3. **Progression engine:** pure functions for Section 5 (starting weights, calibration, ramp-up sets, bodyweight_loadable, first-loaded weight, deloads, back pain gate, stall detection, scheduled increases and precedence) with unit tests covering every example in 5.7 and 5.12.
-4. **Workout logging:** pushup ladder in Workout B, session screen, ramp sets, rest timer, draft safety, swaps, summary, rotation logic, recovery routine guidance cards.
+3. **Progression engine:** pure functions for Section 5 as cut in v1.13 (starting weights, last-time data, first-loaded weight, scheduled increases) with unit tests covering every example in 5.7 and 5.12 that is not struck.
+4. **Workout logging:** pushup ladder in Workout B, session screen, rest timer, draft safety, swaps, summary, rotation logic, recovery routine guidance cards.
 5. **Exercise history, settings, data export, PWA polish.**
 
 ## 11. Acceptance criteria (v1 done when)
 - I can sign in on my phone and desktop and see the same data.
-- I can complete a full gym session (Workout A) on my phone without the app losing data, and the next Workout A shows correct suggested weights and ramp-up sets per Section 5.
+- I can complete a full gym session (Workout A) on my phone without the app losing data, and the next Workout A shows correct suggested weights per Section 5.
 - On a Tuesday, the home screen offers the recovery routine.
-- Pushups appear in Workout B; after I hit 3×20 standard pushups, the next Workout B suggests tempo pushups at 8 reps, clearly highlighted.
+- Pushups appear in Workout B (no progression suggestions, v1.13).
 - On a new exercise, the starting weight is pre-filled, I can log a different weight, and the next session's suggestion is based on what I actually lifted.
 - An exercise whose weight hasn't gone up in 3 weeks shows an increased, clearly highlighted suggestion labeled "Scheduled" at its next session.
-- Program week 11 is automatically a deload week, and I can start or postpone a deload manually.
 - Export produces a complete JSON file of my data.
