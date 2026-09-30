@@ -54,7 +54,7 @@ export function mountHome(container, ctx) {
       h('p', {}, h('strong', { text: next.label }), h('br'),
         h('span', { class: 'muted', text: `Week ${next.programWeek}${next.beforeStart ? ' (before the program start date)' : ''} · ${next.phaseText}` })),
       next.warningText ? h('p', { class: 'notice', role: 'note', text: next.warningText }) : null,
-      h('ul', { class: 'preview plain' }, next.exercises.map((e) => h('li', {},
+      h('ul', { class: 'preview plain' }, next.exercises.map((e) => h('li', { class: e.superset ? `ss${e.superset}` : '' },
         h('span', { class: 'preview-name', text: e.name }), ' ', h('span', { class: 'muted', text: e.prescription }),
         e.suggestionText ? h('div', { class: 'muted small', text: e.suggestionText }) : null,
         e.increaseText ? h('div', { class: 'up small', text: e.increaseText }) : null))),
