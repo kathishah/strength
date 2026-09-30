@@ -5,13 +5,15 @@
 // the first exercise is marked done (actions.saveExercise), so until then the cards are a preview with the day's suggestions.
 
 import { EXERCISES, RECOVERY, RECOVERY_LABEL } from '../seed/index.js';
-import { pacificDate, weekdayOf } from '../time.js';
+import { addDays, pacificDate, parseInstant, weekdayOf } from '../time.js';
+import { emptyDraft } from './draft.js';
 import { buildView } from './session-view.js';
-import { consecutiveDayWarning, dayKind, inProgressSessions, nextTemplate } from './rotation.js';
+import { consecutiveDayWarning, dayKind, inProgressSessions, listSessions, nextTemplate } from './rotation.js';
 import { formatDay, formatTime, warningText } from './text.js';
 import { WORKOUTS } from '../seed/index.js';
 
 export const PENDING = 'pending'; // the draft's id before the session exists
+export const FINISHED_DAYS = 7; // "Finished workouts" on Home: today and the six days before (spec 6.2)
 
 const WEEK = [1, 2, 3, 4, 5, 6, 0]; // Monday first, as in the viewer
 const NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -40,6 +42,59 @@ export function recoveryCards() {
   });
 }
 
+// What was known when a workout began: only the sessions that started before it. A reopened workout is planned from this, so its
+// "Last: ..." line and its dials are what the person saw that day, not what the workout itself (or a later one) has since logged.
+function stateBefore(state, startedMs) {
+  const sessions = {};
+  for (const [id, s] of Object.entries(state.sessions)) {
+    const ms = parseInstant(s.startedAt);
+    if (Number.isFinite(ms) && ms < startedMs) sessions[id] = s;
+  }
+  return { ...state, sessions };
+}
+
+// The view of a finished workout (spec 6.3): its own exercises and day, what was ticked, and dials at that day's suggestions.
+const viewOfFinished = (state, s, draft, nowMs) => buildView(
+  stateBefore(state, s.startedMs), { sessionId: s.id, session: state.sessions[s.id], templateCode: s.templateCode, date: s.date, startedMs: s.startedMs }, draft, nowMs,
+);
+
+// Home's "Finished workouts": finished in the last FINISHED_DAYS Pacific days, newest first.
+export function finishedRecent(state, today, nowMs) {
+  const from = addDays(today, -(FINISHED_DAYS - 1));
+  return listSessions(state).filter((s) => s.finished && s.date >= from && s.date <= today).reverse().map((s) => {
+    const v = viewOfFinished(state, s, emptyDraft(s.id), nowMs);
+    return { sessionId: s.id, label: WORKOUTS[s.templateCode].label, dateText: formatDay(s.date), exercisesDone: v.exercisesDone, exerciseCount: v.exerciseCount };
+  });
+}
+
+// A finished workout reopened (spec 6.3, v1.15). null when the id is unknown, not finished, or unusable. No swapping, no finish card,
+// no rest timer: the cards are the open workout's, for that workout's day.
+export function editView(state, { sessionId, nowMs, draftFor }) {
+  const s = listSessions(state).find((x) => x.id === sessionId);
+  if (!s || !s.finished) return null;
+  const view = viewOfFinished(state, s, draftFor(sessionId), nowMs);
+  for (const card of view.cards) {
+    card.canSwap = false;
+    card.swapOptions = [];
+    card.optionGroups = { alternatives: [], trx: [] };
+    card.swappedFromName = null;
+    card.swapBlockedReason = null;
+  }
+  return {
+    ...view,
+    mode: 'edit',
+    statusText: `Workout ${view.templateCode} · ${view.dateText} · editing`,
+    pills: [],
+    selectedWeekday: null,
+    older: [],
+    warning: null,
+    warningText: null,
+    finishedRecent: [],
+    canTrainInstead: false,
+    rest: null,
+  };
+}
+
 // state: replay(events). today: Pacific yyyy-mm-dd. nowMs. draftFor(sessionId|PENDING): the draft of that workout.
 // pickedWeekday: the pill chosen in the header (defaults to today); forceWorkout: "train instead" on a recovery day.
 export function dayView(state, { today, nowMs, draftFor, pickedWeekday = null, forceWorkout = false }) {
@@ -60,6 +115,7 @@ export function dayView(state, { today, nowMs, draftFor, pickedWeekday = null, f
       label: RECOVERY_LABEL,
       cards: recoveryCards(),
       older: [],
+      finishedRecent: finishedRecent(state, today, nowMs),
       warning: null,
       warningText: null,
       canTrainInstead: true,
@@ -84,6 +140,7 @@ export function dayView(state, { today, nowMs, draftFor, pickedWeekday = null, f
     older: open.slice(1).map((s) => ({
       sessionId: s.id, label: WORKOUTS[s.templateCode].label, dateText: formatDay(s.date), startedText: formatTime(s.startedMs), loggedSets: s.loggedSets,
     })),
+    finishedRecent: finishedRecent(state, today, nowMs),
     warning,
     warningText: warningText(warning),
     canTrainInstead: false,

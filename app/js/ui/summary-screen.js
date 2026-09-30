@@ -34,6 +34,7 @@ export function mountSummary(container, ctx, sessionId) {
         h('ul', { class: 'plain' }, s.exercises.map((e) => h('li', {}, h('strong', { text: e.name }), h('div', { class: 'muted', text: e.text }))))),
       s.notes ? h('section', { class: 'card' }, h('h3', { text: 'Notes' }), h('p', { class: 'notes-text', text: s.notes })) : null,
       h('a', { class: 'btn primary block', href: '#/', text: 'Back to Home' }),
+      h('a', { class: 'btn block', href: `#/workout/${sessionId}`, text: 'Edit workout' }),
     );
   }
   render();

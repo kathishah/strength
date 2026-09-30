@@ -457,3 +457,4 @@ textarea {
 .dcap.skip { min-height: 22px; padding: 0 0 2px; font: inherit; font-size: 0.68rem; color: var(--muted); background: none; border: 0; cursor: pointer; }
 .dcol.skipped .dial { opacity: 0.3; }
 .dcol.skipped .dcap { text-decoration: line-through; }
+.edit-bar p { margin: 0 0 8px; }
