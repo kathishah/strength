@@ -1,8 +1,13 @@
-# Recomp Tracker — Product Spec (v1.13)
+# Recomp Tracker — Product Spec (v1.14)
 
 A personal, mobile-first web app for logging gym workouts in a body recomposition program (build lean mass, reduce visceral fat, strengthen the back) and telling the user what to lift next. Used at the gym on a phone and at home on a desktop, with data synced across devices. Activity tracking (steps, Bollyx, hikes, mobility) and body metrics (DEXA, waist, weight) are out of scope: activity is tracked on an Apple Watch, and body metrics are not tracked in this app.
 
 ## Changelog
+- **v1.14**
+  - Set counts: Phase 1 (weeks 1–4) uses the full set counts of Section 4.3 (it was 2 sets per exercise). The phases now differ only in target effort (5.1).
+  - Exercises that start at 0 and have a first-loaded weight (leg press, hip thrust, reverse lunge) pre-fill that weight when there is no history (5.6). What was logged last time still wins.
+  - Reps in reserve (RIR) is no longer asked per set. Target effort is shown in plain words ("stop each set with about 3 reps left"). The `rir` field stays in the data model, unused.
+  - Session screen follows the v0.2 viewer: one horizontal swipe carousel of exercise cards, colour-coded supersets (6.3).
 - **v1.13**
   - Progression scope cut to what the app needs: show the weights used last time, pre-fill an editable suggestion, and prompt an increase after a few weeks (scheduled increase, 5.12). Struck-through text in Section 5 (and where it is mentioned elsewhere) is removed and is not built; it is kept for reference.
   - Removed: ramp-up sets (5.5), calibration (5.6), earned increases and reductions (5.2 rules 1 and 2), deload weeks (5.8), back pain gate (5.9), stall detection (5.10), expected pace (5.11), and all progression for bodyweight-based exercises (5.4: bodyweight, loadable, TRX levels, pushup ladder). Those exercises still show sets, reps, last time and an editable box; nothing is suggested to change.
@@ -309,7 +314,7 @@ A warm-up (about 5 min of easy-to-brisk cardio, then the McGill Big 3: curl-up, 
 Exercises are grouped as supersets: slots with the same superset group are alternated. Rest 60–90 seconds between rounds.
 
 **Workout A**
-| Slot | Superset | Exercise | Sets (Phase 2) | Reps | Type |
+| Slot | Superset | Exercise | Sets | Reps | Type |
 |---|---|---|---|---|---|
 | 1 | 1 | Goblet squat | 3 | 8–12 | dumbbell |
 | 2 | 1 | Dumbbell bench press | 3 | 8–12 | dumbbell |
@@ -319,7 +324,7 @@ Exercises are grouped as supersets: slots with the same superset group are alter
 | 6 | 3 | Face pull | 2 | 12–15 | cable |
 
 **Workout B**
-| Slot | Superset | Exercise | Sets (Phase 2) | Reps | Type |
+| Slot | Superset | Exercise | Sets | Reps | Type |
 |---|---|---|---|---|---|
 | 1 | 1 | Leg press | 3 | 10–12 | machine |
 | 2 | 1 | Lat pulldown | 3 | 10–12 | cable |
@@ -329,7 +334,7 @@ Exercises are grouped as supersets: slots with the same superset group are alter
 | 6 | 3 | 45° back extension | 2 | 10–15 | bodyweight_loadable |
 
 **Workout C**
-| Slot | Superset | Exercise | Sets (Phase 2) | Reps | Type |
+| Slot | Superset | Exercise | Sets | Reps | Type |
 |---|---|---|---|---|---|
 | 1 | 1 | Trap bar deadlift | 3 | 6–10 | barbell |
 | 2 | 1 | Incline dumbbell press | 3 | 8–12 | dumbbell |
@@ -410,10 +415,10 @@ Implement as **pure functions** with unit tests. These rules drive the "suggeste
 **v1.13 scope.** The app shows last session's sets, pre-fills the suggestion in an editable box, and after a few weeks prompts a load increase (5.12). Struck-through text is removed and not built.
 
 ### 5.1 Phases
-- **Phase 1 (program weeks 1–4):** 2 working sets per exercise. Target effort: stop with ~3 reps in reserve (RIR 3).
-- **Phase 2 (week 5 onward):** full set counts from Section 4.3. Target effort: RIR 1–2.
+- **Phase 1 (program weeks 1–4):** the full set counts from Section 4.3 (v1.14; it was 2 working sets per exercise). Target effort: stop with ~3 reps left (RIR 3).
+- **Phase 2 (week 5 onward):** the same set counts. Target effort: 1–2 reps left (RIR 1–2).
 - Program week = weeks elapsed since `programStartDate` (stored on UserProfile; user-editable), counted in Pacific-time calendar days. Initial value: **2026-09-28** (a Monday, the first Workout A), so that day is program week 1, Phase 1.
-- Display the current phase and target RIR on the session screen.
+- Display the current phase and target effort on the session screen, in plain words ("stop each set with about 3 reps left").
 
 ### 5.2 Base load and suggestion (weighted exercises)
 For each exercise, look at the most recent completed session containing that exercise (working sets only). If that session's working sets used different weights (e.g. a manual override), the heaviest weight used is the base load.
@@ -490,6 +495,8 @@ Dumbbell values are per hand. Leg press values are added plates, excluding the s
 | Seated cable row | 60 | — | |
 | Farmer carry | 35 | — | |
 
+**No history (v1.14).** An exercise whose `startingWeightLbs` is 0 and that has a `firstLoadedWeightLbs` (leg press 50, hip thrust 45, reverse lunge 10) pre-fills its first-loaded weight instead of 0, and the person can still log less. Once a weight has been logged, the pre-fill is that (5.2), including a logged 0.
+
 Swapped-in alternatives without a seeded value: no pre-fill; prompt the user to enter a weight they could lift for the top of the range with ~3 reps to spare.
 
 ~~Calibration~~ — removed (v1.13). The first sessions of an exercise are not special; the starting weight is only a pre-fill. Original text, struck:
@@ -508,7 +515,7 @@ Struck examples belong to removed rules (v1.13). Unless stated otherwise, assume
 - Goblet squat, last session 12, 11, 10 at 35 lbs → suggest 35 lbs, add reps.
 - ~~Lat pulldown, range 10–12, last two sessions each had a set of 8 at 100 lbs → suggest 90 lbs.~~
 - ~~Reverse lunge 8 per leg (repMin = repMax = 8), 2×8 achieved → suggest +5 lbs.~~
-- Phase 1 week 2 → Workout A shows 2 sets for all exercises.
+- Phase 1 week 2 → Workout A shows its full set counts (3, 3, 3, 3, 2, 2).
 - ~~Back extension, last session 2×15 at 0 lbs → suggest 5 lbs, target 10 reps.~~
 - ~~Back extension at 5 lbs, below 10 reps on a set in each of the last 2 sessions → suggest 0 lbs.~~
 - ~~Trap bar deadlift working weight 135 lbs (increment 10) → ramp sets 70 × 8 (67.5 rounds to 70) and 100 × 4 (101.25 rounds to 100).~~
@@ -531,7 +538,7 @@ Struck examples belong to removed rules (v1.13). Unless stated otherwise, assume
 - ~~Pushup level 1, last session 14, 12, 10 → stay at level 1.~~
 - ~~Pushup level 2, below 8 reps on a set in each of the last 2 sessions → suggest level 1.~~
 - ~~Pushup at level 1 for 5 weeks without reaching 3×20 → no scheduled increase (ladder exercises excluded).~~
-- Workout B in Phase 1 → pushups show 2 sets; in Phase 2, 3 sets; ~~in a deload week, 2 sets~~.
+- Workout B in Phase 1 → pushups show 3 sets, and 3 sets in Phase 2 too; ~~in a deload week, 2 sets~~.
 - ~~Pushup is never flagged loadsBack and never gets ramp-up sets.~~
 - ~~TRX row at level 2, last session 3×15 → suggest level 3, target 10 reps, highlighted "↑ Level 3 · Earned".~~
 - ~~TRX row at level 3, reps not at top, 21 days since last level increase → suggest level 4, "Scheduled".~~
@@ -612,20 +619,20 @@ Test cases:
 - Data syncs across phone and desktop via the backend.
 
 ### 6.2 Home / Today screen
-- Next workout (A/B/C) with a "Start" button and the no-consecutive-days warning if applicable.
-- On Tuesdays and Thursdays, show the recovery routine (4.6) as today's primary card (still allow starting a workout).
+- Home is the v0.2 viewer's page (v1.14, 0.B.1): a slim header (one status line such as "Wed · Workout B · 0/6 done", which opens to the day pills Monday to Sunday, the save state, the back pain rating for the workout about to start, and sign out; a dot for whether the work is saved; a theme button) over the day's swipe carousel of cards. There is no Start button: the next workout (A/B/C by rotation) is shown as cards, and it starts when the first exercise is marked done. The no-consecutive-days warning shows above the cards if applicable.
+- On Tuesdays and Thursdays the cards are the recovery routine (4.6), with a last card to show the workout instead (a workout is never blocked). Picking a day pill shows that day's cards.
 - ~~Deload banner during a deload week (5.8), and the Start deload / Postpone controls.~~
 
 ### 6.3 Workout session (most important screen; phone-first)
-- **Exercises grouped by superset**, each showing: suggested weight, target reps, set count for the current phase, and last session's result (e.g. "Last: 35 × 12, 12, 11"). ~~Ramp-up sets shown above the first working set for slots 1 and 3, visually distinct.~~
-- Per set: weight (pre-filled with the suggestion or starting weight, always editable) and reps; optional RIR. Large tap targets; numeric keypad inputs; quick +/− buttons that step by the exercise's increment. When the logged weight differs from the suggestion, show a subtle "changed from X" indicator. Carries log load and distance.
+- **Exercises in one horizontal swipe carousel, as in the v0.2 viewer (0.B.1)** (v1.14): one card per swipe with the neighbours peeking, ordered by superset, each superset with its own accent colour on the card's left edge (Superset 1 green, 2 indigo, 3 amber, Finisher none) and a label such as "Superset 1 · 1 of 2". Each card shows: suggested weight, target reps, set count for the current phase, and last session's result (e.g. "Last: 35 × 12, 12, 11"). ~~Ramp-up sets shown above the first working set for slots 1 and 3, visually distinct.~~
+- **Logging (v1.14): one tick per exercise.** At the bottom of the card, where the viewer had "mark this exercise as done", a barrel dial per set holds the weight and one shared dial holds the reps; each shows one value, already at the suggested weight and the recommended reps, and turns in 2.5 lb notches (drag up for more, down for less, or tap its upper or lower half). One tick logs every set of the exercise at once; after that the card shows a one-line summary with Edit and Undo. A weight that differs between sets is set on that set's dial; a dial changed on a set carries to the sets after it. Levels (TRX, pushups) use dials of 1 to 5, carries a distance dial. No RIR. The layout follows what was asked for: the GIF is the hero at the top of the card, with the cue, muscles and the Options and TRX lists above the dials.
 - Changing the weight (or TRX level) on one set pre-fills it into the remaining sets of the same exercise in this session.
 - For suspension exercises, the weight field is replaced by a level stepper (1–5) with the exercise's level description shown on tap.
 - **Increase highlight:** when the suggested weight is higher than the previous session's base load, the weight field and exercise header use a distinct accent color and bold weight, with an up-arrow badge and text such as "↑ +5 lbs from 25 · Scheduled". Meaning must not rely on color alone (arrow + text always shown). The highlight stays for that session only.
 - ~~Calibration prompt after each working set during an exercise's first 2 sessions (5.6).~~
 - Back pain before is an optional field asked at session start (one tap, skippable); it changes no suggestion.
 - ~~Deload banner and halved set counts during deload weeks (5.8).~~
-- Rest timer (default 90 s, adjustable) that starts when a set is marked done.
+- Rest timer (default 90 s, adjustable) that starts when an exercise is marked done.
 - Swap exercise (Section 4.5). Tap exercise name for cues.
 - Optional session fields: back pain rating 0–10 (before and after), notes.
 - **Draft safety:** an in-progress session must survive a page refresh, app switch, or dropped gym Wi-Fi. Persist the draft locally and save to the backend on finish (and opportunistically during the session).
@@ -674,7 +681,7 @@ All records belong to an owner (the signed-in user). Storage is an append-only e
 - **RoutineItem**: routineId, order, exerciseId, prescription (text), sets/holds, reps, holdSeconds, perSide
 - **WorkoutSession**: date, templateCode, startedAt, finishedAt, phase, programWeek, isDeload, backPainBefore, backPainAfter, notes
 - **ExerciseLevel** (for bodyweight_ladder): exerciseId, level, name, repMin, repMax, cue
-- **SetLog**: sessionId, exerciseId, levelNumber (nullable; ladder and suspension exercises), suggestedLevel (nullable), setNumber, isRampUp, isCalibration, suggestedWeightLbs (nullable), suggestionSource (starting | hold | scheduled | null in v1.13; the registry still accepts calibration, earned, reduction, deload and gated), weightLbs (nullable; actual, drives progression), reps (nullable), distanceM (nullable, carries), rir (nullable), calibrationFeel (too_easy | about_right | too_hard | null), completed
+- **SetLog**: sessionId, exerciseId, levelNumber (nullable; ladder and suspension exercises), suggestedLevel (nullable), setNumber, isRampUp, isCalibration, suggestedWeightLbs (nullable), suggestionSource (starting | hold | scheduled | null in v1.13; the registry still accepts calibration, earned, reduction, deload and gated), weightLbs (nullable; actual, drives progression), reps (nullable), distanceM (nullable, carries), rir (nullable; not asked in the UI since v1.14), calibrationFeel (too_easy | about_right | too_hard | null), completed
 - ~~**DeloadWeek**: programWeek, source (scheduled | manual), postponedFromWeek (nullable)~~ (removed, v1.13; the event types stay in the registry, unused)
 
 Seed data: exercise catalog with cues, starting weights, first-loaded weights, and ~~loadsBack flags~~ (Sections 4 and 5), templates A/B/C with slots and alternatives (including TRX alternatives with starting levels and level descriptions, Section 4.5.1), the recovery routine (Section 4.6), and pushup ladder levels (Section 5.4). Seed data is bundled with the app, so there is nothing to seed into storage.

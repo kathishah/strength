@@ -101,7 +101,7 @@ export function suggestExercise(state, { exerciseId, templateCode = null, slot =
     exerciseId,
     type: cfg.type,
     progression: cfg.progression,
-    sets: slot ? setsFor(templateCode, slot, cal.phase) : null,
+    sets: slot ? setsFor(templateCode, slot) : null,
     repMin: r.repMin ?? cfg.repMin,
     repMax: r.repMax ?? cfg.repMax,
     perSide: cfg.perSide,

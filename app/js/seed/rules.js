@@ -128,5 +128,4 @@ export const PROGRAM = {
   defaultTrapBarWeightLbs: 45,
   defaultScheduledIncreaseDays: 21,
   phase1Weeks: 4,
-  phase1Sets: 2,
 };
