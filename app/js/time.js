@@ -64,6 +64,13 @@ export function addDays(date, days) {
   return new Date((n + days) * DAY_MS).toISOString().slice(0, 10);
 }
 
+// Day of the week for a "yyyy-mm-dd" calendar day: 0 = Sunday ... 6 = Saturday (1970-01-01 was a Thursday).
+export function weekdayOf(date) {
+  const n = dayNumber(date);
+  if (Number.isNaN(n)) throw new RangeError(`not a yyyy-mm-dd date: ${date}`);
+  return (((n + 4) % 7) + 7) % 7;
+}
+
 // The Pacific calendar day of an ISO time with any offset ("2026-09-28T11:03:00.000-07:00" -> "2026-09-28");
 // null if the time is malformed.
 export function pacificDateOf(iso) {

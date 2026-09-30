@@ -186,3 +186,14 @@ describe('pacificDate and calendar days', () => {
     assert.throws(() => addDays('nope', 1), RangeError);
   });
 });
+
+import { weekdayOf } from '../app/js/time.js';
+test('weekdayOf: 0 is Sunday; 2026-09-28 is a Monday, 09-29 a Tuesday', () => {
+  assert.equal(weekdayOf('1970-01-01'), 4); // a Thursday
+  assert.equal(weekdayOf('2026-09-27'), 0);
+  assert.equal(weekdayOf('2026-09-28'), 1);
+  assert.equal(weekdayOf('2026-09-29'), 2);
+  assert.equal(weekdayOf('2026-10-03'), 6);
+  assert.equal(weekdayOf('1969-12-31'), 3); // before the epoch
+  assert.throws(() => weekdayOf('2026-02-30'), RangeError);
+});
