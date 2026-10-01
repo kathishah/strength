@@ -30,7 +30,7 @@ v1 on S3 + CloudFront (app/); GitHub Pages keeps the frozen v0.2 viewer
   - The PIN is the Cognito "password". Cognito's password policy cannot go below 6 characters and has no maximum, so the policy is minimum length 6 with no character-class rules, and the sign-in form accepts exactly 6 digits (a 4-digit PIN is not possible). Cognito's built-in lockout after repeated wrong attempts is the main brute-force defence; a 6-digit PIN is much weaker than a password, which is acceptable for this single-user test app and should be revisited before wider use (see section 12).
   - The user is created with `admin-create-user` and then `admin-set-user-password --permanent`, so the account is never in the `NEW_PASSWORD_REQUIRED` state. The page therefore handles no auth challenges; if Cognito returns one, it shows "sign-in unavailable" instead.
   - A forgotten PIN is reset by an admin with `admin-set-user-password` (no email-based reset flow).
-  - Google/Apple sign-in is a possible later addition (redirect-based, riskier on iOS home-screen apps); see section 12.
+  - Google/Apple sign-in is a possible later addition (redirect-based, riskier on iOS home-screen apps); dropped, see section 12.
 - **API:** one HTTP API with a JWT authorizer, so the Lambda contains no token-verification code. As defence in depth, the Lambda also checks the token's `sub` against an `OWNER_SUB` environment variable.
 - **Lambda:** one function, Node 22, arm64, esbuild single-file bundle, no VPC, no heavy SDK (use `@aws-sdk/client-s3` only).
 - **Storage:** private S3 bucket, versioning on, public access blocked, encryption at rest (SSE-S3).
@@ -176,14 +176,14 @@ Tests run with Node's built-in runner (`node --test`), so there is still no bund
 
 Phase C can start in parallel with A and B, since the engine has no dependencies.
 
-**Status (2026-09-30):** Phases 0 and A to D are built, tested (493 tests) and merged to `main`. The site at `https://strength.logbook.me` runs Phases B, C and D (deployed together with `scripts/deploy-app.sh`; the Lambda and `infra/` have not changed since Phase A). The owner deployed it, tried it and reports that it works. The spec is v1.17 (v1.15 edit a finished workout, v1.16 no back pain rating, v1.17 Phase E scope). Found after that: a finished workout is locked, so a tick missed before Finish (pushups in Workout B on 2026-09-30) cannot be added. Phase D2 (section 15c, spec v1.15, 504 tests) fixes that: merged to `main` and deployed on 2026-09-30 with `scripts/deploy-app.sh` (static site only). It went in before Phase E. Phase E (scope cut after mock-ups, spec v1.17: History by exercise and by date, sync-only Settings, an export script, the service worker; design in section 15e) is built, tested (525 tests), merged to `main` and deployed on 2026-09-30 (static site only). All phases of v1 are now built; what remains is the owner's checks on the installed phone (BUILD.md step 7, Phase E check) and one run of `scripts/export-data.mjs` against the real API.
+**Status (2026-09-30):** Phases 0 and A to D are built, tested (493 tests) and merged to `main`. The site at `https://strength.logbook.me` runs Phases B, C and D (deployed together with `scripts/deploy-app.sh`; the Lambda and `infra/` have not changed since Phase A). The owner deployed it, tried it and reports that it works. The spec is v1.17 (v1.15 edit a finished workout, v1.16 no back pain rating, v1.17 Phase E scope). Found after that: a finished workout is locked, so a tick missed before Finish (pushups in Workout B on 2026-09-30) cannot be added. Phase D2 (section 15c, spec v1.15, 504 tests) fixes that: merged to `main` and deployed on 2026-09-30 with `scripts/deploy-app.sh` (static site only). It went in before Phase E. Phase E (scope cut after mock-ups, spec v1.17: History by exercise and by date, sync-only Settings, an export script, the service worker; design in section 15e) is built, tested (525 tests), merged to `main` and deployed on 2026-09-30 (static site only). All phases of v1 are built and deployed. The owner made the phone checks (BUILD.md step 7, Phase E check) and ran `scripts/export-data.mjs` against the real API, and both worked. The open decisions of section 12 are struck out, so nothing is planned beyond v1.
 
 ## 10. Risks and mitigations
 | Risk | Mitigation |
 |---|---|
 | Login in an iOS standalone PWA | In-page PIN form, no redirects; Phase A tests it on the phone |
 | Offsets change at daylight saving, so string order of `ts` is wrong for about an hour each fall | Order by instant (`compareTs`); the offset is always explicit |
-| A 6-digit PIN is guessable | Cognito lockout; single-user test data; revisit before wider use (section 12) |
+| A 6-digit PIN is guessable | Cognito lockout; single-user app; a stronger sign-in is not planned (section 12) |
 | iOS evicts local storage | S3 is the source of truth; local is a cache; re-login restores everything |
 | Two devices write at once | `If-None-Match: *` to create, `If-Match` to update, retry on 412/409; idempotent event ids |
 | Offline events uploaded later are missed by other devices | Files are partitioned by receive time; the cursor is a file position |
@@ -207,8 +207,9 @@ Phase C can start in parallel with A and B, since the engine has no dependencies
 - Phase E scope (spec v1.17, from mock-ups): History by exercise and by date, Settings = sync only, export as a script, no install-help screen, no settings screens (defaults stay; the engine still honours `setting.changed` events), service worker kept.
 
 ## 12. Open decisions
-1. **Stronger sign-in later:** replace the 6-digit PIN with a longer password or passkey before the app holds anything beyond personal test data or is shared with anyone else.
-2. **Google/Apple sign-in later:** only if the PIN form becomes a nuisance. It would need a hosted-UI redirect (test on the installed iPhone app first), a way to keep unknown Google accounts out, and a fixed data owner instead of one prefix per `sub`.
+Both struck out (2026-09-30, owner's call after the phone checks): not planned. The 6-digit PIN stays, for a single-user app. The text is kept for reference.
+1. ~~**Stronger sign-in later:** replace the 6-digit PIN with a longer password or passkey before the app holds anything beyond personal test data or is shared with anyone else.~~
+2. ~~**Google/Apple sign-in later:** only if the PIN form becomes a nuisance. It would need a hosted-UI redirect (test on the installed iPhone app first), a way to keep unknown Google accounts out, and a fixed data owner instead of one prefix per `sub`.~~
 
 ## 13. As built (Phase 0 and A)
 Deployment facts and behaviours the sections above left open. `BUILD.md` has the commands; `lambda/events/registry.mjs` is the source of truth for event validation.
@@ -526,5 +527,5 @@ Offline load, not offline sync (sync is unchanged). Install caches the shell (in
 
 **As built (Phase E).** Branch `v1-phase-e`; 525 tests pass (504 before). Nothing under `lambda/` or `infra/` changed. Checked in the browser pane at 375 px wide on a scratch page (memory store, seven workouts over two weeks, one Workout B with the pushups unticked): the header panel with History, Settings and sign-out; By exercise; an exercise with its chart, the Top set / Volume switch and the increase lines; By date with "This week", "Last week", "October" and "September" groups and the "1 missing" tag; Edit opening the workout, ticking the missing exercise, and the Back link returning to By date with the tag gone; Settings showing the sync panel. The service worker was checked on the real `app/` folder: it installs, caches 60 files, and with the dev server stopped the page still loads and renders.
 - *Differences from the design above.* The exercise kinds are `weight`, `level`, `distance`, `reps` (no added weight, such as the dead bug: top is best reps) and `done` (no chart). The header's three icons are one group, so on a 375 px phone they wrap together onto their own line under the day pills; beside the pills on a wider screen. The Settings card keeps the old panel's extra rows (replayed state, cursor, last round trip) as well as the ones in the mock-up. `statusText` and Back link of the edit view now say History.
-- *Not checked.* An installed iPhone home-screen app (offline load and the header icons), and `scripts/export-data.mjs` against the real API (its parts are tested with a fake server; run it once: BUILD.md step 9).
+- *Checked afterwards by the owner.* The installed iPhone home-screen app (offline load, the header icons) and `scripts/export-data.mjs` against the real API.
 - *Deploy.* `scripts/deploy-app.sh` as before. `sw.js` is uploaded with `no-cache` like every other file, and the next load installs it.
