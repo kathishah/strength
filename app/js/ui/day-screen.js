@@ -198,31 +198,36 @@ export function mountDay(container, ctx, editId = null) {
     const altButtons = [];
     if (groups.alternatives.length) altButtons.push(h('button', { type: 'button', class: 'alt-toggle opt', 'aria-expanded': String(open === 'alternatives'), disabled: !card.canSwap, onclick: toggle('alternatives') }, 'Options ', h('span', { class: 'alt-badge', text: String(groups.alternatives.length) })));
     if (groups.trx.length) altButtons.push(h('button', { type: 'button', class: 'alt-toggle trx', 'aria-expanded': String(open === 'trx'), disabled: !card.canSwap, onclick: toggle('trx') }, 'TRX ', h('span', { class: 'alt-badge', text: String(groups.trx.length) })));
-    return h('article', { class: `ex slide ${card.ssClass}${card.increased ? ' increased' : ''}${card.done ? ' done' : ''}`, 'aria-label': card.name },
-      card.done ? h('div', { class: 'done-flag' }, h('span'), 'Done') : null,
-      h('div', { class: 'ex-header' },
-        h('div', {}, h('h3', { class: 'ex-title', text: card.name }), h('div', { class: 'phase-chip', text: card.chipText })),
-        h('div', { class: 'ex-meta' }, h('strong', { text: card.prescription }), h('span', { text: 'Sets × Reps' }))),
-      card.increaseText ? h('p', { class: 'up', text: card.increaseText }) : null,
-      hero(card.name, card.cues.gifUrl, card.cues.attribution),
-      description(card),
-      card.swappedFromName ? h('div', { class: 'swap-note' }, `Swapped from ${card.swappedFromName} · `, h('button', { type: 'button', class: 'revert-btn', onclick: () => guard(async () => { ui.alt.delete(card.exerciseId); await ctx.actions.swap(current.sessionId, { slotNumber: card.slot, exerciseId: card.defaultExerciseId, templateCode: current.templateCode }); }) }, 'Revert')) : null,
-      altButtons.length ? h('div', { class: 'alt-row' }, altButtons) : null,
-      card.swapBlockedReason && altButtons.length ? h('p', { class: 'small muted', text: card.swapBlockedReason }) : null,
-      open && card.canSwap ? altPanel(card, open) : null,
-      h('div', { class: 'log-area' },
-        card.lastText ? h('p', { class: 'last muted small', text: card.lastText }) : null,
-        card.mode === 'done' ? doneLine(card) : logLine(card)));
+    // head / media / rest: plain stacked in portrait (display: contents), two columns in phone landscape (app.css).
+    return h('article', { class: `ex slide split ${card.ssClass}${card.increased ? ' increased' : ''}${card.done ? ' done' : ''}`, 'aria-label': card.name },
+      h('div', { class: 'ex-head' },
+        card.done ? h('div', { class: 'done-flag' }, h('span'), 'Done') : null,
+        h('div', { class: 'ex-header' },
+          h('div', {}, h('h3', { class: 'ex-title', text: card.name }), h('div', { class: 'phase-chip', text: card.chipText })),
+          h('div', { class: 'ex-meta' }, h('strong', { text: card.prescription }), h('span', { text: 'Sets × Reps' }))),
+        card.increaseText ? h('p', { class: 'up', text: card.increaseText }) : null),
+      h('div', { class: 'ex-media' }, hero(card.name, card.cues.gifUrl, card.cues.attribution)),
+      h('div', { class: 'ex-rest' },
+        description(card),
+        card.swappedFromName ? h('div', { class: 'swap-note' }, `Swapped from ${card.swappedFromName} · `, h('button', { type: 'button', class: 'revert-btn', onclick: () => guard(async () => { ui.alt.delete(card.exerciseId); await ctx.actions.swap(current.sessionId, { slotNumber: card.slot, exerciseId: card.defaultExerciseId, templateCode: current.templateCode }); }) }, 'Revert')) : null,
+        altButtons.length ? h('div', { class: 'alt-row' }, altButtons) : null,
+        card.swapBlockedReason && altButtons.length ? h('p', { class: 'small muted', text: card.swapBlockedReason }) : null,
+        open && card.canSwap ? altPanel(card, open) : null,
+        h('div', { class: 'log-area' },
+          card.lastText ? h('p', { class: 'last muted small', text: card.lastText }) : null,
+          card.mode === 'done' ? doneLine(card) : logLine(card))));
   }
 
   function buildRecoveryCard(card) {
-    return h('article', { class: 'ex slide rec', 'aria-label': card.name },
-      h('div', { class: 'ex-header' },
-        h('div', {}, h('h3', { class: 'ex-title', text: card.name }), h('div', { class: 'phase-chip', text: card.chipText })),
-        h('div', { class: 'ex-meta' }, h('strong', { text: card.prescription }), h('span', { text: 'Per round · 2 rounds' }))),
-      hero(card.name, card.gifUrl, card.attribution),
-      h('div', { class: 'exercise-body', text: card.notes }),
-      card.tags.length ? h('div', { class: 'tags' }, card.tags.map((t) => h('span', { class: 'tag', text: t }))) : null);
+    return h('article', { class: 'ex slide split rec', 'aria-label': card.name },
+      h('div', { class: 'ex-head' },
+        h('div', { class: 'ex-header' },
+          h('div', {}, h('h3', { class: 'ex-title', text: card.name }), h('div', { class: 'phase-chip', text: card.chipText })),
+          h('div', { class: 'ex-meta' }, h('strong', { text: card.prescription }), h('span', { text: 'Per round · 2 rounds' })))),
+      h('div', { class: 'ex-media' }, hero(card.name, card.gifUrl, card.attribution)),
+      h('div', { class: 'ex-rest' },
+        h('div', { class: 'exercise-body', text: card.notes }),
+        card.tags.length ? h('div', { class: 'tags' }, card.tags.map((t) => h('span', { class: 'tag', text: t }))) : null));
   }
 
   // The last card of a workout: notes and Finish (there is no separate Finish screen).

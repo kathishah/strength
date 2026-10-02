@@ -196,3 +196,4 @@ node scripts/export-data.mjs "$EMAIL"               # or: node scripts/export-da
 - Test notes are real, permanent log entries (`session.notes` on an entity whose id starts with `spike_`; no session ever refers to it).
 - After a code-only change to the Lambda: `sam build` and the same `sam deploy` command as in step 5. After an app-only change: step 7.
 - Logs: `sam logs --stack-name "$STACK" --region "$AWS_REGION" --tail`. They never contain request bodies.
+- Landscape layout (spec v1.18) is CSS plus three wrapper divs per card (`ex-head`, `ex-media`, `ex-rest`, `display: contents` in portrait). After step 7, turn the phone sideways: the GIF, title, dials and tick should all show without scrolling.
