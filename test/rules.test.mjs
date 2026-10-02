@@ -112,7 +112,7 @@ describe('rules.js matches spec 4.3 (slots, sets, reps)', () => {
       const block = s43.split(`**Workout ${code}**`)[1].split('**Workout')[0].split('**Exercise cues')[0];
       const rows = tableRows(block);
       assert.equal(rows.length, WORKOUTS[code].slots.length);
-      rows.forEach(([slot, , name, sets, repsText], i) => {
+      rows.forEach(([slot, name, sets, repsText], i) => {
         const s = WORKOUTS[code].slots[i];
         const id = idOf(name);
         assert.equal(Number(slot), s.slot);
@@ -133,6 +133,44 @@ describe('rules.js matches spec 4.3 (slots, sets, reps)', () => {
 
   test('SLOT_SETS has exactly the slots of the templates', () => {
     for (const code of ['A', 'B', 'C']) assert.equal(SLOT_SETS[code].length, WORKOUTS[code].slots.length);
+  });
+});
+
+describe('program.js matches spec 4.5 and 4.5.2 (alternatives, v1.19)', () => {
+  // Names as the spec writes them: in full, or without a trailing "(bench-supported)"-style note; a full name wins a clash.
+  const lower = new Map(Object.entries(EXERCISES).map(([id, e]) => [e.name.toLowerCase().replace(/\s*\(.*\)$/, ''), id]));
+  for (const [id, e] of Object.entries(EXERCISES)) lower.set(e.name.toLowerCase(), id);
+  const byName = (name) => {
+    const id = lower.get(name.trim().toLowerCase());
+    assert.ok(id, `no catalog exercise named "${name}"`);
+    return id;
+  };
+  const table45 = section('### 4.5 Back-friendly substitutions').split('#### 4.5.1')[0];
+
+  test('every slot row of the 4.5 table is the slot exercise and its alternatives, in order', () => {
+    const rows = tableRows(table45).filter(([slot]) => /^[ABC]\d$/.test(slot));
+    assert.equal(rows.length, 17);
+    for (const [slot, exercise, alternatives] of rows) {
+      const s = WORKOUTS[slot[0]].slots[Number(slot[1]) - 1];
+      assert.equal(byName(exercise), s.exercise, `${slot} exercise`);
+      const list = alternatives.replace(/\([^)]*,[^)]*\)/g, '').split(',').map((x) => x.replace(/\(for sessions.*$/, '').trim());
+      assert.deepEqual(list.map(byName), s.alternatives, `${slot} alternatives`);
+    }
+  });
+
+  test('every exercise added in v1.19 (4.5.2) is in the catalog with rules, and a slot lists it as an alternative', () => {
+    const rows = tableRows(section('#### 4.5.2 Exercises added in v1.19'));
+    assert.equal(rows.length, 16);
+    for (const [id, name, type, , alternativeFor] of rows) {
+      assert.equal(EXERCISES[id]?.name, name, `${id} name`);
+      assert.equal(EXERCISES[id].type, type, `${id} type`);
+      assert.ok(RULES[id], `${id} has no rules`);
+      // "Goblet squat (A1) · Leg press (B1)": each (slot) is a slot that offers it.
+      for (const [, code, slotNumber] of alternativeFor.matchAll(/\(([ABC])(\d)\)/g)) {
+        const s = WORKOUTS[code].slots[Number(slotNumber) - 1];
+        assert.ok(s.alternatives.includes(id), `${id} is not an alternative in ${code}${slotNumber}`);
+      }
+    }
   });
 });
 
@@ -175,11 +213,16 @@ describe('rules.js matches spec 5.3 and 5.6', () => {
     assert.deepEqual(single.sort(), ['box-squat', 'goblet-squat']);
     const byType = { barbell: amount(rowFor('Barbell')), machine: amount(rowFor('Machine')), cable: amount(rowFor('Machine')), carry: amount(rowFor('Carry')) };
     assert.match(rowFor('Machine'), /face pull \+5 lbs/);
+    // The exceptions for exercises added in v1.19, named in the note under the table (4.5.2).
+    const exceptions = { 'cable-glute-kickback': 5, 'cable-reverse-fly': 5, 'single-arm-cable-row': 5, 'trap-bar-carry': 10, 'goblet-carry': 5 };
+    const note = section('### 5.3 Load increments').toLowerCase();
+    for (const id of Object.keys(exceptions)) assert.ok(note.includes(EXERCISES[id].name.toLowerCase().replace(/ \(.*/, '')), `5.3 note names ${id}`);
     for (const [id, r] of Object.entries(RULES)) {
       if (r.progression !== 'load') continue;
       let want = byType[r.type];
       if (r.type === 'dumbbell') want = single.includes(id) ? amount(rowFor('Dumbbell, one dumbbell')) : amount(rowFor('Dumbbell, one in each hand'));
       if (id === 'face-pull') want = 5;
+      if (Object.hasOwn(exceptions, id)) want = exceptions[id];
       assert.equal(r.loadIncrementLbs, want, `${id} (${r.type})`);
     }
     assert.equal(RULES['goblet-squat'].loadIncrementLbs, 5);

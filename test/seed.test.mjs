@@ -1,38 +1,58 @@
-// The bundled seed data is a verbatim copy of the frozen v0.2 viewer's data (spec 0.C).
+// The bundled seed data (spec 4.3, 4.5 to 4.5.3). It began as a copy of the v0.2 viewer's data; the viewer is retired (the root
+// index.html redirects to the app, spec 0.C), so the seed is the only copy and nothing here compares against it.
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import vm from 'node:vm';
 import { EXERCISES, PLACEHOLDER_GIF, RECOVERY, RECOVERY_LABEL, WORKOUTS } from '../app/js/seed/index.js';
 import { validateEvent } from '../lambda/events/registry.mjs';
 import { NOW, makeEvent } from '../test-support/util.mjs';
 
-const viewer = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
+describe('seed basics', () => {
+  test('recovery routine, its label and the placeholder image', () => {
+    assert.equal(RECOVERY.length, 8);
+    assert.equal(RECOVERY_LABEL, 'Sitting recovery · ~10 min, 2 rounds');
+    assert.match(PLACEHOLDER_GIF, /^data:image\/svg\+xml,/);
+  });
 
-// Pulls `  const NAME = <literal>;` out of the viewer's inline script and evaluates just the literal.
-function viewerConst(name) {
-  const m = new RegExp(`\\n  const ${name} =\\s*`).exec(viewer);
-  assert.ok(m, `${name} not found in index.html`);
-  const from = m.index + m[0].length;
-  return vm.runInNewContext(`(${viewer.slice(from, viewer.indexOf(';\n', from))})`);
-}
-// The literal is evaluated in another realm; compare as plain JSON data.
-const plain = (x) => JSON.parse(JSON.stringify(x));
+  test('no slot has a superset (spec v1.19)', () => {
+    for (const w of Object.values(WORKOUTS)) for (const s of w.slots) assert.equal('superset' in s, false, `slot ${s.slot}`);
+  });
 
-describe('seed matches the frozen v0.2 viewer', () => {
-  test('exercise catalog', () => assert.deepEqual(plain(EXERCISES), plain(viewerConst('EXERCISES'))));
-  test('recovery routine', () => assert.deepEqual(plain(RECOVERY), plain(viewerConst('RECOVERY'))));
-  test('workout templates', () => assert.deepEqual(plain(WORKOUTS), plain(viewerConst('WORKOUTS'))));
-  test('recovery label and placeholder image', () => {
-    assert.equal(RECOVERY_LABEL, viewerConst('RECOVERY_LABEL'));
-    assert.equal(PLACEHOLDER_GIF, viewerConst('PLACEHOLDER_GIF'));
+  test('every slot has 1 to 4 non-TRX alternatives, none repeated or equal to the slot exercise (spec 4.5)', () => {
+    for (const [code, w] of Object.entries(WORKOUTS)) {
+      for (const s of w.slots) {
+        const all = [s.exercise, ...s.alternatives, ...s.trxAlternatives];
+        assert.equal(new Set(all).size, all.length, `${code}${s.slot} has a repeated exercise`);
+        assert.ok(s.alternatives.length >= 1 && s.alternatives.length <= 4, `${code}${s.slot} has ${s.alternatives.length} alternatives`);
+      }
+    }
+  });
+
+  test('every image is our own copy, img/<id>.gif or .webp, with a source in scripts/image-sources.json (spec 4.5.3)', () => {
+    const sources = JSON.parse(readFileSync(new URL('../scripts/image-sources.json', import.meta.url), 'utf8'));
+    for (const [id, e] of Object.entries(EXERCISES)) {
+      if (!e.gifUrl) { assert.equal(Object.hasOwn(sources, id), false, `${id} has a source but no image`); continue; }
+      assert.match(e.gifUrl, new RegExp(`^img/${id}\\.(gif|webp)$`), `${id} image path`);
+      assert.match(sources[id] ?? '', /^https:\/\//, `${id} has no source URL`);
+      assert.ok(e.attribution.label && e.attribution.url, `${id} has no credit`);
+    }
+  });
+
+  test('images of the exercises added in v1.19 are set, with a credit (spec 4.5.3)', () => {
+    const added = ['hack-squat', 'leg-extension', 'seated-leg-curl', 'cable-glute-kickback', 'cable-chest-press', 'pec-deck-fly',
+      'incline-machine-press', 'machine-high-row', 'one-arm-db-row', 'single-arm-cable-row', 'cable-reverse-fly',
+      'chest-supported-rear-delt-raise', 'db-lateral-raise', 'plank', 'goblet-carry', 'trap-bar-carry'];
+    for (const id of added) {
+      assert.match(EXERCISES[id].gifUrl, /^img\//, `${id} image`);
+      assert.ok(EXERCISES[id].attribution.label && EXERCISES[id].attribution.url, `${id} credit`);
+    }
   });
 });
 
 describe('seed integrity', () => {
   const ids = Object.keys(EXERCISES);
 
-  test('the catalog is the 49 exercises of the viewer', () => assert.equal(ids.length, 49));
+  test('the catalog has 65 exercises (49 of v1.6 and the 16 added in v1.19)', () => assert.equal(ids.length, 65));
 
   test('every id the templates and routine mention exists in the catalog', () => {
     const referenced = [];

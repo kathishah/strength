@@ -18,7 +18,7 @@ export function mountHistory(container, ctx, view) {
       h('section', { class: 'card hlist', 'aria-label': g.label },
         g.rows.map((r) => h('a', { class: 'hrow', href: `#/history/exercise/${r.exerciseId}` },
           h('span', { class: 'main' },
-            h('span', {}, h('span', { class: `ssbar${r.superset ? ` ss${r.superset}` : ''}`, 'aria-hidden': 'true' }), r.name),
+            h('span', { text: r.name }),
             h('span', { class: 'sub', text: r.lastText })),
           r.due ? h('span', { class: 'tag-due', text: '↑ due' }) : h('span', { class: 'sub', 'aria-hidden': 'true', text: '›' })))),
     ]);

@@ -2,7 +2,8 @@
 //
 // Install caches the shell listed below. Every same-origin GET is answered network first, from the cache only when the network fails, and
 // a good network answer refreshes the cache. So online you always get what was deployed (scripts/deploy-app.sh takes effect on the next
-// load) and offline you get the last copy. Cognito, the API and the GIF hosts are other origins and are never touched here.
+// load) and offline you get the last copy. Cognito and the API are other origins and are never touched here. The exercise images (img/, about 160 MB) are not
+// in the list below: each is cached the first time it is shown, by the same network-first rule.
 // test/sw.test.mjs fails if this list differs from the files in app/.
 
 const CACHE = 'strength-shell-v1';

@@ -43,11 +43,17 @@ describe('planning a workout day', () => {
     assert.deepEqual([row.exerciseId, row.level, row.weightLbs, row.source], ['trx-row', 2, null, 'starting']);
   });
 
-  test('two TRX exercises in one superset get the tip; one does not', () => {
+  test('two TRX exercises in a row get no pairing tip (there are no supersets, spec v1.19)', () => {
     const both = plan(makeLog().swap('A', 4, 'trx-row').swap('A', 3, 'trx-hamstring-curl'), 'A', '2026-10-26');
-    assert.deepEqual(both.exercises.filter((e) => e.hints.some((h) => h.code === 'trx-pair')).map((e) => e.slot), [3, 4]);
-    const one = plan(makeLog().swap('A', 4, 'trx-row'), 'A', '2026-10-26');
-    assert.equal(one.exercises.some((e) => e.hints.some((h) => h.code === 'trx-pair')), false);
+    assert.equal(both.exercises.some((e) => e.hints.some((h) => h.code === 'trx-pair')), false);
+    assert.equal(both.exercises.some((e) => 'superset' in e), false);
+  });
+
+  test('a swap into an exercise added in v1.19 takes the slot\'s sets and reps and its own starting weight', () => {
+    const p = plan(makeLog().swap('B', 2, 'machine-high-row').swap('A', 5, 'plank'), 'B', '2026-10-26');
+    const row = p.exercises[1];
+    assert.deepEqual([row.exerciseId, row.sets, row.weightLbs, row.source], ['machine-high-row', 3, 40, 'starting']);
+    assert.deepEqual([row.repMin, row.repMax], [10, 12]);
   });
 
   test('before the start date the plan is week 1 and says so', () => {
