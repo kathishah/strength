@@ -21,7 +21,7 @@
   --ok-bg: #dcfce7;
   --ok-text: #14532d;
   --radius: 20px;
-  /* v0.2 viewer colours: superset accents, Options (cyan) and TRX (fuchsia) */
+  /* colours: the green/indigo/amber accents (day pills, recovery cards, chart), Options (cyan) and TRX (fuchsia) */
   --ss1: #16a34a; --ss2: #6366f1; --ss3: #d97706;
   --opt-text: #0e7490; --opt-border: #67e8f9; --opt-bg: #ecfeff; --opt-active-bg: #cffafe; --opt-active-border: #0891b2; --opt-badge-bg: rgb(8 145 178 / 0.15);
   --trx-text: #a21caf; --trx-border: #f0abfc; --trx-bg: #fdf4ff; --trx-active-bg: #fae8ff; --trx-active-border: #c026d3; --trx-badge-bg: rgb(192 38 211 / 0.12);
@@ -252,12 +252,7 @@ a.btn.block { display: flex; }
   padding: 14px 14px 12px; position: relative; display: flex; flex-direction: column; gap: 6px;
 }
 .slide { flex: 0 0 calc(100% - 28px); scroll-snap-align: center; scroll-snap-stop: always; min-width: 0; }
-/* superset colour on the card's left edge */
-.ex.ss1 { border-left: 4px solid var(--ss1); }
-.ex.ss2 { border-left: 4px solid var(--ss2); }
-.ex.ss3 { border-left: 4px solid var(--ss3); }
 .ex.increased { border-color: var(--up-border); }
-.ex.increased.ss1 { border-left-color: var(--ss1); } .ex.increased.ss2 { border-left-color: var(--ss2); } .ex.increased.ss3 { border-left-color: var(--ss3); }
 .ex.done { border-color: var(--done-border); box-shadow: var(--done-shadow); }
 .done-flag {
   position: absolute; top: 10px; right: 12px; padding: 3px 8px; border-radius: 999px; font-size: 0.7rem; display: inline-flex;
@@ -272,7 +267,6 @@ a.btn.block { display: flex; }
   display: inline-flex; margin-top: 4px; padding: 3px 9px; border-radius: 999px; font-size: 0.75rem; white-space: nowrap;
   background: var(--surface); border: 1px solid var(--surface-border); color: var(--text);
 }
-.ex.ss1 .phase-chip { border-color: var(--ss1); } .ex.ss2 .phase-chip { border-color: var(--ss2); } .ex.ss3 .phase-chip { border-color: var(--ss3); }
 .ex-meta { text-align: right; font-size: 0.75rem; color: var(--muted); }
 .ex-meta strong { display: block; font-size: 0.9rem; color: var(--text); }
 .ex p { margin: 2px 0; }
@@ -287,7 +281,8 @@ a.btn.block { display: flex; }
   background: rgb(15 23 42 / 0.82); border: 1px solid rgb(148 163 184 / 0.4); display: inline-flex; align-items: center; gap: 6px;
 }
 .gif-label span { width: 6px; height: 6px; border-radius: 999px; background: #22c55e; box-shadow: 0 0 0 5px rgb(34 197 94 / 0.25); }
-.gif-attribution { font-size: 0.72rem; color: var(--muted); margin-top: 6px; }
+.gif-attribution { font-size: 0.6rem; line-height: 1.2; color: var(--muted); opacity: 0.75; margin-top: 3px; }
+.gif-attribution a { color: inherit; }
 .exercise-body { font-size: 0.85rem; margin-top: 8px; line-height: 1.5; }
 .pairing-tip { margin-top: 6px; color: var(--pairing); }
 .start-line { margin-top: 6px; color: var(--startline); }
@@ -468,8 +463,6 @@ textarea {
 .hrow:first-child { border-top: 0; }
 .hrow .main { min-width: 0; }
 .hrow .sub { display: block; font-size: 0.8rem; color: var(--muted); }
-.hrow .ssbar { display: inline-block; width: 4px; height: 14px; border-radius: 2px; margin-right: 8px; vertical-align: -2px; background: var(--border); }
-.ssbar.ss1 { background: var(--ss1); } .ssbar.ss2 { background: var(--ss2); } .ssbar.ss3 { background: var(--ss3); }
 .wk { display: inline-block; width: 24px; height: 24px; border-radius: 6px; text-align: center; line-height: 24px; font-weight: 700; font-size: 0.8rem; margin-right: 8px; color: var(--accent-text); background: var(--accent); }
 .tag-due, .tag-miss { flex: none; font-size: 0.75rem; padding: 1px 8px; border-radius: 6px; white-space: nowrap; }
 .tag-due { color: var(--ok-text); background: var(--ok-bg); }

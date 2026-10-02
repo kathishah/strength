@@ -1,6 +1,5 @@
-// Structured rules per exercise: the numeric fields spec section 8 lists, which the v0.2 display
-// catalog (catalog.js) does not have. Same exercise ids as catalog.js and program.js, which stay
-// untouched so their parity test with the frozen viewer keeps working (DEPLOYMENT-PLAN.md section 14).
+// Structured rules per exercise: the numeric fields spec section 8 lists, which the display catalog (catalog.js) does not
+// have. Same exercise ids as catalog.js and program.js.
 //
 // Values come from spec 4.3 (reps), 4.5.1 (TRX reps and levels), 5.3 (increments) and the 5.6 table
 // (starting and first-loaded weights). test/rules.test.mjs reads those tables out of
@@ -16,7 +15,7 @@
 //   bodyweight  dead bug: no load, no progression
 //   ladder      pushup: pre-filled with last time's level, never changed
 //   suspension  TRX: pre-filled with last time's level (start 2), never changed
-//   hold        completion only (TRX plank, weighted bird dog)
+//   hold        completion only (TRX plank, plank, side plank, weighted bird dog)
 //   none        sets and reps only (band pull-apart)
 const base = {
   progression: 'load',
@@ -85,6 +84,27 @@ export const RULES = {
   // The catalog gives the pallof press "10 / side"; the spec table gives only its starting weight (10).
   'pallof-press': ex('cable', { ...reps(10, 10, true), loadIncrementLbs: MC, startingWeightLbs: 10 }),
 
+  // ---- Added in spec v1.19 (4.5.2). Reps and distance come from the slot they are swapped into (null here) ----
+  'hack-squat': ex('machine', { loadIncrementLbs: MC, startingWeightLbs: 0, firstLoadedWeightLbs: 20 }),
+  'leg-extension': ex('machine', { loadIncrementLbs: MC, startingWeightLbs: 30 }),
+  'seated-leg-curl': ex('machine', { loadIncrementLbs: MC, startingWeightLbs: 30 }),
+  'cable-glute-kickback': ex('cable', { loadIncrementLbs: 5, startingWeightLbs: 10 }),
+  'cable-chest-press': ex('cable', { loadIncrementLbs: MC, startingWeightLbs: 15 }),
+  'pec-deck-fly': ex('machine', { loadIncrementLbs: MC, startingWeightLbs: 40 }),
+  'incline-machine-press': ex('machine', { loadIncrementLbs: MC, startingWeightLbs: 40 }),
+  'machine-high-row': ex('machine', { loadIncrementLbs: MC, startingWeightLbs: 40 }),
+  'one-arm-db-row': ex('dumbbell', { loadIncrementLbs: DB, startingWeightLbs: 20 }),
+  'single-arm-cable-row': ex('cable', { loadIncrementLbs: 5, startingWeightLbs: 20 }),
+  'cable-reverse-fly': ex('cable', { loadIncrementLbs: 5, startingWeightLbs: 10 }),
+  'chest-supported-rear-delt-raise': ex('dumbbell', { loadIncrementLbs: DB, startingWeightLbs: 5 }),
+  'db-lateral-raise': ex('dumbbell', { loadIncrementLbs: DB, startingWeightLbs: 5 }),
+  // A hold with its own time (4.5): completion only. Side plank (recovery item 4.6) is also an alternative to the dead bug.
+  plank: ex('hold', { progression: 'hold', holdSeconds: { min: 20, max: 40 } }),
+  'side-plank': ex('hold', { progression: 'hold', holdSeconds: { min: 15, max: 20 } }),
+  'goblet-carry': ex('carry', { loadIncrementLbs: 5, startingWeightLbs: 25 }),
+  // One total load, bar included (the bar weighs 45-65 lbs): +10 like the trap bar deadlift.
+  'trap-bar-carry': ex('carry', { loadIncrementLbs: BB, startingWeightLbs: 45 }),
+
   // ---- TRX alternatives (spec 4.5.1): level 1-5 instead of a load, starting level 2 ----
   'trx-squat': ex('suspension', { progression: 'suspension', ...reps(12, 15), startingLevel: 2 }),
   'trx-bulgarian-split-squat': ex('suspension', { progression: 'suspension', ...reps(8, 12, true), startingLevel: 2 }),
@@ -100,9 +120,9 @@ export const RULES = {
 };
 
 // Catalog ids with no rules: recovery-routine items (spec 4.6), guidance only, never progressed and never
-// a slot or alternative. (band-pull-apart is also a recovery item but is a face pull alternative, so it has rules.)
+// a slot or alternative. (band-pull-apart and side-plank are also recovery items but are alternatives, so they have rules.)
 export const GUIDANCE_ONLY = [
-  'bird-dog', 'glute-bridge', 'hip-flexor-stretch', 'mcgill-curl-up', 'side-plank', 'open-book', 'dowel-hip-hinge',
+  'bird-dog', 'glute-bridge', 'hip-flexor-stretch', 'mcgill-curl-up', 'open-book', 'dowel-hip-hinge',
 ];
 
 // Working sets per template slot in Phase 2 (spec 4.3), by slot number 1..n. A swapped-in exercise keeps the slot's count.

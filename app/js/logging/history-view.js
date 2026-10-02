@@ -60,18 +60,17 @@ const linesOf = (kind, sets) => (kind === 'done' ? `${sets.length} ${sets.length
 
 // ---- By exercise ----
 
-// [{ templateCode, label, rows: [{ exerciseId, name, superset, lastText, lastDate, due }] }], workouts A, B, C. Each slot's current
+// [{ templateCode, label, rows: [{ exerciseId, name, lastText, lastDate, due }] }], workouts A, B, C. Each slot's current
 // exercise (swaps applied), then any other exercise logged in a session of that workout.
 export function historyByExercise(state, today) {
   const logged = sessionsByExercise(state);
-  const row = (exerciseId, superset, templateCode, slot) => {
+  const row = (exerciseId, templateCode, slot) => {
     const sessions = logged.get(exerciseId) ?? [];
     const last = sessions[sessions.length - 1] ?? null;
     const kind = kindOf(sessions);
     return {
       exerciseId,
       name: exerciseName(exerciseId),
-      superset,
       lastText: last ? `${formatDay(last.date)} · ${linesOf(kind, last.sets)}` : 'Not logged yet',
       lastDate: last?.date ?? null,
       due: Object.hasOwn(RULES, exerciseId) ? suggestExercise(state, { exerciseId, templateCode, slot, today }).increased : false,
@@ -85,11 +84,11 @@ export function historyByExercise(state, today) {
       const { exerciseId } = exerciseForSlot(state, templateCode, s.slot);
       if (shown.has(exerciseId)) continue;
       shown.add(exerciseId);
-      rows.push(row(exerciseId, s.superset, templateCode, s.slot));
+      rows.push(row(exerciseId, templateCode, s.slot));
     }
     for (const [exerciseId, sessions] of logged) {
       if (shown.has(exerciseId) || !Object.hasOwn(RULES, exerciseId)) continue;
-      if (sessions.some((x) => x.templateCode === templateCode)) { shown.add(exerciseId); rows.push(row(exerciseId, null, templateCode, null)); }
+      if (sessions.some((x) => x.templateCode === templateCode)) { shown.add(exerciseId); rows.push(row(exerciseId, templateCode, null)); }
     }
     return { templateCode, label: WORKOUTS[templateCode].label, rows };
   });
