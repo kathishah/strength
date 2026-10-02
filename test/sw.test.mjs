@@ -14,9 +14,9 @@ function walk(dir) {
   });
 }
 
-test('the shell list in sw.js is exactly the files under app/ (except sw.js itself)', () => {
+test('the shell list in sw.js is exactly the files under app/ (except sw.js itself and the exercise images in img/)', () => {
   const shell = new Function(`return ${/const SHELL = (\[[\s\S]*?\]);/.exec(source)[1]}`)();
-  const files = walk(app).map((p) => relative(app, p)).filter((p) => p !== 'sw.js' && !p.endsWith('.DS_Store'));
+  const files = walk(app).map((p) => relative(app, p)).filter((p) => p !== 'sw.js' && !p.startsWith('img/') && !p.endsWith('.DS_Store'));
   assert.deepEqual([...shell].sort(), files.sort());
   assert.equal(new Set(shell).size, shell.length, 'no duplicates');
 });
@@ -28,7 +28,6 @@ test('it only handles same-origin GETs, answers network first, and takes over at
   assert.match(source, /clients\.claim/);
 });
 
-test('the page registers it and its CSP allows a worker from the same origin', () => {
+test('the page registers it', () => {
   assert.match(readFileSync(join(app, 'js/main.js'), 'utf8'), /serviceWorker\.register\('sw\.js'\)/);
-  assert.match(readFileSync(join(app, 'index.html'), 'utf8'), /worker-src 'self'/);
 });

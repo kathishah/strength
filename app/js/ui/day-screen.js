@@ -1,9 +1,9 @@
-// Home (spec 6.2, 6.3), laid out as the v0.2 viewer: one horizontal swipe carousel of cards, each superset with its own colour on the
-// card's left edge. On a recovery day the cards are the recovery routine; otherwise they are the next workout's exercises, and the
+// Home (spec 6.2, 6.3): one horizontal swipe carousel of exercise cards, one exercise at a time (no supersets, v1.19).
+// On a recovery day the cards are the recovery routine; otherwise they are the next workout's exercises, and the
 // workout starts by itself when the first exercise is marked done.
 //
-// Each exercise card reads top to bottom: name and superset, the form GIF as the hero, the cue, muscles, the Options and TRX lists, and
-// at the bottom where the viewer had "mark this exercise as done": one barrel dial per set for the weight (2.5 lb notches, each already
+// Each exercise card reads top to bottom: name and position ("Exercise 2 of 6"), the form GIF as the hero, the cue, muscles, the Options and TRX lists, and
+// at the bottom: one barrel dial per set for the weight (2.5 lb notches, each already
 // at the suggested weight), one shared dial for the reps (already at the recommended number), and one tick for the whole exercise. The logic is in
 // logging/day-view.js and logging/actions.js; this file only draws.
 //
@@ -24,7 +24,7 @@ const FIELD = {
 };
 
 const cardKey = (c) => [
-  c.exerciseId, c.mode, c.swapped, c.canSwap, c.chipText, c.partnerName, c.increaseText, c.suggestionText, c.lastText, c.hints,
+  c.exerciseId, c.mode, c.swapped, c.canSwap, c.chipText, c.restText, c.increaseText, c.suggestionText, c.lastText, c.hints,
   c.swapBlockedReason, c.summaryText, c.rows.map((r) => [r.id, r.status, r.reps === null]),
 ];
 
@@ -111,7 +111,7 @@ export function mountDay(container, ctx, editId = null) {
     return [
       h('div', { class: 'exercise-body' },
         c.notes,
-        card.partnerName ? ` Alternate with ${card.partnerName}; rest 60–90 s between rounds.` : '',
+        card.restText ? ` ${card.restText}` : '',
         card.hints.map((t) => h('div', { class: 'pairing-tip', text: t })),
         c.levelText ? h('div', { class: 'start-line', text: `Level: start at 2 of 5. ${c.levelText}` }) : null,
         c.rationale ? h('div', { class: 'start-line', text: c.rationale }) : null,
@@ -199,7 +199,7 @@ export function mountDay(container, ctx, editId = null) {
     if (groups.alternatives.length) altButtons.push(h('button', { type: 'button', class: 'alt-toggle opt', 'aria-expanded': String(open === 'alternatives'), disabled: !card.canSwap, onclick: toggle('alternatives') }, 'Options ', h('span', { class: 'alt-badge', text: String(groups.alternatives.length) })));
     if (groups.trx.length) altButtons.push(h('button', { type: 'button', class: 'alt-toggle trx', 'aria-expanded': String(open === 'trx'), disabled: !card.canSwap, onclick: toggle('trx') }, 'TRX ', h('span', { class: 'alt-badge', text: String(groups.trx.length) })));
     // head / media / rest: plain stacked in portrait (display: contents), two columns in phone landscape (app.css).
-    return h('article', { class: `ex slide split ${card.ssClass}${card.increased ? ' increased' : ''}${card.done ? ' done' : ''}`, 'aria-label': card.name },
+    return h('article', { class: `ex slide split${card.increased ? ' increased' : ''}${card.done ? ' done' : ''}`, 'aria-label': card.name },
       h('div', { class: 'ex-head' },
         card.done ? h('div', { class: 'done-flag' }, h('span'), 'Done') : null,
         h('div', { class: 'ex-header' },

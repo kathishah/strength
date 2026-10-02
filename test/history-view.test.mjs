@@ -16,7 +16,6 @@ describe('history by exercise', () => {
     assert.equal(h[0].rows[0].lastText, 'Mon, Sep 28 · 25 lbs × 10, 10, 9');
     assert.equal(h[0].rows[1].lastText, 'Mon, Sep 28 · 22.5 lbs × 8, 8, 8');
     assert.equal(h[0].rows[2].lastText, 'Not logged yet');
-    assert.deepEqual([h[0].rows[0].superset, h[0].rows[4].superset], [1, 3]);
     assert.ok(h[1].rows.every((r) => r.lastText === 'Not logged yet'));
   });
 
@@ -29,7 +28,6 @@ describe('history by exercise', () => {
     assert.equal(rows[0].lastText, 'Not logged yet');
     const extra = rows.find((r) => r.exerciseId === 'goblet-squat');
     assert.ok(extra, 'goblet squat is still there');
-    assert.equal(extra.superset, null);
     assert.equal(extra.lastText, 'Mon, Sep 28 · 25 lbs × 10, 10, 10');
     assert.equal(rows.length, 7);
   });

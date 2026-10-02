@@ -1,8 +1,13 @@
-# Recomp Tracker — Product Spec (v1.18)
+# Recomp Tracker — Product Spec (v1.19)
 
 A personal, mobile-first web app for logging gym workouts in a body recomposition program (build lean mass, reduce visceral fat, strengthen the back) and telling the user what to lift next. Used at the gym on a phone and at home on a desktop, with data synced across devices. Activity tracking (steps, Bollyx, hikes, mobility) and body metrics (DEXA, waist, weight) are out of scope: activity is tracked on an Apple Watch, and body metrics are not tracked in this app.
 
 ## Changelog
+- **v1.19**
+  - More alternatives (4.5): 16 new exercises (hack squat, leg extension, seated leg curl, cable glute kickback, cable chest press, pec deck fly, incline machine press, machine high row, one-arm dumbbell row, single-arm cable row, cable reverse fly, chest-supported rear delt raise, dumbbell lateral raise, plank, goblet carry, trap bar carry), and existing exercises offered in more slots, so every slot has 1 to 4 non-TRX alternatives (it was 0 to 2). The catalog goes from 49 to 65. The new exercises use existing exercise types, so the engine, events and export are unchanged. Their starting weights, the slots they fit and their images are in 4.5.2 and 4.5.3. A variation of the same movement (another grip, machine or stride) is not an alternative; the equipment is a full gym with all machines and a landmine, no sled.
+  - No supersets (4.3, 6.3, 6.6, 8): a workout is a list of exercises done one at a time, all sets of one before the next, in the same slot order. Cards say "Exercise 2 of 6" with no coloured edge and "Rest about 90 s between sets". The TRX pairing tip (4.5.1) is removed. Reason: alternating two stations is hard in a busy gym. Layout and seed data only: the superset number was never stored, so logged workouts and swaps stay valid.
+  - Exercise images are our own copies in `app/img/` (downloaded by `scripts/fetch-images.mjs`, uploaded by `scripts/deploy-app.sh`, not in git), not hotlinks, and the art credit under each is very small (4.5.3). The Content-Security-Policy in `app/index.html` is removed.
+  - The frozen v0.2 viewer is retired (0.C): the root `index.html` is now a redirect to https://strength.logbook.me, and the viewer lives on only in git history. The seed in `app/js/seed/` is the only copy of the program and catalog, so the test that compared it with the viewer is gone.
 - **v1.18**
   - Phone in landscape (6.2): each exercise card is two columns, the form GIF on the left and the title, the log dials and the tick on the right, so a card needs no vertical scroll. The description, tags and Options/TRX follow below the dials. The header and cards use the full width, and the rest bar is slimmer. Portrait is unchanged. Layout only: no data, events or engine changes.
 - **v1.17** (Phase E, agreed from mock-ups)
@@ -99,14 +104,14 @@ App release versions (v0.x) are separate from spec versions (v1.x in the Changel
 | App version | Status | Program it shows |
 |---|---|---|
 | v0.1 | Shipped (commit `543d99b`) | Spec v1.0 program |
-| v0.2 | Shipped; frozen (bug fixes only) | Spec v1.6 program (Section 4) |
+| v0.2 | Retired (v1.19): `index.html` redirects to https://strength.logbook.me | Spec v1.6 program (Section 4) |
 | v1 | In progress | Full app: logging, progression, history (Sections 5–6). Sync spike (milestone 1) is live at https://strength.logbook.me; see DEPLOYMENT-PLAN.md section 13 |
 
 ### 0.C Hosting of v0.x and v1
-- **v0.2 viewer:** the single `index.html` at the repo root stays on GitHub Pages, frozen. Only bug fixes go in; no new features.
-- **v1:** built in `app/` in the same repo (separate `index.html`, JS modules, PWA files) and deployed to S3 + CloudFront with the backend in DEPLOYMENT-PLAN.md. v1 starts from the v0.2 catalog data (copied into `app/js/seed/`) and then diverges.
+- **v0.2 viewer:** retired in v1.19. The single `index.html` at the repo root, still served by GitHub Pages, is now a page that redirects to https://strength.logbook.me (a meta refresh and a script, with a link as a fallback). The old viewer is in git history (the commit before v1.19). Sections 0.A and 0.B below describe it as it was.
+- **v1:** built in `app/` in the same repo (separate `index.html`, JS modules, PWA files) and deployed to S3 + CloudFront with the backend in DEPLOYMENT-PLAN.md. v1 started from the v0.2 catalog data (copied into `app/js/seed/`) and has diverged: from v1.19 the seed adds exercises and alternatives and has no supersets.
 - **v1 address:** https://strength.logbook.me (CloudFront alias; DNS is a CNAME at GoDaddy). One stack, `strength-prod`, while the app is unpublished and being tested.
-- When v1 meets the acceptance criteria (Section 11), it replaces the viewer as the daily-use app; the viewer can stay up as a read-only guide.
+- v1 is the daily-use app; the viewer is gone (v1.19).
 
 ### 0.A App v0.1 — Static program viewer (shipped)
 
@@ -285,7 +290,7 @@ Weight/rep/level logging, progression, calibration, scheduled increases, deloads
 | Limitation | Lower back pain from prolonged sitting |
 | Other activity | Bollyx dance classes 3x/week; enjoys hiking (Redwood City, CA area) |
 | Training history | HIIT ~3 years ago for a year; bodyweight/pushups for last 3 months. Pushup baseline: 4 sets of 15, 15, 10, 5 with good form, 60–90 s rest |
-| Equipment | Full gym (including TRX suspension trainer); resistance band, mat, and dowel/broomstick at home |
+| Equipment | Full gym: all machines, cables, free weights, landmine, trap bar and TRX suspension trainer (no sled); resistance band, mat, and dowel/broomstick at home |
 
 Units throughout: **lbs** for mass.
 
@@ -318,43 +323,43 @@ Units throughout: **lbs** for mass.
 - Recovery rule: each muscle group gets at least 48 hours between resistance sessions (ACSM guidance for older adults). The Mon/Wed/Fri gym schedule satisfies this; pushups live in Workout B for this reason.
 - At least one full rest day per week (an easy walk is fine).
 - Bollyx 3x/week, 1 longer hike per week, and daily steps are tracked on the Apple Watch, outside this app.
-- Target gym session length: ~45 minutes.
+- Target gym session length: ~45 minutes (straight sets with about 90 s rest run close to that for Workout B, 17 sets; a busy day may run past it).
 
 ### 4.2 Gym warm-up — not in the app
 A warm-up (about 5 min of easy-to-brisk cardio, then the McGill Big 3: curl-up, side plank, bird dog) is still recommended, but the app does not show, time, or log it. ~~Ramp-up sets (5.5) are part of the workout, not the warm-up.~~
 
 ### 4.3 Workouts
 
-Exercises are grouped as supersets: slots with the same superset group are alternated. Rest 60–90 seconds between rounds.
+Exercises are done one at a time, in slot order: all sets of one exercise before the next (v1.19; there are no supersets). Rest about 90 seconds between sets.
 
 **Workout A**
-| Slot | Superset | Exercise | Sets | Reps | Type |
-|---|---|---|---|---|---|
-| 1 | 1 | Goblet squat | 3 | 8–12 | dumbbell |
-| 2 | 1 | Dumbbell bench press | 3 | 8–12 | dumbbell |
-| 3 | 2 | Dumbbell Romanian deadlift | 3 | 8–10 | dumbbell |
-| 4 | 2 | Chest-supported row | 3 | 10–12 | dumbbell/machine |
-| 5 | 3 | Dead bug | 2 | 8 per side | bodyweight |
-| 6 | 3 | Face pull | 2 | 12–15 | cable |
+| Slot | Exercise | Sets | Reps | Type |
+|---|---|---|---|---|
+| 1 | Goblet squat | 3 | 8–12 | dumbbell |
+| 2 | Dumbbell bench press | 3 | 8–12 | dumbbell |
+| 3 | Dumbbell Romanian deadlift | 3 | 8–10 | dumbbell |
+| 4 | Chest-supported row | 3 | 10–12 | dumbbell/machine |
+| 5 | Dead bug | 2 | 8 per side | bodyweight |
+| 6 | Face pull | 2 | 12–15 | cable |
 
 **Workout B**
-| Slot | Superset | Exercise | Sets | Reps | Type |
-|---|---|---|---|---|---|
-| 1 | 1 | Leg press | 3 | 10–12 | machine |
-| 2 | 1 | Lat pulldown | 3 | 10–12 | cable |
-| 3 | 2 | Hip thrust | 3 | 10–12 | barbell/machine |
-| 4 | 2 | Seated dumbbell shoulder press | 3 | 8–12 | dumbbell |
-| 5 | 3 | Pushup | 3 | per ladder level (standard: 10–20) | bodyweight_ladder |
-| 6 | 3 | 45° back extension | 2 | 10–15 | bodyweight_loadable |
+| Slot | Exercise | Sets | Reps | Type |
+|---|---|---|---|---|
+| 1 | Leg press | 3 | 10–12 | machine |
+| 2 | Lat pulldown | 3 | 10–12 | cable |
+| 3 | Hip thrust | 3 | 10–12 | barbell/machine |
+| 4 | Seated dumbbell shoulder press | 3 | 8–12 | dumbbell |
+| 5 | Pushup | 3 | per ladder level (standard: 10–20) | bodyweight_ladder |
+| 6 | 45° back extension | 2 | 10–15 | bodyweight_loadable |
 
 **Workout C**
-| Slot | Superset | Exercise | Sets | Reps | Type |
-|---|---|---|---|---|---|
-| 1 | 1 | Trap bar deadlift | 3 | 6–10 | barbell |
-| 2 | 1 | Incline dumbbell press | 3 | 8–12 | dumbbell |
-| 3 | 2 | Reverse lunge | 2 | 8 per leg | dumbbell |
-| 4 | 2 | Seated cable row | 3 | 10–12 | cable |
-| 5 | — | Farmer carry | 3 | 40 m | carry (load + distance) |
+| Slot | Exercise | Sets | Reps | Type |
+|---|---|---|---|---|
+| 1 | Trap bar deadlift | 3 | 6–10 | barbell |
+| 2 | Incline dumbbell press | 3 | 8–12 | dumbbell |
+| 3 | Reverse lunge | 2 | 8 per leg | dumbbell |
+| 4 | Seated cable row | 3 | 10–12 | cable |
+| 5 | Farmer carry | 3 | 40 m | carry (load + distance) |
 
 **Exercise cues to seed (shown on tap):**
 - 45° back extension: "Start bodyweight only. Move slowly, pause 1 s at the top. Go only as low as comfortable. Stop when the body forms a straight line; don't arch or swing."
@@ -365,20 +370,33 @@ Exercises are grouped as supersets: slots with the same superset group are alter
 An optional 10–15 min incline walk after lifting is still fine, but the app does not show or log it.
 
 ### 4.5 Back-friendly substitutions
-Each slot must support swapping the exercise for an alternative. Swaps persist for future sessions of that workout until changed back. Seed these alternatives:
+Each slot must support swapping the exercise for an alternative. Swaps persist for future sessions of that workout until changed back. A swapped-in exercise takes the sets and reps of the slot it replaces (plank, a hold, keeps its own 20–40 s).
 
-| Exercise | Alternatives |
-|---|---|
-| Goblet squat | Leg press, Box squat |
-| Dumbbell Romanian deadlift | Hip thrust, Cable pull-through |
-| Trap bar deadlift | Bulgarian split squat, Leg press |
-| Reverse lunge | Split squat, Step-up |
-| Chest-supported row | Seated cable row, Machine row |
-| Seated dumbbell shoulder press | Machine shoulder press, Landmine press |
-| Farmer carry | Suitcase carry (one side) |
-| Face pull | Reverse pec deck, Band pull-apart |
-| 45° back extension | Machine back extension, Bird dog (weighted hold) |
-| Pushup | Machine chest press, Pallof press (for sessions where pressing should be skipped, e.g. shoulder discomfort) |
+**What counts as an alternative (v1.19).** It trains the same movement and main muscles as the slot, is at least as back-friendly as the default (supported or low spinal load, no loaded spinal flexion), and is found in a normal gym (this gym has all machines, cables and a landmine, but no sled). A variation of the default with a different grip, machine or stride (for example neutral-grip pulldown, machine hip thrust, walking lunge) is not an alternative. Seed these, 1 to 4 per slot (the TRX ones are in 4.5.1; the exercises new in v1.19 are in 4.5.2):
+
+| Slot | Exercise | Alternatives |
+|---|---|---|
+| A1 | Goblet squat | Leg press, Box squat, Hack Squat, Leg Extension |
+| A2 | Dumbbell bench press | Machine chest press, Pushup, Cable Chest Press, Pec Deck Fly |
+| A3 | Dumbbell Romanian deadlift | Hip thrust, Cable pull-through, Seated Leg Curl |
+| A4 | Chest-supported row | Seated cable row, Machine row, One-Arm Dumbbell Row, Single-Arm Cable Row |
+| A5 | Dead bug | Pallof press, Plank, Side plank, Bird dog (weighted hold) |
+| A6 | Face pull | Reverse pec deck, Band pull-apart, Cable Reverse Fly, Chest-Supported Rear Delt Raise |
+| B1 | Leg press | Hack Squat, Goblet squat, Split squat, Leg Extension |
+| B2 | Lat pulldown | Machine High Row |
+| B3 | Hip thrust | Cable pull-through, Cable Glute Kickback |
+| B4 | Seated dumbbell shoulder press | Machine shoulder press, Landmine press, Dumbbell Lateral Raise |
+| B5 | Pushup | Machine chest press, Pallof press (for sessions where pressing should be skipped, e.g. shoulder discomfort), Cable Chest Press, Pec Deck Fly |
+| B6 | 45° back extension | Machine back extension, Bird dog (weighted hold), Cable pull-through, Plank |
+| C1 | Trap bar deadlift | Bulgarian split squat, Leg press, Hack Squat, Dumbbell Romanian deadlift |
+| C2 | Incline dumbbell press | Incline Machine Press, Landmine press, Machine chest press |
+| C3 | Reverse lunge | Split squat, Step-up |
+| C4 | Seated cable row | Machine row, Chest-supported row, Single-Arm Cable Row, One-Arm Dumbbell Row |
+| C5 | Farmer carry | Suitcase carry (one side), Goblet Carry, Trap Bar Carry |
+
+Side plank is also a recovery-routine item (4.6); as an alternative it is a `hold` (completion only, 15–20 s), as band pull-apart already is.
+
+**Not offered, on purpose:** barbell back squat, conventional deadlift, barbell row and good morning (spinal load); Smith machine squat (axial load; hack squat gives the same work with the back supported); assisted pull-up (the weight is assistance, so a scheduled increase would make it easier); cable crunch, GHD sit-up and ab wheel (loaded spinal flexion); pull-up and chin-up (no load to progress); sled push (no sled here).
 
 The exercise catalog is fixed: it ships with the app, and there is no UI to add custom exercises. Changing the catalog is a code change.
 
@@ -401,8 +419,66 @@ Add these as additional swap options for the listed slot exercises. TRX exercise
 | Dumbbell Romanian deadlift | TRX hamstring curl (heels in straps) | 8–12 | Level 1: hips stay down. Level 5: single leg with hips held up. | Keep hips up throughout if possible; slow return. |
 | Dead bug | TRX plank (feet in straps) | 2 × 20–40 s hold | Hold type; no levels. | Body straight; don't let hips sag or pike. |
 
-Pairing note: when a swap puts two TRX exercises in the same superset (e.g., TRX row + TRX chest press), show a tip: "Both use the TRX; if the station is shared, alternate with the dumbbell version."
+~~Pairing note: when a swap puts two TRX exercises in the same superset (e.g., TRX row + TRX chest press), show a tip: "Both use the TRX; if the station is shared, alternate with the dumbbell version."~~ Removed in v1.19: there are no supersets, so no two exercises are paired.
 
+
+#### 4.5.2 Exercises added in v1.19
+Catalog entries (name, cue, muscles, type, image) for these 16 are written during implementation. A swapped-in exercise takes the slot's sets and reps. **Start** is the pre-filled first weight (5.6): dumbbell values are per hand, machine and cable values are the stack setting, and the person can always log something else. Values are conservative guesses for a detrained 50-year-old with a sensitive back, scaled from the existing seeds; machine stacks differ between gyms, so the first logged session corrects them. Exercises that start at 0 jump to a first-loaded weight, as leg press and reverse lunge do (5.6).
+
+| Id | Name | Type | Muscles | Alternative for (workout, slot) | Start |
+|---|---|---|---|---|---|
+| hack-squat | Hack Squat | machine | Quads, Glutes | Goblet squat (A1) · Leg press (B1) · Trap bar deadlift (C1) | 0 (empty sled), first loaded 20 |
+| leg-extension | Leg Extension | machine | Quads | Goblet squat (A1) · Leg press (B1) | 30 lbs |
+| seated-leg-curl | Seated Leg Curl | machine | Hamstrings | Dumbbell Romanian deadlift (A3) | 30 lbs |
+| cable-glute-kickback | Cable Glute Kickback | cable | Glutes | Hip thrust (B3) | 10 lbs |
+| cable-chest-press | Cable Chest Press | cable | Chest, Triceps, Shoulders | Dumbbell bench press (A2) · Pushup (B5) | 15 lbs per handle |
+| pec-deck-fly | Pec Deck Fly | machine | Chest | Dumbbell bench press (A2) · Pushup (B5) | 40 lbs |
+| incline-machine-press | Incline Machine Press | machine | Chest, Shoulders, Triceps | Incline dumbbell press (C2) | 40 lbs |
+| machine-high-row | Machine High Row | machine | Lats, Upper back | Lat pulldown (B2) | 40 lbs |
+| one-arm-db-row | One-Arm Dumbbell Row (bench-supported) | dumbbell | Back, Lats, Biceps | Chest-supported row (A4) · Seated cable row (C4) | 20 lbs |
+| single-arm-cable-row | Single-Arm Cable Row | cable | Back, Lats, Biceps | Chest-supported row (A4) · Seated cable row (C4) | 20 lbs |
+| cable-reverse-fly | Cable Reverse Fly | cable | Rear delts, Upper back | Face pull (A6) | 10 lbs per handle |
+| chest-supported-rear-delt-raise | Chest-Supported Rear Delt Raise | dumbbell | Rear delts, Upper back | Face pull (A6) | 5 lbs |
+| db-lateral-raise | Dumbbell Lateral Raise | dumbbell | Shoulders | Seated dumbbell shoulder press (B4) | 5 lbs |
+| plank | Plank | hold | Core | Dead bug (A5) · 45° back extension (B6) | none (hold, 20–40 s) |
+| goblet-carry | Goblet Carry | carry | Core, Grip, Upper back | Farmer carry (C5) | 25 lbs (one dumbbell) |
+| trap-bar-carry | Trap Bar Carry (high handles) | carry | Grip, Traps, Core, Glutes | Farmer carry (C5) | the empty trap bar (45 lbs; 45–65 by bar) |
+
+Load steps are the 5.3 defaults, with the small cable exercises (glute kickback, reverse fly, single-arm row) at +5, like face pull, and trap bar carry at +10 total, like the trap bar deadlift. Goblet carry is one dumbbell, trap bar carry is one total load: a carry card does not say "per hand" for them.
+
+#### 4.5.3 Exercise images (v1.19: our own copies)
+Every exercise image is downloaded once, unchanged, and served from the app's own site, not hotlinked from the publisher: `app/img/<id>.gif` (or `.webp`), shown at `img/<id>.gif`. This replaces hotlinking for all 58 exercises that have an image (the 49 of v1.6 and the 16 new ones, less the 7 with none), because the large GIFs (1 to 11 MB each, 160 MB in all) from other sites were slow and sometimes failed to load in the Options list.
+- `scripts/image-sources.json` lists the source URL of each image (exercise id to URL). `node scripts/fetch-images.mjs` downloads the ones missing from `app/img/` (`--force` re-downloads all).
+- `app/img/` is not in git (160 MB). `scripts/deploy-app.sh` runs the fetch for any missing file, then uploads `app/img/` to the site bucket with a week-long cache, along with the rest of `app/`.
+- Each card keeps an **art credit**: a very small link to the publisher's page (the `attribution` in the catalog), under the image. Exercises with no image (7, as before) show the placeholder.
+- The service worker does not precache the images; each is cached the first time it is shown.
+- The app has **no Content-Security-Policy** (removed in v1.19: it only allowed images from three sites).
+- The images are public static files on strength.logbook.me (the sign-in protects data, not static files). They are other sites' work, kept here for personal use with a credit link.
+
+Where the 16 new images came from (each source URL was fetched and confirmed to be an image, 4 to 43 frames, except the LoadMuscle files, which are animated WebP):
+
+| Exercise id | Source image URL | Credit (label and page) | Notes |
+|---|---|---|---|
+| hack-squat | https://www.strengthlog.com/wp-content/uploads/2020/04/hack-squat-machine.gif | StrengthLog: https://www.strengthlog.com/hack-squat/ |  |
+| leg-extension | https://www.strengthlog.com/wp-content/uploads/2020/03/leg-extension-seated.gif | StrengthLog: https://www.strengthlog.com/leg-extension/ |  |
+| seated-leg-curl | https://www.strengthlog.com/wp-content/uploads/2020/03/leg-curl-seated.gif | StrengthLog: https://www.strengthlog.com/seated-leg-curl/ |  |
+| cable-glute-kickback | https://www.strengthlog.com/wp-content/uploads/2025/09/cable-glute-kickback.gif | StrengthLog: https://www.strengthlog.com/cable-glute-kickback/ |  |
+| cable-chest-press | https://www.strengthlog.com/wp-content/uploads/2020/03/cable-chest-press.gif | StrengthLog: https://www.strengthlog.com/cable-chest-press/ |  |
+| pec-deck-fly | https://www.strengthlog.com/wp-content/uploads/2020/04/pec-deck.gif | StrengthLog: https://www.strengthlog.com/pec-deck/ |  |
+| incline-machine-press | https://fitnessprogramer.com/wp-content/uploads/2021/02/Incline-Chest-Press-Machine.gif | Fitness Programer: https://fitnessprogramer.com/exercise/incline-chest-press-machine/ | Plate-loaded lever machine; logo watermark. |
+| machine-high-row | https://fitnessprogramer.com/wp-content/uploads/2023/06/Lever-High-Row.gif | Fitness Programer: https://fitnessprogramer.com/exercise/lever-high-row/ | Plate-loaded lever machine; logo watermark. |
+| one-arm-db-row | https://www.strengthlog.com/wp-content/uploads/2020/03/Dumbbell-Row.gif | StrengthLog: https://www.strengthlog.com/dumbbell-row/ | Bench-supported one-arm row (checked). |
+| single-arm-cable-row | https://www.strengthlog.com/wp-content/uploads/2020/04/cable-row-seated-single-arm.gif | StrengthLog: https://www.strengthlog.com/one-handed-cable-row/ |  |
+| cable-reverse-fly | https://www.strengthlog.com/wp-content/uploads/2023/08/Reverse-cable-fly.gif | StrengthLog: https://www.strengthlog.com/reverse-cable-fly/ |  |
+| chest-supported-rear-delt-raise | https://www.strengthlog.com/wp-content/uploads/2025/10/Reverse-Dumbbell-Flyes-on-Incline-Bench.gif | StrengthLog: https://www.strengthlog.com/reverse-dumbbell-flyes-on-incline-bench/ | Chest on an incline bench. |
+| db-lateral-raise | https://www.strengthlog.com/wp-content/uploads/2020/12/Dumbbell-Lateral-Raise.gif | StrengthLog: https://www.strengthlog.com/dumbbell-lateral-raise/ |  |
+| plank | https://cdn.jefit.com/assets/img/exercises/gifs/631.gif | Jefit: https://www.jefit.com/exercises/631/plank | Forearm plank, a person on a mat, 4 frames, no watermark (checked). |
+| goblet-carry | https://exercises.loadmuscle.com/gifs/720/2916.webp | LoadMuscle: https://loadmuscle.com/exercises/kettlebell-goblet-carry | Animated WebP, not GIF; shows a kettlebell held at the chest (the closest found for a dumbbell); watermark. |
+| trap-bar-carry | https://exercises.loadmuscle.com/gifs/720/2912.webp | LoadMuscle: https://loadmuscle.com/exercises/trap-bar-farmers-carry | Animated WebP, not GIF; watermark. |
+
+- Incline machine press, machine high row, goblet carry and trap bar carry carry a site watermark. The goblet carry image shows a kettlebell held at the chest (the closest found for a dumbbell).
+- Fitness Programer, LoadMuscle and Jefit are commercial sites. Because the images are copied, a source that later blocks downloads only matters for a re-fetch.
+- Planfit and GymKee were not used: they publish video (MP4) only, which the card's image element cannot show.
 
 ### 4.6 Tuesday/Thursday sitting recovery routine (~10 min, at home)
 2 rounds. Shown as guidance only: one card per exercise with prescription and cue. Nothing is checked off, logged, or synced.
@@ -452,6 +528,8 @@ For per-side exercises (reverse lunge, Pallof press, dead bug), reps are per sid
 | Machine / cable | +10 lbs (or next stack plate); face pull +5 lbs |
 | Carry | +5 lbs per hand |
 | ~~Bodyweight loadable~~ | ~~+5 lbs (plate held to chest)~~ (no progression, see 5.4) |
+
+Exercises added in v1.19 (4.5.2) use these defaults, with the exceptions noted there: cable glute kickback, cable reverse fly and single-arm cable row +5; trap bar carry +10 total; goblet carry (one dumbbell) +5.
 
 ### 5.4 Bodyweight exercises
 **v1.13: no progression logic for bodyweight-based exercises** (dead bug, 45° back extension, TRX/suspension levels, pushup ladder). They show sets, reps and last time, and the weight or level box is pre-filled with the last value used (or the starting value) and stays editable; the app never suggests a change. The rules below are struck except first-loaded weights (which apply to the weighted exercises that start empty) and the recovery routine note.
@@ -511,7 +589,7 @@ Dumbbell values are per hand. Leg press values are added plates, excluding the s
 
 **No history (v1.14).** An exercise whose `startingWeightLbs` is 0 and that has a `firstLoadedWeightLbs` (leg press 50, hip thrust 45, reverse lunge 10) pre-fills its first-loaded weight instead of 0, and the person can still log less. Once a weight has been logged, the pre-fill is that (5.2), including a logged 0.
 
-Swapped-in alternatives without a seeded value: no pre-fill; prompt the user to enter a weight they could lift for the top of the range with ~3 reps to spare.
+Exercises added in v1.19 have their seeded starting weights, and hack squat (0, first loaded 20), in 4.5.2 rather than in this table. Swapped-in alternatives without a seeded value (box squat, machine row, and the other older alternatives): no pre-fill; prompt the user to enter a weight they could lift for the top of the range with ~3 reps to spare.
 
 ~~Calibration~~ — removed (v1.13). The first sessions of an exercise are not special; the starting weight is only a pre-fill. Original text, struck:
 
@@ -640,7 +718,7 @@ Test cases:
 - ~~Deload banner during a deload week (5.8), and the Start deload / Postpone controls.~~
 
 ### 6.3 Workout session (most important screen; phone-first)
-- **Exercises in one horizontal swipe carousel, as in the v0.2 viewer (0.B.1)** (v1.14): one card per swipe with the neighbours peeking, ordered by superset, each superset with its own accent colour on the card's left edge (Superset 1 green, 2 indigo, 3 amber, Finisher none) and a label such as "Superset 1 · 1 of 2". Each card shows: suggested weight, target reps, set count for the current phase, and last session's result (e.g. "Last: 35 × 12, 12, 11"). ~~Ramp-up sets shown above the first working set for slots 1 and 3, visually distinct.~~
+- **Exercises in one horizontal swipe carousel, as in the v0.2 viewer (0.B.1)** (v1.14): one card per swipe with the neighbours peeking, in slot order, labelled "Exercise 2 of 6" (v1.19: there are no supersets, so no grouping, no superset colour and no "Finisher"; do all sets of an exercise before the next). Each card shows the line "Rest about 90 s between sets" and: suggested weight, target reps, set count for the current phase, and last session's result (e.g. "Last: 35 × 12, 12, 11"). ~~Ramp-up sets shown above the first working set for slots 1 and 3, visually distinct.~~
 - **Logging (v1.14): one tick per exercise.** At the bottom of the card, where the viewer had "mark this exercise as done", a barrel dial per set holds the weight and one shared dial holds the reps; each shows one value, already at the suggested weight and the recommended reps, and turns in 2.5 lb notches (drag up for more, down for less, or tap its upper or lower half). One tick logs every set of the exercise at once; after that the card shows a one-line summary with Edit and Undo. A weight that differs between sets is set on that set's dial; a dial changed on a set carries to the sets after it. Levels (TRX, pushups) use dials of 1 to 5, carries a distance dial. No RIR. The layout follows what was asked for: the GIF is the hero at the top of the card, with the cue, muscles and the Options and TRX lists above the dials.
 - Changing the weight (or TRX level) on one set pre-fills it into the remaining sets of the same exercise in this session.
 - For suspension exercises, the weight field is replaced by a level stepper (1–5) with the exercise's level description shown on tap.
@@ -663,7 +741,7 @@ DEXA, waist, and body weight are not tracked in this app.
 
 ### 6.6 History (v1.17)
 Opened from the History icon in the header. A switch at the top picks **By exercise** or **By date**.
-- **By exercise.** Exercises grouped under Workout A, B and C (each slot's current exercise, swaps included, then anything else logged in that workout). A row shows the exercise, its superset colour, and its last session ("Mon Sep 28 · 25 lbs × 10, 10, 9", or "Not logged yet"). A badge "↑ due" shows when a scheduled increase is pending (5.12). Tapping a row opens the exercise.
+- **By exercise.** Exercises grouped under Workout A, B and C (each slot's current exercise, swaps included, then anything else logged in that workout). A row shows the exercise and its last session ("Mon Sep 28 · 25 lbs × 10, 10, 9", or "Not logged yet"). A badge "↑ due" shows when a scheduled increase is pending (5.12). Tapping a row opens the exercise.
 - **Exercise detail.** The date of the last increase and the next scheduled increase date (or "Off"; "Not used" for bodyweight-based exercises, which have no progression, 5.4). A chart with a switch between **Top set** (heaviest weight; the level for TRX and pushups; the longest distance for a carry) and **Volume** (working-set volume: weight × reps summed, reps alone for bodyweight; ramp sets excluded), with each increase marked. A table of past sessions, newest first: date and workout, the sets, the top value. Tapping a row opens that workout for editing (6.3).
 - **By date.** Every finished workout, newest first, grouped "This week", "Last week", then by month (Weeks start on Monday, Pacific dates). A row shows the workout letter, the date, exercises done of the total, working sets, duration, and an **Edit** button that opens the workout as in 6.3. A workout with an exercise that was not ticked carries an amber "1 missing" tag (more than one: "2 missing"). This replaces the Home card of v1.15.
 - Empty states say what to do ("No finished workouts yet. Finish one and it shows up here.").
@@ -695,7 +773,7 @@ All records belong to an owner (the signed-in user). Storage is an append-only e
 - **UserProfile**: programStartDate (initial value 2026-09-28), restTimerDefaultSec, recoveryDays (default [Tue, Thu]), trapBarWeightLbs (default 45), scheduledIncreasesEnabled (default true), scheduledIncreaseDays (default 21)
 - **Exercise**: name, type (dumbbell | barbell | machine | cable | bodyweight | bodyweight_loadable | bodyweight_ladder | suspension | carry | hold | mobility), repMin, repMax, perSide (bool), holdSeconds (nullable), loadIncrementLbs, startingWeightLbs (nullable), firstLoadedWeightLbs (nullable), startingNote (nullable), startingLevel (nullable; suspension, default 2), levelDescription (nullable; suspension), ~~loadsBack (bool)~~, scheduledIncreasesEnabled (default true), cues (optional text)
 - **WorkoutTemplate**: code (A | B | C), name
-- **TemplateSlot**: templateId, slotNumber (1–6), supersetGroup (1 | 2 | 3 | null), exerciseId, phase2Sets, alternativeExerciseIds[]
+- **TemplateSlot**: templateId, slotNumber (1–6), ~~supersetGroup (1 | 2 | 3 | null)~~ (removed, v1.19), exerciseId, phase2Sets, alternativeExerciseIds[]
 - **SlotOverride**: templateSlotId, exerciseId (the user's persistent swap)
 - **Routine**: code (SITTING_RECOVERY), name, rounds
 - **RoutineItem**: routineId, order, exerciseId, prescription (text), sets/holds, reps, holdSeconds, perSide
@@ -704,7 +782,7 @@ All records belong to an owner (the signed-in user). Storage is an append-only e
 - **SetLog**: sessionId, exerciseId, levelNumber (nullable; ladder and suspension exercises), suggestedLevel (nullable), setNumber, isRampUp, isCalibration, suggestedWeightLbs (nullable), suggestionSource (starting | hold | scheduled | null in v1.13; the registry still accepts calibration, earned, reduction, deload and gated), weightLbs (nullable; actual, drives progression), reps (nullable), distanceM (nullable, carries), rir (nullable; not asked in the UI since v1.14), calibrationFeel (too_easy | about_right | too_hard | null), completed
 - ~~**DeloadWeek**: programWeek, source (scheduled | manual), postponedFromWeek (nullable)~~ (removed, v1.13; the event types stay in the registry, unused)
 
-Seed data: exercise catalog with cues, starting weights, first-loaded weights, and ~~loadsBack flags~~ (Sections 4 and 5), templates A/B/C with slots and alternatives (including TRX alternatives with starting levels and level descriptions, Section 4.5.1), the recovery routine (Section 4.6), and pushup ladder levels (Section 5.4). Seed data is bundled with the app, so there is nothing to seed into storage.
+Seed data: exercise catalog (65 exercises from v1.19) with cues, starting weights, first-loaded weights, and ~~loadsBack flags~~ (Sections 4 and 5), templates A/B/C with slots and alternatives (including TRX alternatives with starting levels and level descriptions, Section 4.5.1), the recovery routine (Section 4.6), and pushup ladder levels (Section 5.4). Seed data is bundled with the app, so there is nothing to seed into storage.
 
 ---
 
@@ -728,6 +806,7 @@ Seed data: exercise catalog with cues, starting weights, first-loaded weights, a
 3. **Progression engine:** pure functions for Section 5 as cut in v1.13 (starting weights, last-time data, first-loaded weight, scheduled increases) with unit tests covering every example in 5.7 and 5.12 that is not struck.
 4. **Workout logging:** pushup ladder in Workout B, session screen, rest timer, draft safety, swaps, summary, rotation logic, recovery routine guidance cards. Reopening a finished workout to correct it (v1.15) follows as a small addition before milestone 5.
 5. **History (by exercise and by date), the sync screen in Settings, an export script, the service worker (PWA polish).**
+6. **Alternatives and straight sets (v1.19):** the 16 new exercises and the alternatives of 4.5 in the seed, no supersets in the cards, history and engine, the viewer retired (0.C). (The Content-Security-Policy is already removed.)
 
 ## 11. Acceptance criteria (v1 done when)
 - I can sign in on my phone and desktop and see the same data.
@@ -740,3 +819,5 @@ Seed data: exercise catalog with cues, starting weights, first-loaded weights, a
 - A script exports all my data as JSON and my logged sets as CSV (not a screen).
 - History by date lists every finished workout, flags one with an exercise not ticked, and opens it for editing; History by exercise shows each exercise's last increase, next scheduled increase, chart and sessions.
 - With the network off, the installed app still opens and lets me log a workout.
+- Every workout slot offers at least one non-TRX alternative; swapping into any of them keeps the slot's sets and reps, and a swapped-in exercise shows its image.
+- A workout shows its exercises one at a time in slot order, labelled "Exercise N of M", with no supersets.

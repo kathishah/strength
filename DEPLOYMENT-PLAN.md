@@ -18,10 +18,10 @@ Browser (installed PWA)                         AWS
 │ event log → replay → state   │──────────▶│   └─ Lambda "events" (Node, arm64)│
 └──────────────────────────────┘  Bearer   │        └─ S3 data bucket (private)│
         ▲ static files                      └───────────────────────────────────┘
-v1 on S3 + CloudFront (app/); GitHub Pages keeps the frozen v0.2 viewer
+v1 on S3 + CloudFront (app/); GitHub Pages serves only a redirect to it (the v0.2 viewer was retired in v1.19)
 ```
 - **Hosting:** two sites, side by side.
-  - **GitHub Pages** keeps serving the root `index.html` (the v0.2 viewer), frozen: bug fixes only.
+  - **GitHub Pages** keeps serving the root `index.html`, which since v1.19 only redirects to https://strength.logbook.me (it was the v0.2 viewer).
   - **v1** lives in `app/` and is deployed to a private S3 bucket behind CloudFront (Origin Access Control, HTTPS only). Deploy with `aws s3 sync app/ s3://<site-bucket> --delete` followed by a CloudFront invalidation.
   - Pages also publishes `app/` at `/strength/app/`, since it serves the whole repo. That is harmless (no data, and the Cognito pool id and API URL are not secrets), but if it bothers you, switch Pages to a workflow that publishes only `index.html`.
   - v1 is served at **https://strength.logbook.me** (a CloudFront alias). DNS is at GoDaddy, so a CNAME points the name at the CloudFront domain (no Route 53), and the ACM certificate lives in `us-east-1`. The installed PWA, `localStorage` (refresh token) and IndexedDB are tied to the origin, so changing the domain later means reinstalling and signing in again.
@@ -116,7 +116,7 @@ s3://<data-bucket>/u/<cognito-sub>/events/2026-10.json     # append-only array, 
 - Bucket: block all public access, versioning on, lifecycle rule to expire old versions after 90 days.
 - IAM: the Lambda role can only `GetObject`, `PutObject`, `ListBucket` on this bucket.
 - HTTP API: throttle to a low rate (for example 10 requests per second, burst 20), CORS locked to the site origin.
-- Page: a Content-Security-Policy meta tag allowing only self, the Cognito and API origins, and the GIF publishers; no third-party scripts or analytics.
+- Page: no Content-Security-Policy (removed: it blocked exercise GIFs from sites outside a short list); no third-party scripts or analytics.
 - Nothing sensitive in URLs; only the opaque `since` cursor (a month and a position).
 
 ## 7. Infrastructure as code
@@ -131,7 +131,7 @@ There is one stack, **`strength-prod`**, in `us-west-2`; a dev stack is not need
 
 ## 8. Repo layout
 ```
-index.html                # FROZEN v0.2 viewer, served by GitHub Pages (bug fixes only)
+index.html                # redirect to https://strength.logbook.me, served by GitHub Pages (was the v0.2 viewer)
 app/                      # v1, deployed to S3 + CloudFront
   index.html, manifest.webmanifest, sw.js, css/app.css, icons/     # sw.js is Phase E (section 15e)
   js/
@@ -195,7 +195,7 @@ Phase C can start in parallel with A and B, since the engine has no dependencies
 
 ## 11. Decisions made
 - Warm-up, post-lift cardio, and recovery-routine tracking are out of the app (spec v1.11).
-- The v0.2 viewer stays on GitHub Pages, frozen; v1 is built in `app/` on S3 + CloudFront.
+- The v0.2 viewer was retired in v1.19: GitHub Pages serves a redirect to v1, which is built in `app/` on S3 + CloudFront.
 - Cognito User Pool only, one permanent 6-digit PIN, no MFA, no Identity Pool.
 - One stack (`strength-prod`); no dev stack for now.
 - The v1 site is served at `https://strength.logbook.me` (CloudFront alias, DNS at GoDaddy, ACM certificate in `us-east-1`).

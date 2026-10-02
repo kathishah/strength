@@ -14,7 +14,6 @@ import { increaseLoad } from './load.js';
 
 const HINTS = {
   'enter-weight': 'No starting weight for this exercise. Enter a weight you could lift for the top of the rep range with about 3 reps to spare.',
-  'trx-pair': 'Both use the TRX; if the station is shared, alternate with the dumbbell version.',
 };
 export const hint = (code) => ({ code, text: HINTS[code] });
 

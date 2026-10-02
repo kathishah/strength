@@ -12,6 +12,9 @@ import {
   exerciseName, formatDay, formatTime, increaseText, lastText, phaseText, repsText, setsRepsText, setsText, sourceLabel, suggestionText,
 } from './text.js';
 
+// The line under the cue on every exercise card (spec 6.3).
+const REST_TEXT = 'Rest about 90 s between sets.';
+
 const isWorking = (set) => set.isRampUp !== true && set.completed !== false;
 
 // The slot's exercise choices (spec 4.5, 4.5.1): the default, its alternatives, then the TRX alternatives.
@@ -51,7 +54,7 @@ function levelInfo(suggestion, levelNumber) {
   return c?.trx?.levels ?? null;
 }
 
-function buildCard({ state, sessionId, draft, e, slot, superset, defaultExerciseId, swapped, templateCode, logged, planned }) {
+function buildCard({ state, sessionId, draft, e, slot, defaultExerciseId, swapped, templateCode, logged, planned }) {
   const inputs = inputsFor(e);
   const reopened = draft.editing?.[e.exerciseId] === true && logged.length > 0;
   const rows = buildRows({
@@ -77,7 +80,6 @@ function buildCard({ state, sessionId, draft, e, slot, superset, defaultExercise
     exerciseId: e.exerciseId,
     name: exerciseName(e.exerciseId),
     slot,
-    superset,
     swapped: Boolean(swapped),
     defaultExerciseId,
     type: e.type,
@@ -106,10 +108,9 @@ function buildCard({ state, sessionId, draft, e, slot, superset, defaultExercise
       trx: options.filter((o) => o.kind === 'trx'),
     },
     swappedFromName: swapped ? exerciseName(defaultExerciseId) : null,
-    // The card carries its own superset marking, filled in by markSupersets once every card is known.
-    ssClass: '',
-    chipText: superset === null ? 'Finisher' : `Superset ${superset}`,
-    partnerName: null,
+    // The position label, filled in by labelCards once every card is known (spec 6.3).
+    chipText: '',
+    restText: REST_TEXT,
     // 'input': nothing logged yet; 'done': logged, shown as one summary line; 'editing': a logged exercise reopened.
     mode: loggedCount === 0 ? 'input' : reopened ? 'editing' : 'done',
     done: loggedCount > 0,
@@ -123,26 +124,9 @@ function buildCard({ state, sessionId, draft, e, slot, superset, defaultExercise
   };
 }
 
-// Superset labels, colour class and the "Alternate with <partner>" line (spec 0.B.2, 4.3), after swaps.
-function markSupersets(cards) {
-  for (const card of cards) {
-    if (card.superset === null) continue;
-    const mates = cards.filter((c) => c.superset === card.superset);
-    card.ssClass = `ss${card.superset}`;
-    card.chipText = `Superset ${card.superset} · ${mates.indexOf(card) + 1} of ${mates.length}`;
-    card.partnerName = mates.length > 1 ? mates.find((c) => c !== card).name : null;
-  }
-}
-
-// Groups consecutive cards of one superset (spec 6.3); a card with no superset is a group of its own.
-function group(cards) {
-  const groups = [];
-  for (const card of cards) {
-    const last = groups[groups.length - 1];
-    if (last && card.superset !== null && last.superset === card.superset) last.cards.push(card);
-    else groups.push({ superset: card.superset, cards: [card] });
-  }
-  return groups;
+// "Exercise 2 of 6" on each plan card (spec 6.3, v1.19: one exercise at a time, no supersets); an exercise logged outside the plan is "Extra".
+function labelCards(cards) {
+  cards.forEach((card, i) => { card.chipText = `Exercise ${i + 1} of ${cards.length}`; });
 }
 
 // The view of one workout. `session` is the replayed record, or null for a workout that has not been started yet (Home shows
@@ -161,11 +145,11 @@ export function buildView(state, { sessionId = null, session = null, templateCod
 
   const common = { state, sessionId, draft, templateCode };
   const cards = plan.exercises.map((e) => buildCard({
-    ...common, e, slot: e.slot, superset: e.superset, defaultExerciseId: e.defaultExerciseId, swapped: e.swapped,
+    ...common, e, slot: e.slot, defaultExerciseId: e.defaultExerciseId, swapped: e.swapped,
     logged: byExercise.get(e.exerciseId) ?? [], planned: e.sets,
   }));
 
-  markSupersets(cards);
+  labelCards(cards);
 
   // Sets logged for an exercise that is not in the plan now (a swap made on another device, say) stay visible and editable.
   const inPlan = new Set(cards.map((c) => c.exerciseId));
@@ -173,9 +157,11 @@ export function buildView(state, { sessionId = null, session = null, templateCod
   for (const [exerciseId, logged] of byExercise) {
     if (inPlan.has(exerciseId) || !Object.hasOwn(RULES, exerciseId)) continue;
     const e = suggestExercise(state, { exerciseId, today: date });
-    orphans.push(buildCard({
-      ...common, e, slot: null, superset: null, defaultExerciseId: exerciseId, swapped: false, logged, planned: 0,
-    }));
+    const card = buildCard({
+      ...common, e, slot: null, defaultExerciseId: exerciseId, swapped: false, logged, planned: 0,
+    });
+    card.chipText = 'Extra exercise';
+    orphans.push(card);
   }
 
   const loggedSets = [...byExercise.values()].reduce((n, list) => n + list.length, 0);
@@ -192,7 +178,6 @@ export function buildView(state, { sessionId = null, session = null, templateCod
     programWeek: session?.programWeek ?? plan.calendar.programWeek,
     phase,
     phaseText: phaseText(phase, targetRir(phase)),
-    groups: group(cards),
     cards: [...cards, ...orphans],
     orphans,
     exerciseCount: cards.length,
