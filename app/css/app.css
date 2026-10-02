@@ -277,6 +277,8 @@ a.btn.block { display: flex; }
 .ex-meta strong { display: block; font-size: 0.9rem; color: var(--text); }
 .ex p { margin: 2px 0; }
 .ex .suggest { font-weight: 600; }
+/* head / media / rest are just wrappers in portrait; phone landscape lays them out in two columns (below) */
+.ex-head, .ex-media, .ex-rest { display: contents; }
 .form-section { margin-top: 8px; border-top: 1px solid var(--item-border); padding-top: 10px; }
 .gif-wrapper { position: relative; aspect-ratio: 16 / 10; border-radius: 16px; overflow: hidden; background: var(--thumb-bg); border: 1px solid var(--tag-border); display: flex; align-items: center; justify-content: center; }
 .gif-wrapper img { width: 100%; height: auto; max-height: 100%; object-fit: contain; display: block; }
@@ -489,3 +491,30 @@ textarea {
 .htable td.r, .htable th.r { text-align: right; }
 .htable a { color: inherit; text-decoration: none; display: block; }
 .empty-note { padding: 14px 0; color: var(--muted); }
+
+/* ---- Phone in landscape: ~400 px of height. GIF left; title, the log dials and the tick right, so a card needs no vertical scroll ---- */
+@media (orientation: landscape) and (max-height: 500px) {
+  body:has(.day-body) .page, body:has(.day-body) .hdr-bar, body:has(.day-body) .hdr-panel { max-width: none; }
+  .page { padding-top: 6px; }
+  .phase-line { margin: 0 0 6px; }
+  .day-body { padding-bottom: 64px; }
+  .track {
+    margin: 0 calc(-1 * max(16px, env(safe-area-inset-right))) 0 calc(-1 * max(16px, env(safe-area-inset-left)));
+    padding: 0 max(16px, env(safe-area-inset-right)) 12px max(16px, env(safe-area-inset-left));
+    scroll-padding: 0 max(16px, env(safe-area-inset-left));
+  }
+  .slide { flex-basis: calc(100% - 40px); }
+  .ex.split {
+    display: grid; grid-template-columns: min(42%, calc((100dvh - 190px) * 1.6)) minmax(0, 1fr); grid-template-rows: auto 1fr;
+    column-gap: 16px; row-gap: 6px; align-content: start;
+  }
+  .ex.split > .ex-head, .ex.split > .ex-rest { display: flex; flex-direction: column; gap: 6px; grid-column: 2; min-width: 0; }
+  .ex.split > .ex-head { grid-row: 1; }
+  .ex.split > .ex-rest { grid-row: 2; }
+  .ex.split > .ex-media { display: block; grid-column: 1; grid-row: 1 / span 2; align-self: start; min-width: 0; }
+  .ex-rest > .log-area { order: -1; margin-top: 0; }
+  .ex-rest .exercise-body:first-child { margin-top: 0; }
+  .rest-bar { padding-top: 4px; padding-bottom: max(4px, env(safe-area-inset-bottom)); }
+  .rest-bar .btn { min-height: 40px; padding: 6px 12px; }
+  .rest-bar .rest-time { font-size: 1.05rem; }
+}

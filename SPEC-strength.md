@@ -1,8 +1,10 @@
-# Recomp Tracker — Product Spec (v1.17)
+# Recomp Tracker — Product Spec (v1.18)
 
 A personal, mobile-first web app for logging gym workouts in a body recomposition program (build lean mass, reduce visceral fat, strengthen the back) and telling the user what to lift next. Used at the gym on a phone and at home on a desktop, with data synced across devices. Activity tracking (steps, Bollyx, hikes, mobility) and body metrics (DEXA, waist, weight) are out of scope: activity is tracked on an Apple Watch, and body metrics are not tracked in this app.
 
 ## Changelog
+- **v1.18**
+  - Phone in landscape (6.2): each exercise card is two columns, the form GIF on the left and the title, the log dials and the tick on the right, so a card needs no vertical scroll. The description, tags and Options/TRX follow below the dials. The header and cards use the full width, and the rest bar is slimmer. Portrait is unchanged. Layout only: no data, events or engine changes.
 - **v1.17** (Phase E, agreed from mock-ups)
   - Header: History, Settings and sign-out are icon buttons after Sunday (6.2). The "Finished workouts" card is gone from Home; finished workouts live in History.
   - History (6.6) has two views: by exercise (grouped by workout A, B, C, with a chart and session table per exercise) and by date (every finished workout, newest first, grouped by week and month, each with Edit and a "missing" tag when an exercise was not ticked).
@@ -632,6 +634,7 @@ Test cases:
 
 ### 6.2 Home / Today screen
 - Home is the v0.2 viewer's page (v1.14, 0.B.1): a slim header (one status line such as "Wed · Workout B · 0/6 done", which opens to the day pills Monday to Sunday, then three icon buttons (History, Settings, sign out, two taps) after a divider, and the save state; a dot for whether the work is saved; a theme button) over the day's swipe carousel of cards. There is no Start button: the next workout (A/B/C by rotation) is shown as cards, and it starts when the first exercise is marked done. The no-consecutive-days warning shows above the cards if applicable.
+- **Landscape (v1.18).** On a phone turned sideways (landscape, under 500 px high) a card is two columns: the form GIF, sized to the screen height, on the left; the title, the log dials and the tick, then the description and Options/TRX, on the right. Portrait keeps the single column.
 - On Tuesdays and Thursdays the cards are the recovery routine (4.6), with a last card to show the workout instead (a workout is never blocked). Picking a day pill shows that day's cards.
 - **Finished workouts.** ~~A "Finished workouts" card on Home listing the last 7 days (v1.15).~~ Moved to History by date (6.6, v1.17). A finished workout never changes which workout is next (rotation, 4.1).
 - ~~Deload banner during a deload week (5.8), and the Start deload / Postpone controls.~~
