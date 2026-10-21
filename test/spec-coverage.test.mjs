@@ -1,5 +1,5 @@
 // Meta-test: every live example in the spec has a numbered test, struck ones have none, and the spec text has not
-// changed under a test. Reads SPEC-strength.md and test/spec-examples.test.mjs. If this fails after a spec edit, re-read
+// changed under a test. Reads docs/SPEC-strength.md and test/spec-examples.test.mjs. If this fails after a spec edit, re-read
 // the example, fix, add or remove its test in spec-examples.test.mjs, and update the fingerprint (the message prints it).
 // A bullet starting with "~~" is struck (removed from the app, v1.13): it must have no test.
 import { test } from 'node:test';
@@ -7,7 +7,7 @@ import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 
-const spec = readFileSync(new URL('../SPEC-strength.md', import.meta.url), 'utf8');
+const spec = readFileSync(new URL('../docs/SPEC-strength.md', import.meta.url), 'utf8');
 const examples = readFileSync(new URL('./spec-examples.test.mjs', import.meta.url), 'utf8');
 
 function bulletsBetween(from, to) {

@@ -9,7 +9,7 @@ import { loggedDefaults, planSession, suggestExercise } from '../app/js/engine/i
 import { firstSlotFor } from '../app/js/engine/config.js';
 import { lift, makeLog } from '../test-support/engine-log.mjs';
 
-const spec = readFileSync(new URL('../SPEC-strength.md', import.meta.url), 'utf8');
+const spec = readFileSync(new URL('../docs/SPEC-strength.md', import.meta.url), 'utf8');
 const bullets = (from, to) => {
   const a = spec.indexOf(from);
   return spec.slice(a, spec.indexOf(to, a)).split('\n').filter((l) => l.startsWith('- ')).map((l) => l.slice(2));

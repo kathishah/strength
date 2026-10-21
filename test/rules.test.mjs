@@ -1,11 +1,11 @@
-// app/js/seed/rules.js against the spec: the tables are read out of SPEC-strength.md, so an edited spec fails here.
+// app/js/seed/rules.js against the spec: the tables are read out of docs/SPEC-strength.md, so an edited spec fails here.
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { EXERCISES, WORKOUTS, RECOVERY } from '../app/js/seed/index.js';
 import { GUIDANCE_ONLY, PROGRAM, PUSHUP_LADDER, RULES, SLOT_SETS } from '../app/js/seed/rules.js';
 
-const spec = readFileSync(new URL('../SPEC-strength.md', import.meta.url), 'utf8');
+const spec = readFileSync(new URL('../docs/SPEC-strength.md', import.meta.url), 'utf8');
 
 // Text of a section: from a line starting with `heading` to the next heading of the same or higher level.
 function section(heading) {

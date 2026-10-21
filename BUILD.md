@@ -1,4 +1,4 @@
-# Build and deploy (v1, through Phase D)
+# Build and deploy
 
 Everything here is run by you, from the repo root. Nothing in this repo deploys itself.
 Stack region is `us-west-2`; the CloudFront certificate must be in `us-east-1` (it already is).
@@ -112,9 +112,9 @@ sam deploy \
 
 To reset a forgotten password later, run `admin-set-user-password ... --permanent` again.
 
-## 6. Fill in `app/js/config.js`
+## 6. Configure `app/js/config.js`
 
-Already done for the deployed `strength-prod` stack (and the CSP pins its API host). Redo this only if the stack is recreated. Replace the two values with the stack outputs:
+Already done for the deployed `strength-prod` stack (the page does not set a Content-Security-Policy). Redo this only if the stack is recreated. Replace the two values with the stack outputs:
 
 ```js
 userPoolClientId: '<UserPoolClientId output>',
@@ -138,7 +138,7 @@ scripts/deploy-app.sh --dry-run     # preview: what would be uploaded or deleted
 scripts/deploy-app.sh               # deploy
 ```
 
-The exercise images are our own copies in `app/img/` (160 MB, not in git). The deploy downloads any that are missing (`node scripts/fetch-images.mjs`, sources in `scripts/image-sources.json`) and uploads them with the app; the first deploy after this change uploads all of them.
+Exercise images are excluded from git and must be downloaded separately for a full local preview or deployment: run `node scripts/fetch-images.mjs` (sources are listed in `scripts/image-sources.json`). A deploy fetches missing images before either S3 sync and stops if a fetch fails. `--dry-run` does not download files; if images are absent, it previews the app files and reports that the image sync cannot be previewed yet.
 
 `--skip-tests` skips the test run. The script exports `AWS_REGION`, `STACK`, `DOMAIN`, `SITE_BUCKET` and `DIST_ID` (from `scripts/aws-env.sh`) for its own commands; to have them in your terminal too, run `source scripts/aws-env.sh`. Set `AWS_PROFILE` first if you use profiles. By hand, the same thing is:
 

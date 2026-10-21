@@ -3,7 +3,7 @@
 //
 // Values come from spec 4.3 (reps), 4.5.1 (TRX reps and levels), 5.3 (increments) and the 5.6 table
 // (starting and first-loaded weights). test/rules.test.mjs reads those tables out of
-// SPEC-strength.md and compares. A null where a value would be is "the spec gives none":
+// docs/SPEC-strength.md and compares. A null where a value would be is "the spec gives none":
 //   - repMin/repMax/perSide/targetDistanceM null: an alternative with no range of its own uses the range of the
 //     slot it is swapped into (spec question in plan section 14).
 //   - startingWeightLbs null: no pre-fill; the user is asked for a weight (spec 5.6, swapped-in alternatives).

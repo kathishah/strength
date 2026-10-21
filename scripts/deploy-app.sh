@@ -33,15 +33,19 @@ if [ "$tests" = 1 ] && [ "$dry" = 0 ]; then
   echo "Tests pass."
 fi
 
-# Exercise images: only the ones missing from app/img are downloaded (this touches nothing but local files).
-node scripts/fetch-images.mjs | grep -v '^have ' || true
-
 if [ "$dry" = 1 ]; then
-  echo "Dry run: nothing is uploaded or deleted."
+  echo "Dry run: nothing is downloaded, uploaded, or deleted."
   aws s3 sync app/ "s3://$SITE_BUCKET" --delete --dryrun --exclude '.DS_Store' --exclude 'img/*'
-  aws s3 sync app/img "s3://$SITE_BUCKET/img" --delete --dryrun --exclude '.DS_Store'
+  if [ -d app/img ]; then
+    aws s3 sync app/img "s3://$SITE_BUCKET/img" --delete --dryrun --exclude '.DS_Store'
+  else
+    echo "Images are not present locally; image sync would require downloading them first."
+  fi
   exit 0
 fi
+
+# Fetch before either --delete sync. Any failed download stops deployment and preserves the remote image set.
+node scripts/fetch-images.mjs
 
 aws s3 sync app/ "s3://$SITE_BUCKET" --delete --exclude '.DS_Store' --exclude 'img/*' --cache-control no-cache
 # Images never change under the same name, so they may be cached for a week.
