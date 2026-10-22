@@ -102,12 +102,12 @@ export const setRestLength = (draft, seconds) => ({ ...draft, restSec: seconds }
 
 // ---- saving ----
 
-const DRAFT_KEY = 'strength.draft';
-
-// One draft is kept, for the session in progress. backend: a key-value store with getItem, setItem and removeItem (the browser's local storage),
+// One draft is kept, for the session in progress, under `${keyPrefix}draft` ('strength.draft' by default; the demo passes its own
+// prefix, see profile.js). backend: a key-value store with getItem, setItem and removeItem (the browser's local storage),
 // or null/broken storage, in which case the draft lives in memory for as long as the page does.
 // load(sessionId) always returns a usable draft; save and clear never throw.
-export function createDraftStore(backend, key = DRAFT_KEY) {
+export function createDraftStore(backend, { keyPrefix = 'strength.' } = {}) {
+  const key = `${keyPrefix}draft`;
   let cached = null;
   return {
     load(sessionId) {
