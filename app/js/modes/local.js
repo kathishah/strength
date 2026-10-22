@@ -20,11 +20,11 @@ export const HOME_NOTE_TEXT = 'Your workouts are saved in this browser only. Exp
 
 const seenKey = (ctx) => `${ctx.profile.keyPrefix}localNoticeSeen`;
 
-// Dismissals this page remembers even when localStorage is blocked (the note then returns on the next visit).
+// Dismissals this page remembers even when localStorage is blocked (the note then returns on the next visit). Keyed by ctx: one per startApp.
 const dismissed = new WeakSet();
 
 function noteSeen(ctx) {
-  if (dismissed.has(ctx.profile)) return true;
+  if (dismissed.has(ctx)) return true;
   try { return localStorage.getItem(seenKey(ctx)) !== null; } catch { return false; }
 }
 
@@ -42,7 +42,7 @@ export const localUi = {
       h('button', {
         type: 'button', class: 'btn quiet', 'aria-label': 'Dismiss this note',
         onclick() {
-          dismissed.add(ctx.profile);
+          dismissed.add(ctx);
           try { localStorage.setItem(seenKey(ctx), '1'); } catch { /* storage blocked: gone for this visit only */ }
           ctx.refresh();
         },

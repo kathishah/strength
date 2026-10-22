@@ -1,8 +1,11 @@
-# Recomp Tracker — Product Spec (v1.19)
+# Recomp Tracker — Product Spec (v1.20)
 
 A mobile-first strength-training log that records workouts and suggests what to lift next. It is designed for a single private account, with data synced across that user’s devices. Activity tracking and body metrics are out of scope.
 
 ## Changelog
+- **v1.20**
+  - Local-only mode (6.7, 6.2): when the app's sync settings are missing or incomplete it runs with no account and no network, keeping events in the browser's IndexedDB (docs/SHOWCASE-AND-SELF-HOST-SPEC.md, sections 3 and 4). The header chip reads "On this device" and its panel says "Saved in this browser only. Not synced to other devices."; Home shows a one-time note about it; if the browser keeps nothing (IndexedDB unavailable) a notice on every screen says the workouts will be lost when the page closes.
+  - Settings (6.7) depends on the mode. Synced mode is unchanged. Local-only Settings has Storage, Export backup (a JSON file in the format of `scripts/export-data.mjs`) and Clear data on this device (two taps). There is no in-app import: a backup moves to an AWS deployment with `scripts/post-events.mjs`. Demo Settings has the demo explanation and Reset.
 - **v1.19**
   - More alternatives (4.5): 16 new exercises (hack squat, leg extension, seated leg curl, cable glute kickback, cable chest press, pec deck fly, incline machine press, machine high row, one-arm dumbbell row, single-arm cable row, cable reverse fly, chest-supported rear delt raise, dumbbell lateral raise, plank, goblet carry, trap bar carry), and existing exercises offered in more slots, so every slot has 1 to 4 non-TRX alternatives (it was 0 to 2). The catalog goes from 49 to 65. The new exercises use existing exercise types, so the engine, events and export are unchanged. Their starting weights, the slots they fit and their images are in 4.5.2 and 4.5.3. A variation of the same movement (another grip, machine or stride) is not an alternative; the equipment is a full gym with all machines and a landmine, no sled.
   - No supersets (4.3, 6.3, 6.6, 8): a workout is a list of exercises done one at a time, all sets of one before the next, in the same slot order. Cards say "Exercise 2 of 6" with no coloured edge and "Rest about 90 s between sets". The TRX pairing tip (4.5.1) is removed. Reason: alternating two stations is hard in a busy gym. Layout and seed data only: the superset number was never stored, so logged workouts and swaps stay valid.
@@ -719,12 +722,15 @@ Opened from the History icon in the header. A switch at the top picks **By exerc
 - **By date.** Every finished workout, newest first, grouped "This week", "Last week", then by month (Weeks start on Monday, Pacific dates). A row shows the workout letter, the date, exercises done of the total, working sets, duration, and an **Edit** button that opens the workout as in 6.3. A workout with an exercise that was not ticked carries an amber "1 missing" tag (more than one: "2 missing"). This replaces the Home card of v1.15.
 - Empty states say what to do ("No finished workouts yet. Finish one and it shows up here.").
 
-### 6.7 Settings (v1.17: sync only)
-- **Sync.** What the Phase B panel shows, moved here from Home: status, last sync and how long it took, events waiting to upload, events on this device, where they are stored, anything the server set aside, and the recent events. Buttons: **Sync now** and **Add test note**.
-- Sign out stays in the header (6.2).
+### 6.7 Settings (v1.20: depends on the mode)
+The app runs in one of three modes (docs/SHOWCASE-AND-SELF-HOST-SPEC.md, section 3). Settings is the heading followed by the mode's own content.
+- **Synced** (the sync settings in the app config are complete; unchanged from v1.17). Sync: what the Phase B panel shows, moved here from Home: status, last sync and how long it took, events waiting to upload, events on this device, where they are stored, anything the server set aside, and the recent events. Buttons: **Sync now** and **Add test note**.
+- **Local only** (no sync settings; no account and no network). Three cards. **Storage:** whether workouts are saved on this device (or the browser is keeping them in memory only), how many events it holds and how many workouts are finished. **Export backup:** downloads `strength-events-<date>.json` as `{ exportedAt, count, events }`, the file `scripts/export-data.mjs` writes; there is no import in the app. Under it: "Moving to your own AWS deployment? Export a backup, then upload it with `scripts/post-events.mjs` (see the self-hosting guide)." **Clear data on this device:** two taps; the first reads "Tap again to delete all workouts on this device. Export first if you want a copy."; the second deletes the local database and the app's saved values (the theme choice stays) and reloads into an empty app.
+- **Demo** (the public sandbox). A short explanation, **Reset demo** (two taps) and a link back to the project page.
+- Sign out stays in the header (6.2), in synced mode only (local-only and demo have no account).
 - ~~Program start date, rest timer default, recovery days, units.~~ Not built. The start date stays 2026-09-28, the rest timer 90 s, the recovery days Tuesday and Thursday.
 - ~~Per exercise: starting weight, first-loaded weight, load increment; trap bar weight; scheduled increases on/off, interval, per-exercise on/off.~~ Not built. Defaults apply (5.3, 5.6, 5.12). The engine still reads `setting.changed` events for these keys, so a value can be set by a script if ever needed.
-- ~~Export all data as JSON (and CSV of logged sets).~~ Not a screen: `scripts/export-data.mjs` writes the JSON and the CSV (DEPLOYMENT-PLAN.md section 15e).
+- ~~Export all data as JSON (and CSV of logged sets).~~ Not a screen in synced mode: `scripts/export-data.mjs` writes the JSON and the CSV (DEPLOYMENT-PLAN.md section 15e). Local-only mode has Export backup (above), which writes the JSON.
 
 ---
 
