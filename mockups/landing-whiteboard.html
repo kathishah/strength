@@ -6,7 +6,7 @@
   <title>Gym Whiteboard · Strength Training Tracker</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Permanent+Marker&family=Kalam:wght@400;700&family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Anton&family=Permanent+Marker&family=Kalam:wght@400;700&family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="shared/phone-preview.css">
   <style>
     /* Layout: one dry-erase board in an aluminium frame, written in marker; the footer is the marker tray. Dark mode is a black glass board. */
@@ -22,15 +22,17 @@
       --paper: #ffffff;
       --paper-ink: #1f2328;
       --tape: rgb(230 214 170 / .78);
+      --print: #1d2a44;      /* vinyl banner lettering */
       --hand: "Kalam", "Comic Sans MS", cursive;
       --marker: "Permanent Marker", "Kalam", cursive;
       --body: "Atkinson Hyperlegible", "Helvetica Neue", Arial, sans-serif;
+      --print-font: "Anton", "Impact", "Arial Narrow", sans-serif;
       color-scheme: light;
     }
     @media (prefers-color-scheme: dark) {
-      :root:not([data-theme="light"]) { --board: #16191d; --ghost: rgb(255 255 255 / .05); --frame-hi: #6c737a; --frame-lo: #2d3237; --mk-black: #f1f0ea; --mk-blue: #74a6ff; --mk-red: #ff7466; --mk-green: #5fd795; --paper: #f4f2ec; color-scheme: dark; }
+      :root:not([data-theme="light"]) { --board: #16191d; --ghost: rgb(255 255 255 / .05); --frame-hi: #6c737a; --frame-lo: #2d3237; --mk-black: #f1f0ea; --mk-blue: #74a6ff; --mk-red: #ff7466; --mk-green: #5fd795; --paper: #f4f2ec; --print: #e8e6de; color-scheme: dark; }
     }
-    :root[data-theme="dark"] { --board: #16191d; --ghost: rgb(255 255 255 / .05); --frame-hi: #6c737a; --frame-lo: #2d3237; --mk-black: #f1f0ea; --mk-blue: #74a6ff; --mk-red: #ff7466; --mk-green: #5fd795; --paper: #f4f2ec; color-scheme: dark; }
+    :root[data-theme="dark"] { --board: #16191d; --ghost: rgb(255 255 255 / .05); --frame-hi: #6c737a; --frame-lo: #2d3237; --mk-black: #f1f0ea; --mk-blue: #74a6ff; --mk-red: #ff7466; --mk-green: #5fd795; --paper: #f4f2ec; --print: #e8e6de; color-scheme: dark; }
 
     * { box-sizing: border-box; }
     html { -webkit-text-size-adjust: 100%; }
@@ -40,22 +42,23 @@
     .board { position: relative; overflow: hidden; border: 14px solid; border-image: linear-gradient(135deg, var(--frame-hi), var(--frame-lo) 40%, var(--frame-hi) 60%, var(--frame-lo)) 1; }
     .wrap { position: relative; max-width: 1280px; margin: 0 auto; padding-left: max(24px, env(safe-area-inset-left, 0px)); padding-right: max(24px, env(safe-area-inset-right, 0px)); }
     .ghost { position: absolute; z-index: 0; color: var(--ghost); font: 400 var(--s, 80px)/1 var(--marker); white-space: nowrap; pointer-events: none; filter: blur(.6px); user-select: none; }
-    .hand { font-family: var(--hand); font-weight: 700; }
-    .rough { border: 3px solid currentColor; border-radius: 255px 18px 225px 18px / 18px 225px 18px 255px; }
 
-    .top { display: flex; justify-content: space-between; align-items: center; gap: 20px; padding-block: 18px; }
-    .top .name { font: 700 22px var(--hand); text-decoration: none; }
-    .top nav { display: flex; gap: 22px; font: 700 19px var(--hand); }
-    .top nav a { text-decoration: none; color: var(--mk-blue); }
-    .top nav a:hover { text-decoration: underline wavy; text-underline-offset: 6px; }
+    /* printed vinyl banner across the top of the board; transparent so the ghosting shows through */
+    .banner { position: relative; z-index: 1; border-top: 12px solid var(--print); border-bottom: 4px solid var(--print); }
+    .banner-in { display: flex; align-items: center; justify-content: space-between; gap: 24px 40px; padding-block: 26px 22px; }
+    .banner h1 { margin: 0; font: 400 clamp(44px, 6.2vw, 92px)/.95 var(--print-font); text-transform: uppercase; letter-spacing: .01em; color: var(--print); text-wrap: balance; }
+    .banner p { margin: 10px 0 0; font: 700 13px var(--body); letter-spacing: .2em; text-transform: uppercase; color: var(--print); opacity: .75; }
+    .taped { flex: none; display: flex; gap: 20px; }
+    .tag { position: relative; display: inline-flex; align-items: center; gap: 10px; min-height: 54px; padding: 12px 20px 10px; background: var(--paper); color: var(--paper-ink); font: 700 23px/1 var(--hand); text-decoration: none; box-shadow: 0 2px 2px rgb(0 0 0 / .08), 0 14px 22px -14px rgb(0 0 0 / .45); transform: rotate(var(--r)); transition: transform .15s; }
+    .tag::before { content: ""; position: absolute; top: -12px; left: 50%; width: 66px; height: 24px; margin-left: -33px; background: var(--tape); transform: rotate(var(--tr)); }
+    .tag:hover { transform: rotate(0deg) translateY(-2px); }
+    .tag.demo { --r: -2.5deg; --tr: 4deg; background: #d2322a; color: #fff; }
+    .tag.host { --r: 2deg; --tr: -5deg; }
+    .tag svg { width: 22px; height: 22px; fill: currentColor; }
 
     /* hero */
-    .hero { position: relative; padding-block: 18px 72px; }
-    .scrawl { margin: 0; font: 700 21px var(--hand); color: var(--mk-blue); transform: rotate(-1.5deg); transform-origin: left; }
-    h1 { position: relative; z-index: 1; margin: 4px 0 34px; max-width: 13ch; font: 400 clamp(54px, 8.4vw, 124px)/.95 var(--marker); letter-spacing: -.01em; transform: rotate(-1deg); }
-    h1 .u { position: relative; white-space: nowrap; }
-    h1 .u svg { position: absolute; left: -2%; bottom: -.08em; width: 104%; height: .28em; overflow: visible; }
-    .hero-grid { position: relative; z-index: 1; display: grid; grid-template-columns: minmax(0, 1.05fr) auto minmax(0, .95fr); gap: 56px 92px; align-items: start; }
+    .hero { position: relative; padding-block: 44px 72px; }
+    .hero-grid { position: relative; z-index: 1; display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 56px 80px; align-items: start; }
     .today h2 { margin: 0 0 6px; font: 400 40px/1 var(--marker); color: var(--mk-red); }
     .today .sub { margin: 0 0 20px; font: 700 18px var(--hand); opacity: .75; }
     .today ol { margin: 0; padding: 0; list-style: none; display: grid; gap: 6px; }
@@ -70,19 +73,9 @@
     .cycle .title { font: 400 38px var(--marker); fill: var(--mk-red); }
     .cycle .small { font: 700 19px var(--hand); fill: var(--mk-blue); }
     .phone-wrap { position: relative; padding-top: 18px; }
-    .phone-wrap .pp-device { --pp-zoom: .76; transform: rotate(1.5deg); }
+    .phone-wrap .pp-device { --pp-zoom: .74; transform: rotate(1.5deg); }
+    .phone-wrap.history .pp-device { transform: rotate(-1.5deg); }
     .magnet { position: absolute; z-index: 2; top: 2px; width: 34px; height: 34px; border-radius: 50%; background: radial-gradient(circle at 35% 30%, rgb(255 255 255 / .7), transparent 40%), var(--c); box-shadow: 0 4px 0 rgb(0 0 0 / .18), 0 8px 14px rgb(0 0 0 / .2); }
-    .note { position: relative; padding: 30px 28px 26px; background: var(--paper); color: var(--paper-ink); box-shadow: 0 2px 2px rgb(0 0 0 / .06), 0 18px 30px -18px rgb(0 0 0 / .35); transform: rotate(-.8deg); }
-    .note::before, .note::after { content: ""; position: absolute; top: -12px; width: 92px; height: 26px; background: var(--tape); }
-    .note::before { left: 18px; transform: rotate(-6deg); }
-    .note::after { right: 18px; transform: rotate(5deg); }
-    .note p { margin: 0 0 14px; }
-    .note .lead { font-size: 19px; }
-    .note .ctas { display: flex; flex-wrap: wrap; gap: 12px; margin: 22px 0 18px; }
-    .btn { display: inline-flex; align-items: center; min-height: 50px; padding: 0 20px; font: 700 20px var(--hand); text-decoration: none; transition: transform .15s; }
-    .btn:hover { transform: rotate(-2deg) scale(1.03); }
-    .btn.red { color: var(--paper); background: #d2322a; border-color: #d2322a; }
-    .note .fine { margin: 0; font-size: 14px; color: #555b62; }
     .overlay { position: absolute; inset: 0; z-index: 3; width: 100%; height: 100%; pointer-events: none; overflow: visible; }
     .overlay path { fill: none; stroke-linecap: round; stroke-linejoin: round; }
 
@@ -122,21 +115,24 @@
     .footnote { margin: 22px 0 0; font-size: 13.5px; color: #20242c; max-width: 90ch; }
 
     @media (max-width: 1100px) {
-      .hero-grid { grid-template-columns: minmax(0, 1fr) auto; }
-      .note { grid-column: 1 / -1; order: -1; max-width: 640px; }
+      .hero-grid { grid-template-columns: auto auto; justify-content: center; }
+      .today { grid-column: 1 / -1; width: 100%; max-width: 560px; justify-self: center; }
     }
     @media (max-width: 720px) {
       .board { border-width: 8px; }
       .wrap { padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
-      .top nav a:not(.keep) { display: none; }
+      .banner-in { flex-direction: column; align-items: flex-start; }
+      .taped { padding-left: 4px; }
       .hero-grid { grid-template-columns: 1fr; gap: 36px; }
       .phone-wrap { justify-self: center; }
+      .today { max-width: none; }
+      .today h2 { font-size: 32px; }
       .phone-wrap .pp-device { --pp-zoom: .7; }
       .overlay .arrow { display: none; }
       section.zone { padding-block: 52px; }
       .eraser { margin-left: 0; }
     }
-    @media (prefers-reduced-motion: reduce) { .btn, .marker { transition: none; } }
+    @media (prefers-reduced-motion: reduce) { .tag, .marker { transition: none; } }
   </style>
 </head>
 <body>
@@ -145,15 +141,21 @@
     <span class="ghost" style="--s: 90px; right: 4%; top: 1650px; transform: rotate(-3deg)">deload wk</span>
     <span class="ghost" style="--s: 64px; left: 30%; top: 2500px; transform: rotate(2deg)">|||| |||| ||</span>
 
-    <header class="wrap top">
-      <a class="name" href="#">strength tracker</a>
-      <nav aria-label="Main"><a href="#ways">run your own</a><a href="#">github</a><a class="keep" href="#">demo →</a></nav>
+    <header class="banner">
+      <div class="wrap banner-in">
+        <div>
+          <h1>Strength Training Tracker</h1>
+          <p>Open-source workout logbook · runs in your browser</p>
+        </div>
+        <nav class="taped" aria-label="Get started">
+          <a class="tag demo" href="#">Demo →</a>
+          <a class="tag host" href="https://github.com/kathishah/strength">Host <svg viewBox="0 0 16 16" aria-label="Fork on GitHub"><path d="M5 5.372v.878c0 .414.336.75.75.75h4.5a.75.75 0 0 0 .75-.75v-.878a2.25 2.25 0 1 1 1.5 0v.878a2.25 2.25 0 0 1-2.25 2.25h-1.5v2.128a2.251 2.251 0 1 1-1.5 0V8.5h-1.5A2.25 2.25 0 0 1 3.5 6.25v-.878a2.25 2.25 0 1 1 1.5 0ZM5 3.25a.75.75 0 1 0-1.5 0 .75.75 0 0 0 1.5 0Zm6.75.75a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5Zm-3 8.75a.75.75 0 1 0-1.5 0 .75.75 0 0 0 1.5 0Z"/></svg></a>
+        </nav>
+      </div>
     </header>
 
     <main>
       <section class="wrap hero" id="hero">
-        <p class="scrawl">open source · runs in your browser</p>
-        <h1>Strength Training <span class="u">Tracker<svg viewBox="0 0 300 20" preserveAspectRatio="none" aria-hidden="true"><path d="M4 12 C 70 4, 150 18, 296 6" stroke="var(--mk-red)" stroke-width="5" fill="none" stroke-linecap="round"/></svg></span></h1>
 
         <div class="hero-grid">
           <div class="today">
@@ -185,15 +187,10 @@
             <div id="phone"></div>
           </div>
 
-          <div class="note">
-            <p class="lead">Log sets and reps on your phone between lifts. Open any exercise to see how it has moved. Start the next session from your own numbers.</p>
-            <p>Fork it to change the program, keep it in one browser, or host your own copy with sync in your AWS account.</p>
-            <div class="ctas">
-              <a class="btn rough red" href="#">Try the demo →</a>
-              <a class="btn rough" href="https://github.com/kathishah/strength">Fork on GitHub</a>
-              <a class="btn" href="#ways">Self-host</a>
-            </div>
-            <p class="fine">The demo is a fictional lifter in a browser sandbox. No account, nothing uploaded.</p>
+          <div class="phone-wrap history">
+            <span class="magnet" style="--c: #17834a; left: 34px"></span>
+            <span class="magnet" style="--c: #d2322a; right: 34px"></span>
+            <div id="history-phone"></div>
           </div>
         </div>
         <svg class="overlay" id="overlay" aria-hidden="true"></svg>
@@ -251,6 +248,7 @@
   <script>
     const ctl = PhonePreview.create({ interval: 7500 });
     ctl.mount(document.getElementById('phone'));
+    ctl.mount(document.getElementById('history-phone'), 'history');
     const hero = document.getElementById('hero');
     const overlay = document.getElementById('overlay');
     const items = [...document.querySelectorAll('#list li')];
