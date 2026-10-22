@@ -6,7 +6,7 @@
   <title>Gym Whiteboard · Strength Training Tracker</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Anton&family=Permanent+Marker&family=Kalam:wght@400;700&family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Permanent+Marker&family=Kalam:wght@400;700&family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="shared/phone-preview.css">
   <style>
     /* Layout: one dry-erase board in an aluminium frame, written in marker; the footer is the marker tray. Dark mode is a black glass board. */
@@ -26,7 +26,6 @@
       --hand: "Kalam", "Comic Sans MS", cursive;
       --marker: "Permanent Marker", "Kalam", cursive;
       --body: "Atkinson Hyperlegible", "Helvetica Neue", Arial, sans-serif;
-      --print-font: "Anton", "Impact", "Arial Narrow", sans-serif;
       color-scheme: light;
     }
     @media (prefers-color-scheme: dark) {
@@ -43,12 +42,13 @@
     .wrap { position: relative; max-width: 1280px; margin: 0 auto; padding-left: max(24px, env(safe-area-inset-left, 0px)); padding-right: max(24px, env(safe-area-inset-right, 0px)); }
     .ghost { position: absolute; z-index: 0; color: var(--ghost); font: 400 var(--s, 80px)/1 var(--marker); white-space: nowrap; pointer-events: none; filter: blur(.6px); user-select: none; }
 
-    /* printed vinyl banner across the top of the board; transparent so the ghosting shows through */
+    /* banner across the top of the board, lettered in the board's own marker; transparent so the ghosting shows through */
     .banner { position: relative; z-index: 1; border-top: 12px solid var(--print); border-bottom: 4px solid var(--print); }
-    .banner-in { display: flex; align-items: center; justify-content: space-between; gap: 24px 40px; padding-block: 26px 22px; }
-    .banner h1 { margin: 0; font: 400 clamp(44px, 6.2vw, 92px)/.95 var(--print-font); text-transform: uppercase; letter-spacing: .01em; color: var(--print); text-wrap: balance; }
-    .banner p { margin: 10px 0 0; font: 700 13px var(--body); letter-spacing: .2em; text-transform: uppercase; color: var(--print); opacity: .75; }
-    .taped { flex: none; display: flex; gap: 20px; }
+    .banner-in { position: relative; padding-block: 26px 24px; }
+    .banner h1 { margin: 0; font: 400 clamp(46px, 6.4vw, 96px)/1 var(--marker); letter-spacing: -.01em; color: var(--print); text-wrap: balance; }
+    .banner p { margin: 6px 0 0; font: 700 21px var(--hand); color: var(--print); opacity: .8; }
+    /* taped over the banner's bottom rule, so the title keeps the full width */
+    .taped { position: absolute; z-index: 4; right: max(24px, env(safe-area-inset-right, 0px)); bottom: -28px; display: flex; gap: 20px; }
     .tag { position: relative; display: inline-flex; align-items: center; gap: 10px; min-height: 54px; padding: 12px 20px 10px; background: var(--paper); color: var(--paper-ink); font: 700 23px/1 var(--hand); text-decoration: none; box-shadow: 0 2px 2px rgb(0 0 0 / .08), 0 14px 22px -14px rgb(0 0 0 / .45); transform: rotate(var(--r)); transition: transform .15s; }
     .tag::before { content: ""; position: absolute; top: -12px; left: 50%; width: 66px; height: 24px; margin-left: -33px; background: var(--tape); transform: rotate(var(--tr)); }
     .tag:hover { transform: rotate(0deg) translateY(-2px); }
@@ -121,8 +121,9 @@
     @media (max-width: 720px) {
       .board { border-width: 8px; }
       .wrap { padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
-      .banner-in { flex-direction: column; align-items: flex-start; }
-      .taped { padding-left: 4px; }
+      .banner-in { padding-bottom: 46px; }
+      .taped { right: max(16px, env(safe-area-inset-right, 0px)); }
+      .hero { padding-top: 60px; }
       .hero-grid { grid-template-columns: 1fr; gap: 36px; }
       .phone-wrap { justify-self: center; }
       .today { max-width: none; }
