@@ -1,15 +1,165 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>Strength</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="color-scheme" content="light dark" />
-  <meta http-equiv="refresh" content="0; url=https://strength.logbook.me/" />
-  <link rel="canonical" href="https://strength.logbook.me/" />
-  <script>location.replace("https://strength.logbook.me/");</script>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Strength Training Tracker</title>
+  <meta name="description" content="An open-source strength training tracker: log sets and reps on your phone, see how each lift moves, and start every session from your own numbers.">
+  <meta name="color-scheme" content="light dark">
+  <meta name="theme-color" media="(prefers-color-scheme: light)" content="#f6f7f5">
+  <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#16191d">
+  <link rel="canonical" href="https://kathishah.github.io/strength/">
+  <link rel="icon" href="landing/favicon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="app/icons/apple-touch-icon.png">
+
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Strength Training Tracker">
+  <meta property="og:title" content="Strength Training Tracker">
+  <meta property="og:description" content="An open-source strength training tracker: log sets and reps on your phone, see how each lift moves, and start every session from your own numbers.">
+  <meta property="og:url" content="https://kathishah.github.io/strength/">
+  <meta property="og:image" content="https://kathishah.github.io/strength/landing/preview.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="A gym whiteboard headed Strength Training Tracker, with today's workout list and two phone screens showing a workout card and its history, all with made-up numbers.">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Strength Training Tracker">
+  <meta name="twitter:description" content="An open-source strength training tracker: log sets and reps on your phone, see how each lift moves, and start every session from your own numbers.">
+  <meta name="twitter:image" content="https://kathishah.github.io/strength/landing/preview.png">
+  <meta name="twitter:image:alt" content="A gym whiteboard headed Strength Training Tracker, with today's workout list and two phone screens showing a workout card and its history, all with made-up numbers.">
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "Strength Training Tracker",
+    "description": "An open-source strength training tracker: log sets and reps on your phone, see how each lift moves, and start every session from your own numbers.",
+    "url": "https://kathishah.github.io/strength/",
+    "applicationCategory": "HealthApplication",
+    "operatingSystem": "Any device with a modern web browser",
+    "isAccessibleForFree": true,
+    "license": "https://opensource.org/license/mit",
+    "image": "https://kathishah.github.io/strength/landing/preview.png",
+    "sameAs": ["https://github.com/kathishah/strength"],
+    "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" }
+  }
+  </script>
+
+  <link rel="stylesheet" href="landing/landing.css">
+  <link rel="stylesheet" href="landing/phone-preview.css">
+  <script type="module" src="landing/landing.js"></script>
 </head>
 <body>
-  <p>The Strength app has moved to <a href="https://strength.logbook.me/">strength.logbook.me</a>.</p>
+  <a class="skip" href="#ways">Skip to the three ways to run it</a>
+  <div class="board">
+    <span class="ghost" style="--s: 120px; left: 52%; top: 40px; transform: rotate(-6deg)" aria-hidden="true">LEG DAY</span>
+    <span class="ghost" style="--s: 90px; right: 4%; top: 1650px; transform: rotate(-3deg)" aria-hidden="true">deload wk</span>
+    <span class="ghost" style="--s: 64px; left: 30%; top: 2500px; transform: rotate(2deg)" aria-hidden="true">|||| |||| ||</span>
+
+    <header class="banner">
+      <div class="wrap banner-in">
+        <h1>Strength Training Tracker</h1>
+        <nav class="taped" aria-label="Get started">
+          <!-- Wave 3 turns this span into a link to the public demo. -->
+          <span class="paper-tag demo">Demo&nbsp;&middot; coming&nbsp;soon</span>
+          <a class="paper-tag host" href="https://github.com/kathishah/strength/blob/main/docs/SELF-HOSTING.md">Host
+            <svg viewBox="0 0 16 16" role="img" aria-label="Fork on GitHub"><path d="M5 5.372v.878c0 .414.336.75.75.75h4.5a.75.75 0 0 0 .75-.75v-.878a2.25 2.25 0 1 1 1.5 0v.878a2.25 2.25 0 0 1-2.25 2.25h-1.5v2.128a2.251 2.251 0 1 1-1.5 0V8.5h-1.5A2.25 2.25 0 0 1 3.5 6.25v-.878a2.25 2.25 0 1 1 1.5 0ZM5 3.25a.75.75 0 1 0-1.5 0 .75.75 0 0 0 1.5 0Zm6.75.75a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5Zm-3 8.75a.75.75 0 1 0-1.5 0 .75.75 0 0 0 1.5 0Z"/></svg>
+          </a>
+        </nav>
+      </div>
+    </header>
+
+    <main>
+      <section class="wrap hero" id="hero" aria-label="What the app does">
+        <div class="hero-grid" id="slides">
+          <div class="today" data-label="Today's workout">
+            <h2>Today: Workout A</h2>
+            <p class="sub">full body &middot; 6 lifts &middot; sample lifter</p>
+            <!-- Names and sets x reps come from Workout A in app/js/seed/program.js. -->
+            <ol id="list">
+              <li><span class="n">1</span><button type="button" class="nm">Goblet squat</button><span class="rx">3 &times; 8&ndash;12</span></li>
+              <li><span class="n">2</span><button type="button" class="nm">DB bench press</button><span class="rx">3 &times; 8&ndash;12</span></li>
+              <li><span class="n">3</span><button type="button" class="nm">DB RDL</button><span class="rx">3 &times; 8&ndash;10</span></li>
+              <li><span class="n">4</span><span class="nm">Chest-supp. row</span><span class="rx">3 &times; 10&ndash;12</span></li>
+              <li><span class="n">5</span><span class="nm">Dead bug</span><span class="rx">2 &times; 8/side</span></li>
+              <li><span class="n">6</span><span class="nm">Face pull</span><span class="rx">2 &times; 12&ndash;15</span></li>
+            </ol>
+            <svg class="overlay" id="overlay" aria-hidden="true"></svg>
+          </div>
+
+          <div class="phone-wrap work" data-label="Logging a workout">
+            <span class="magnet l" style="--c: #d2322a"></span>
+            <span class="magnet r" style="--c: #1d4fcf"></span>
+            <div id="phone"></div>
+          </div>
+
+          <div class="loop-wrap" data-label="The useful loop">
+            <svg class="cycle" viewBox="0 0 560 470" role="img" aria-label="A useful loop drawn in marker, every session: log it, see it, add weight, back to log it.">
+              <text x="200" y="60">log it</text><text class="small" x="196" y="88">25 lb &#215; 10, &#10003;</text>
+              <text x="392" y="330">see it</text><text class="small" x="372" y="358">history + chart</text>
+              <text x="22" y="330">add 5 lb</text><text class="small" x="10" y="358">next time: 30</text>
+              <path d="M330 70 C 430 90, 470 170, 456 270"/><path d="M440 252 456 276 470 250"/>
+              <path d="M400 400 C 330 450, 220 450, 150 400"/><path d="M174 392 148 400 160 424"/>
+              <path d="M90 280 C 70 190, 110 110, 180 74"/><path d="M152 72 182 72 170 98"/>
+              <text class="title" x="272" y="236" text-anchor="middle">Useful Loop</text>
+              <text class="small" x="272" y="272" text-anchor="middle">every session</text>
+            </svg>
+          </div>
+
+          <div class="phone-wrap history" data-label="Exercise history">
+            <span class="magnet l" style="--c: #17834a"></span>
+            <span class="magnet r" style="--c: #d2322a"></span>
+            <div id="history-phone"></div>
+          </div>
+        </div>
+        <div class="dots" id="dots" role="group" aria-label="Choose a screen"></div>
+      </section>
+
+      <section class="wrap zone" id="ways">
+        <h2>Three ways to run it</h2>
+        <p class="intro">Each keeps its data apart. None of them touch the private instance at strength.logbook.me.</p>
+        <div class="grid-wrap">
+          <table class="drawn">
+            <thead><tr><th><span class="sr-only">Compare</span></th><th scope="col">Demo</th><th scope="col">Local only</th><th scope="col">Your AWS</th></tr></thead>
+            <tbody>
+              <tr><th scope="row">whose data</th><td>a made-up lifter</td><td>yours, this browser</td><td>yours, your S3</td></tr>
+              <tr><th scope="row">account</th><td class="no">none</td><td class="no">none</td><td class="yes">one owner (Cognito)</td></tr>
+              <tr><th scope="row">syncs devices</th><td class="no">never uploads</td><td class="no">export JSON instead</td><td class="yes">phone, tablet, laptop</td></tr>
+              <tr><th scope="row">start here</th><td><span class="soon">coming soon</span></td><td><a href="https://github.com/kathishah/strength">fork repo</a></td><td><a href="https://github.com/kathishah/strength/blob/main/docs/SELF-HOSTING.md">self-host guide</a></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="wrap zone" id="build">
+        <h2>How it's built</h2>
+        <p class="intro">A static web app that appends each set to an event log in your browser. Add the cloud part only if you want sync.</p>
+        <div class="arch-scroll">
+          <svg class="arch" viewBox="0 0 1000 300" role="img" aria-label="Sketch: the static web app on your phone writes to an event log in the browser. Optionally, a dashed cloud labelled your AWS holds Cognito, API Gateway with Lambda, and a private S3 bucket.">
+            <rect x="10" y="70" width="200" height="110" rx="16"/><text x="30" y="115">static app</text><text class="sm" x="30" y="148">PWA, works offline</text>
+            <path d="M210 125 C 240 120, 255 128, 286 124"/><path d="M272 112 288 124 272 138"/>
+            <rect x="290" y="70" width="210" height="110" rx="16"/><text x="310" y="115">event log</text><text class="sm" x="310" y="148">IndexedDB, append-only</text>
+            <path d="M500 125 C 540 128, 560 120, 596 126" stroke-dasharray="9 8"/><path d="M582 113 598 126 582 140"/>
+            <path class="cloud" d="M620 230 C 580 230, 575 170, 620 165 C 615 100, 700 80, 730 115 C 760 50, 880 60, 880 120 C 950 110, 990 180, 940 220 C 960 270, 880 290, 850 260 C 820 300, 690 300, 680 260 C 650 280, 600 270, 620 230 Z"/>
+            <text class="bl" x="700" y="58">your AWS (optional)</text>
+            <text x="660" y="160">Cognito</text><text x="790" y="160">API + Lambda</text>
+            <text x="715" y="228">S3 &#183; u/&lt;sub&gt;/events</text>
+          </svg>
+        </div>
+      </section>
+    </main>
+
+    <footer class="tray-bar">
+      <div class="wrap">
+        <div class="tray">
+          <a class="marker" style="--c: #1c2130; --r: -1deg" href="https://github.com/kathishah/strength/blob/main/README.md">README</a>
+          <a class="marker" style="--c: #1d4fcf; --r: 1deg" href="https://github.com/kathishah/strength/blob/main/docs/SPEC-strength.md">Product spec</a>
+          <a class="marker" style="--c: #17834a; --r: -.5deg" href="https://github.com/kathishah/strength/blob/main/docs/SELF-HOSTING.md">Self-hosting guide</a>
+          <a class="marker" style="--c: #d2322a; --r: .8deg" href="https://github.com/kathishah/strength">Fork on GitHub</a>
+          <span class="eraser">Demo coming soon</span>
+        </div>
+        <p class="footnote">Every number on this board is made up. The private instance is separate from the demo and is not a service for forks. Code and docs are MIT licensed; exercise images are not included. The board's fonts (Permanent Marker, Kalam, Atkinson Hyperlegible) are served from this site; their <a href="https://github.com/kathishah/strength/tree/main/landing/fonts">licenses</a> are in the repository.</p>
+      </div>
+    </footer>
+  </div>
 </body>
 </html>
