@@ -173,6 +173,9 @@ export function installFakeDom({ html = '<header id="app-header" hidden></header
   const bodyHtml = /<body[^>]*>([\s\S]*)<\/body>/.exec(html)?.[1] ?? html;
   parseInto(document.body, bodyHtml, document);
 
+  // Timers the page starts are cleared when it is uninstalled: the Home screen's rest ticker is only stopped by its screen's destroy(),
+  // and a tick after the document is gone throws "document is not defined" as an uncaught exception, failing an unrelated test file.
+  const timers = new Set();
   const windowListeners = new Map();
   const location = {
     _hash: '',
@@ -195,8 +198,8 @@ export function installFakeDom({ html = '<header id="app-header" hidden></header
     requestAnimationFrame: (fn) => setTimeout(fn, 0),
     cancelAnimationFrame: (id) => clearTimeout(id),
     // Timers the screens leave running (the rest ticker) must not keep the test process alive.
-    setInterval: (...args) => realSetInterval(...args).unref(),
-    setTimeout: (...args) => realSetTimeout(...args).unref(),
+    setInterval: (...args) => { const t = realSetInterval(...args).unref(); timers.add(t); return t; },
+    setTimeout: (...args) => { const t = realSetTimeout(...args).unref(); timers.add(t); return t; },
   });
   for (const [key, value] of Object.entries(globals)) {
     saved[key] = Object.getOwnPropertyDescriptor(globalThis, key);
@@ -214,6 +217,8 @@ export function installFakeDom({ html = '<header id="app-header" hidden></header
     find(root, predicate) { const out = []; walk(root, (e) => { if (predicate(e)) out.push(e); }); return out; },
     findByText(root, text, tag) { return this.find(root, (e) => (!tag || e.tagName === tag.toUpperCase()) && e.textContent.trim() === text); },
     uninstall() {
+      for (const t of timers) { clearInterval(t); clearTimeout(t); }
+      timers.clear();
       for (const [key, descriptor] of Object.entries(saved)) {
         if (descriptor) Object.defineProperty(globalThis, key, descriptor); else delete globalThis[key];
       }
