@@ -188,6 +188,7 @@ input {
 .settings-section .card h3:first-child { margin-top: 0; }
 .settings-section .card p { margin: 8px 0; }
 .settings-section .stats { margin-top: 0; }
+.settings-section code { white-space: nowrap; }
 .btn.danger { color: var(--error-text); border-color: var(--error-text); }
 .btn.danger[data-armed] { background: var(--error-bg); height: auto; text-align: left; line-height: 1.35; }
 .stats { margin: 16px 0 0; display: grid; grid-template-columns: max-content 1fr; gap: 4px 16px; }
