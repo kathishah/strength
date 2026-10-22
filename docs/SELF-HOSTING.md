@@ -119,7 +119,7 @@ scripts/deploy-stack.sh
 
 - **Does** what you would otherwise type by hand: `npm ci` for the Lambda (the AWS SDK and esbuild), `sam validate --lint`, `sam build` and `sam deploy`, always passing every template parameter from `private/deploy.env`, so an update can never drop the domain or the owner by leaving it out.
 - **Shows the change set** and asks before applying it. The first run creates the stack, which takes a few minutes (CloudFront is the slow part).
-- **Success** is `sam deploy` reporting the stack created or updated, with its outputs: `CloudFrontDomain`, `DistributionId`, `SiteUrl`, `ApiUrl`, `UserPoolId`, `UserPoolClientId`, `SiteBucketName`, `DataBucketName`. Until the next step the Lambda answers 403 to every request, by design.
+- **Success** is `sam deploy` reporting the stack created or updated, with its outputs: `CloudFrontDomain`, `DistributionId`, `SiteUrl`, `ApiUrl`, `UserPoolId`, `UserPoolClientId`, `SiteBucketName`, `DataBucketName`. Until the next step, a signed-in request gets 403 from the Lambda, and a request without a sign-in gets 401, by design. The site address shows an "Access denied" page until `deploy-app.sh` has uploaded the app.
 
 ### 4.3 `scripts/create-owner.sh <email>`
 
@@ -260,7 +260,7 @@ If `aws s3api list-object-versions --bucket "$DATA_BUCKET"` still lists anything
 ## 9. Troubleshooting
 
 - **A command says `private/deploy.env` is missing or incomplete.** Every AWS script stops until it is complete. Run `scripts/init-deploy.sh`; `OWNER_SUB` is filled in by `create-owner.sh`. If you set a domain, `CERT_ARN` is required too.
-- **Every request fails with 403.** The stack's `OwnerSub` is not set yet. Run `scripts/create-owner.sh <email>`, which sets it and redeploys.
+- **Every signed-in request fails with 403** (requests without a sign-in get 401, which is normal). The stack's `OwnerSub` is not set yet. Run `scripts/create-owner.sh <email>`, which sets it and redeploys.
 - **Sign-in works but sync fails from `localhost`.** By design: the API only accepts requests from your site's own address (the CloudFront address, plus your custom domain if you set one). Local previews show the interface; signing in works, API calls are blocked by CORS.
 - **The site still shows old files after a deploy.** Hard-reload, or swipe the installed app away and reopen it. The CloudFront refresh takes a minute or two.
 - **"Incorrect email or PIN."** The PIN is exactly six digits. Cognito locks an account temporarily after repeated wrong attempts; wait a minute. To set a new PIN, rerun `scripts/create-owner.sh`.
