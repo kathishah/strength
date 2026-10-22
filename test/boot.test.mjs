@@ -113,9 +113,9 @@ describe('local mode', () => {
     assert.ok(!log.reads.includes('strength.refreshToken'), 'auth.js is never loaded, so nothing reads the token');
   });
 
-  test('the hooks fill their regions; no hook leaves them hidden', async () => {
+  test('regions: local mode has no strip; with no hooks (an override) all three stay hidden', async () => {
     const { dom } = setup();
-    const app = await startApp({ mode: 'local' });
+    const app = await startApp({ mode: 'local', ui: { saveChip: undefined, notice: undefined, homeNote: undefined, settings: undefined } });
     for (const id of ['mode-strip', 'mode-notice', 'home-note']) assert.equal(dom.byId(id).hidden, true, id);
     assert.equal(app.ctx.mode, 'local');
     // Where they sit: the strip above the header; the notice and the Home note above the app.
@@ -201,7 +201,7 @@ describe('mode hooks', () => {
 
   test('without a settings hook, Settings is just the heading', async () => {
     const { dom } = setup();
-    const app = await startApp({ mode: 'local' });
+    const app = await startApp({ mode: 'local', ui: { settings: undefined } });
     app.screens.navigate('#/settings');
     await settle();
     assert.equal(dom.byId('screen').textContent, 'Settings');

@@ -66,6 +66,7 @@ const SHELL = [
   'js/ui/exercise-screen.js',
   'js/ui/format.js',
   'js/ui/history-screen.js',
+  'js/ui/local-settings.js',
   'js/ui/router.js',
   'js/ui/screens.js',
   'js/ui/settings-screen.js',
