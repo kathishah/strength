@@ -69,7 +69,7 @@ export function getDeviceId({ keyPrefix } = DEFAULT_PROFILE) {
   if (!memoryDeviceIds.has(key)) {
     const hex = Array.from(crypto.getRandomValues(new Uint8Array(2)), (b) => b.toString(16).padStart(2, '0')).join('');
     memoryDeviceIds.set(key, `d_${hex}`);
-    try { localStorage.setItem(key, memoryDeviceIds.get(key)); } catch { /* keep it in memory */ }
   }
+  try { localStorage.setItem(key, memoryDeviceIds.get(key)); } catch { /* keep it in memory */ }
   return memoryDeviceIds.get(key);
 }
