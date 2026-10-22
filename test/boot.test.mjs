@@ -6,6 +6,9 @@ import { readFileSync } from 'node:fs';
 import { installFakeDom, makeEvent } from '../test-support/fake-dom.mjs';
 import { doWorkout } from '../test-support/logging-world.mjs';
 import { sessionView } from '../app/js/logging/index.js';
+import { useTestConfig } from '../test-support/test-config.mjs';
+
+useTestConfig(); // app/js/config.js is empty in the repository
 
 const appHtml = readFileSync(new URL('../app/index.html', import.meta.url), 'utf8');
 const { startApp } = await import('../app/js/boot.js');

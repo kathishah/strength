@@ -55,7 +55,7 @@ a:focus-visible, button:focus-visible, [tabindex]:focus-visible { outline: 3px d
 .paper-tag { position: relative; display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; padding: 9px 12px 8px; background: var(--paper); color: var(--paper-ink); font: 700 19px/1.1 var(--hand); text-align: center; text-decoration: none; box-shadow: 0 2px 2px rgb(0 0 0 / .08), 0 14px 22px -14px rgb(0 0 0 / .45); transform: rotate(var(--r)); transition: transform .15s; }
 .paper-tag::before { content: ""; position: absolute; top: -10px; left: 50%; width: 54px; height: 20px; margin-left: -27px; background: var(--tape); transform: rotate(var(--tr)); }
 a.paper-tag:hover { transform: rotate(0deg) translateY(-2px); }
-.paper-tag.demo { --r: -2.5deg; --tr: 4deg; background: #d2322a; color: #fff; cursor: default; }
+.paper-tag.demo { --r: -2.5deg; --tr: 4deg; background: #d2322a; color: #fff; }
 .paper-tag.host { --r: 2deg; --tr: -5deg; }
 .paper-tag svg { width: 19px; height: 19px; flex: none; fill: currentColor; }
 
@@ -109,7 +109,6 @@ table.drawn { min-width: 720px; width: 98%; margin: 0 auto; border-collapse: col
 .drawn .yes::before { content: "\2713\00a0"; font: 700 22px var(--hand); color: var(--mk-green); }
 .drawn .no::before { content: "\2717\00a0"; font: 700 22px var(--hand); color: var(--mk-red); }
 .drawn a { font: 700 20px var(--hand); color: var(--mk-blue); }
-.drawn .soon { font: 700 20px var(--hand); opacity: .7; }
 
 .arch { position: relative; z-index: 1; width: 100%; height: auto; overflow: visible; }
 .arch path, .arch rect { fill: none; stroke: var(--mk-black); stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }

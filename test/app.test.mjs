@@ -3,6 +3,9 @@ import { test, describe, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { ulid, nextTs } from '../app/js/ids.js';
 import { AuthError, getIdToken, hasRefreshToken, signIn, signOut } from '../app/js/store/auth.js';
+import { useTestConfig } from '../test-support/test-config.mjs';
+
+useTestConfig(); // app/js/config.js is empty in the repository
 
 describe('ids', () => {
   test('ulid is 26 Crockford characters, sortable by time', () => {
