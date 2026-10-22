@@ -1,5 +1,6 @@
 // Event ids and timestamps that satisfy the server's validators (lambda/events/registry.mjs).
 
+import { DEFAULT_PROFILE } from './profile.js';
 import { pacificIso, parseTs } from './time.js';
 
 const CROCKFORD = '0123456789ABCDEFGHJKMNPQRSTVWXYZ';
@@ -56,18 +57,19 @@ export function createClock() {
 const pageClock = createClock();
 export const nextTs = (deviceId, nowMs) => pageClock.next(deviceId, nowMs);
 
-// A stable per-install id like "d_7f3a". Falls back to a fresh one if storage is unavailable.
-const DEVICE_KEY = 'strength.deviceId';
-let memoryDeviceId = null;
-export function getDeviceId() {
+// A stable per-install id like "d_7f3a", kept under the profile's key prefix ("strength.deviceId" by default; profile.js).
+// Falls back to a fresh one if storage is unavailable.
+const memoryDeviceIds = new Map(); // key -> id, for when storage is blocked
+export function getDeviceId({ keyPrefix } = DEFAULT_PROFILE) {
+  const key = `${keyPrefix}deviceId`;
   try {
-    const saved = localStorage.getItem(DEVICE_KEY);
+    const saved = localStorage.getItem(key);
     if (saved) return saved;
   } catch { /* storage blocked */ }
-  if (!memoryDeviceId) {
+  if (!memoryDeviceIds.has(key)) {
     const hex = Array.from(crypto.getRandomValues(new Uint8Array(2)), (b) => b.toString(16).padStart(2, '0')).join('');
-    memoryDeviceId = `d_${hex}`;
-    try { localStorage.setItem(DEVICE_KEY, memoryDeviceId); } catch { /* keep it in memory */ }
+    memoryDeviceIds.set(key, `d_${hex}`);
+    try { localStorage.setItem(key, memoryDeviceIds.get(key)); } catch { /* keep it in memory */ }
   }
-  return memoryDeviceId;
+  return memoryDeviceIds.get(key);
 }

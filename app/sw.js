@@ -36,6 +36,7 @@ const SHELL = [
   'js/logging/summary.js',
   'js/logging/text.js',
   'js/main.js',
+  'js/profile.js',
   'js/seed/catalog.js',
   'js/seed/index.js',
   'js/seed/program.js',
