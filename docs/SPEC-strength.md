@@ -6,7 +6,7 @@ A mobile-first strength-training log that records workouts and suggests what to 
 - **v1.19**
   - More alternatives (4.5): 16 new exercises (hack squat, leg extension, seated leg curl, cable glute kickback, cable chest press, pec deck fly, incline machine press, machine high row, one-arm dumbbell row, single-arm cable row, cable reverse fly, chest-supported rear delt raise, dumbbell lateral raise, plank, goblet carry, trap bar carry), and existing exercises offered in more slots, so every slot has 1 to 4 non-TRX alternatives (it was 0 to 2). The catalog goes from 49 to 65. The new exercises use existing exercise types, so the engine, events and export are unchanged. Their starting weights, the slots they fit and their images are in 4.5.2 and 4.5.3. A variation of the same movement (another grip, machine or stride) is not an alternative; the equipment is a full gym with all machines and a landmine, no sled.
   - No supersets (4.3, 6.3, 6.6, 8): a workout is a list of exercises done one at a time, all sets of one before the next, in the same slot order. Cards say "Exercise 2 of 6" with no coloured edge and "Rest about 90 s between sets". The TRX pairing tip (4.5.1) is removed. Reason: alternating two stations is hard in a busy gym. Layout and seed data only: the superset number was never stored, so logged workouts and swaps stay valid.
-  - Exercise images are our own copies in `app/img/` (downloaded by `scripts/fetch-images.mjs`, uploaded by `scripts/deploy-app.sh`, not in git), not hotlinks, and the art credit under each is very small (4.5.3). The Content-Security-Policy in `app/index.html` is removed.
+  - Exercise cards may show locally supplied images. The source list is third-party media without documented redistribution rights; images are optional and the default deploy skips them (4.5.3 and `docs/MEDIA-RIGHTS-AUDIT.md`). The Content-Security-Policy in `app/index.html` is removed.
   - The frozen v0.2 viewer is retired (0.C): the root `index.html` is now a redirect to https://strength.logbook.me, and the viewer lives on only in git history. The seed in `app/js/seed/` is the only copy of the program and catalog, so the test that compared it with the viewer is gone.
 - **v1.18**
   - Phone in landscape (6.2): each exercise card is two columns, the form GIF on the left and the title, the log dials and the tick on the right, so a card needs no vertical scroll. The description, tags and Options/TRX follow below the dials. The header and cards use the full width, and the rest bar is slimmer. Portrait is unchanged. Layout only: no data, events or engine changes.
@@ -418,14 +418,15 @@ Catalog entries (name, cue, muscles, type, image) for these 16 are written durin
 
 Load steps are the 5.3 defaults, with the small cable exercises (glute kickback, reverse fly, single-arm row) at +5, like face pull, and trap bar carry at +10 total, like the trap bar deadlift. Goblet carry is one dumbbell, trap bar carry is one total load: a carry card does not say "per hand" for them.
 
-#### 4.5.3 Exercise images (v1.19: our own copies)
-Every exercise image is downloaded once, unchanged, and served from the app's own site, not hotlinked from the publisher: `app/img/<id>.gif` (or `.webp`), shown at `img/<id>.gif`. This replaces hotlinking for all 58 exercises that have an image (the 49 of v1.6 and the 16 new ones, less the 7 with none), because the large GIFs (1 to 11 MB each, 160 MB in all) from other sites were slow and sometimes failed to load in the Options list.
-- `scripts/image-sources.json` lists the source URL of each image (exercise id to URL). `node scripts/fetch-images.mjs` downloads the ones missing from `app/img/` (`--force` re-downloads all).
-- `app/img/` is not in git (160 MB). `scripts/deploy-app.sh` runs the fetch for any missing file, then uploads `app/img/` to the site bucket with a week-long cache, along with the rest of `app/`.
-- Each card keeps an **art credit**: a very small link to the publisher's page (the `attribution` in the catalog), under the image. Exercises with no image (7, as before) show the placeholder.
-- The service worker does not precache the images; each is cached the first time it is shown.
-- The app has **no Content-Security-Policy** (removed in v1.19: it only allowed images from three sites).
-- The images are public static files on the demo site (sign-in protects data, not static files). They are third-party work included for this personal demo with source links; they are not covered by the project code license.
+#### 4.5.3 Exercise images (optional local media)
+The catalog may point to `app/img/<id>.gif` (or `.webp`), but exercise images are optional. The existing 58 source URLs are third-party media without documented redistribution rights; see [`docs/MEDIA-RIGHTS-AUDIT.md`](MEDIA-RIGHTS-AUDIT.md). When a local file is absent, the app uses its built-in placeholder.
+
+- `scripts/image-sources.json` records source URLs for the existing media set. `scripts/fetch-images.mjs` is an optional downloader and is not part of the default preview or deployment path. Fetching a file does not grant rights to use or redistribute it.
+- `app/img/` is not committed. `scripts/deploy-app.sh` skips image upload by default; `--include-images` uploads local files only and requires documented redistribution rights for every included asset.
+- Any media included in a public demo or a distributable image pack must have a per-file record of creator/source, permission or license, required attribution, and permitted redistribution/modification.
+- The service worker does not precache images; a supplied local image is cached the first time it is shown.
+- The app has no Content-Security-Policy (removed in v1.19).
+- The current production site already serves copies of the third-party images as public static files. This showcase spec does not remove those deployed files; review that existing use separately.
 
 Where the 16 new images came from (each source URL was fetched and confirmed to be an image, 4 to 43 frames, except the LoadMuscle files, which are animated WebP):
 

@@ -1,7 +1,7 @@
 // Exercise catalog. It began as a copy of the v0.2 viewer's catalog and has since diverged (spec 0.C): v1.19 adds 16 exercises
 // (4.5.2). Display data only: name, media, cue, muscle tags, type and a starting-weight hint as text.
-// Images are our own copies in app/img/<id>.<ext> (not committed; node scripts/fetch-images.mjs downloads them from the sources in
-// scripts/image-sources.json, and scripts/deploy-app.sh uploads them with the app). `attribution` is the credit link to the publisher.
+// Optional image paths point to files supplied locally by the operator. Third-party images are not included or deployed by default;
+// check docs/MEDIA-RIGHTS-AUDIT.md before downloading or redistributing any asset. `attribution` links to the source page.
 // The structured fields (rep ranges, increments, numeric starting weights) are in rules.js.
 // The catalog is fixed (spec 4.5): there are no events for creating exercises.
 

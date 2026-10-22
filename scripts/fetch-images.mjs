@@ -1,6 +1,6 @@
 #!/usr/bin/env node
-// Downloads every exercise image listed in scripts/image-sources.json (exercise id -> source URL) into app/img/<id>.<ext>,
-// unchanged, so the app serves them from its own site (spec 4.5.3). Re-run it to refresh or to fetch a newly added exercise.
+// Optional downloader for URLs listed in scripts/image-sources.json. This does not grant rights to use or redistribute assets.
+// Only download files when you have permission for your intended use. Review docs/MEDIA-RIGHTS-AUDIT.md first.
 // Usage: node scripts/fetch-images.mjs [--force]   (--force downloads files that already exist)
 import { mkdirSync, existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { extname } from 'node:path';

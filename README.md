@@ -6,14 +6,13 @@ The hosted instance is a private, single-user demo. It is not an open signup ser
 
 ## Local preview
 
-The exercise images are not stored in this repository. Download them separately before a complete preview:
+Exercise images are third-party media and are not included in the default preview. The app uses a built-in placeholder when local image files are absent. To preview the interface:
 
 ```sh
-node scripts/fetch-images.mjs
 python3 -m http.server 4173 --directory app
 ```
 
-Then open <http://localhost:4173>. Without downloading images, the app can still be previewed but exercise images will be missing. API sign-in and sync are configured for the hosted origin, so a local preview is primarily for viewing the interface.
+Then open <http://localhost:4173>. API sign-in and sync are configured for the hosted origin, so a local preview is primarily for viewing the interface. See [the media rights audit](docs/MEDIA-RIGHTS-AUDIT.md) before using the optional image downloader or deploying local media.
 
 ## Tests
 
@@ -38,4 +37,4 @@ For deployment prerequisites and operational steps, see [BUILD.md](BUILD.md). Th
 
 ## License
 
-No code license is currently provided. The repository is public, but that does not grant general rights to reuse, modify, or redistribute the code. Exercise images are third-party media and are not covered by any future code license. See [GitHub's licensing guidance](https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/licensing-a-repository).
+The original code and documentation in this repository are licensed under the [MIT License](LICENSE). This license does not grant rights to third-party exercise images, trademarks, or other external assets; those remain subject to their respective rights holders and terms. Exercise media is skipped by default; see [the media rights audit](docs/MEDIA-RIGHTS-AUDIT.md).

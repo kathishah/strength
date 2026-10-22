@@ -28,7 +28,7 @@ describe('seed basics', () => {
     }
   });
 
-  test('every image is our own copy, img/<id>.gif or .webp, with a source in scripts/image-sources.json (spec 4.5.3)', () => {
+  test('each catalog image path has source metadata and attribution (spec 4.5.3)', () => {
     const sources = JSON.parse(readFileSync(new URL('../scripts/image-sources.json', import.meta.url), 'utf8'));
     for (const [id, e] of Object.entries(EXERCISES)) {
       if (!e.gifUrl) { assert.equal(Object.hasOwn(sources, id), false, `${id} has a source but no image`); continue; }

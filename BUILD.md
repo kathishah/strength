@@ -138,7 +138,7 @@ scripts/deploy-app.sh --dry-run     # preview: what would be uploaded or deleted
 scripts/deploy-app.sh               # deploy
 ```
 
-Exercise images are excluded from git and must be downloaded separately for a full local preview or deployment: run `node scripts/fetch-images.mjs` (sources are listed in `scripts/image-sources.json`). A deploy fetches missing images before either S3 sync and stops if a fetch fails. `--dry-run` does not download files; if images are absent, it previews the app files and reports that the image sync cannot be previewed yet.
+The default deployment skips third-party exercise images and uses the app's placeholder when local image files are absent. The 58 URLs in `scripts/image-sources.json` do not have documented redistribution rights; review [docs/MEDIA-RIGHTS-AUDIT.md](docs/MEDIA-RIGHTS-AUDIT.md). `node scripts/fetch-images.mjs` is an optional downloader, not part of deployment, and should only be used for sources where you have permission. `scripts/deploy-app.sh --include-images` uploads local files from `app/img/`; use it only when you have rights to redistribute every included asset. `--dry-run` never downloads or uploads files.
 
 `--skip-tests` skips the test run. The script exports `AWS_REGION`, `STACK`, `DOMAIN`, `SITE_BUCKET` and `DIST_ID` (from `scripts/aws-env.sh`) for its own commands; to have them in your terminal too, run `source scripts/aws-env.sh`. Set `AWS_PROFILE` first if you use profiles. By hand, the same thing is:
 
