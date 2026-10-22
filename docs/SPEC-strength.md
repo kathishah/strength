@@ -480,7 +480,7 @@ Implement as **pure functions** with unit tests. These rules drive the "suggeste
 ### 5.1 Phases
 - **Phase 1 (program weeks 1–4):** the full set counts from Section 4.3 (v1.14; it was 2 working sets per exercise). Target effort: stop with ~3 reps left (RIR 3).
 - **Phase 2 (week 5 onward):** the same set counts. Target effort: 1–2 reps left (RIR 1–2).
-- Program week = weeks elapsed since `programStartDate` (stored on UserProfile; user-editable), counted in Pacific-time calendar days. Initial value: **2026-01-05** (a Monday, the first Workout A), so that day is program week 1, Phase 1.
+- Program week = weeks elapsed since `programStartDate` (stored on UserProfile; user-editable), counted in Pacific-time calendar days. Initial value: **2026-09-28** (a Monday, the first Workout A), so that day is program week 1, Phase 1.
 - Display the current phase and target effort on the session screen, in plain words ("stop each set with about 3 reps left").
 
 ### 5.2 Base load and suggestion (weighted exercises)
@@ -722,7 +722,7 @@ Opened from the History icon in the header. A switch at the top picks **By exerc
 ### 6.7 Settings (v1.17: sync only)
 - **Sync.** What the Phase B panel shows, moved here from Home: status, last sync and how long it took, events waiting to upload, events on this device, where they are stored, anything the server set aside, and the recent events. Buttons: **Sync now** and **Add test note**.
 - Sign out stays in the header (6.2).
-- ~~Program start date, rest timer default, recovery days, units.~~ Not built. The start date stays 2026-01-05, the rest timer 90 s, the recovery days Tuesday and Thursday.
+- ~~Program start date, rest timer default, recovery days, units.~~ Not built. The start date stays 2026-09-28, the rest timer 90 s, the recovery days Tuesday and Thursday.
 - ~~Per exercise: starting weight, first-loaded weight, load increment; trap bar weight; scheduled increases on/off, interval, per-exercise on/off.~~ Not built. Defaults apply (5.3, 5.6, 5.12). The engine still reads `setting.changed` events for these keys, so a value can be set by a script if ever needed.
 - ~~Export all data as JSON (and CSV of logged sets).~~ Not a screen: `scripts/export-data.mjs` writes the JSON and the CSV (DEPLOYMENT-PLAN.md section 15e).
 
@@ -743,7 +743,7 @@ Opened from the History icon in the header. A switch at the top picks **By exerc
 
 All records belong to an owner (the signed-in user). Storage is an append-only event log (one event per change, edits are later events on the same entity, state is derived by replaying events); see DEPLOYMENT-PLAN.md. The static seed data below ships with the app code; only user-generated records (sessions, set logs, settings, swaps, deloads) are stored as events.
 
-- **UserProfile**: programStartDate (initial value 2026-01-05), restTimerDefaultSec, recoveryDays (default [Tue, Thu]), trapBarWeightLbs (default 45), scheduledIncreasesEnabled (default true), scheduledIncreaseDays (default 21)
+- **UserProfile**: programStartDate (initial value 2026-09-28), restTimerDefaultSec, recoveryDays (default [Tue, Thu]), trapBarWeightLbs (default 45), scheduledIncreasesEnabled (default true), scheduledIncreaseDays (default 21)
 - **Exercise**: name, type (dumbbell | barbell | machine | cable | bodyweight | bodyweight_loadable | bodyweight_ladder | suspension | carry | hold | mobility), repMin, repMax, perSide (bool), holdSeconds (nullable), loadIncrementLbs, startingWeightLbs (nullable), firstLoadedWeightLbs (nullable), startingNote (nullable), startingLevel (nullable; suspension, default 2), levelDescription (nullable; suspension), ~~loadsBack (bool)~~, scheduledIncreasesEnabled (default true), cues (optional text)
 - **WorkoutTemplate**: code (A | B | C), name
 - **TemplateSlot**: templateId, slotNumber (1–6), ~~supersetGroup (1 | 2 | 3 | null)~~ (removed, v1.19), exerciseId, phase2Sets, alternativeExerciseIds[]
@@ -761,7 +761,7 @@ Seed data: exercise catalog (65 exercises from v1.19) with cues, starting weight
 
 ## 9. Non-functional requirements
 - Mobile-first responsive UI; fully usable one-handed on a phone. Works well on desktop too.
-- **Time zone:** all dates and times are US Pacific (`America/Los_Angeles`), stored with an explicit UTC offset (for example `2026-01-05T11:00:00.000-07:00`). Weekdays, the Tuesday/Thursday recovery day, program weeks, and the "date" of a session are Pacific. Timestamps are compared by instant, not as strings, because the offset changes at daylight saving.
+- **Time zone:** all dates and times are US Pacific (`America/Los_Angeles`), stored with an explicit UTC offset (for example `2026-09-28T11:00:00.000-07:00`). Weekdays, the Tuesday/Thursday recovery day, program weeks, and the "date" of a session are Pacific. Timestamps are compared by instant, not as strings, because the offset changes at daylight saving.
 - Installable as a PWA (home screen icon, standalone display).
 - Light and dark mode.
 - Fast: session screen interactive in under 2 seconds on a phone over mobile data.
