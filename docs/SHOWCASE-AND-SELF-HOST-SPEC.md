@@ -30,7 +30,7 @@ The page must not show personal workout or health information, production creden
 
 ### Chosen design: Gym Whiteboard
 
-The landing page is designed as a gym's dry-erase board in an aluminium frame, written in marker. The reference implementation is [`mockups/landing-whiteboard.html`](../mockups/landing-whiteboard.html). Two other directions, Motion Study and Loaded Bar, stay in `mockups/` for reference only.
+The landing page is designed as a gym's dry-erase board in an aluminium frame, written in marker. The reference implementation is `mockups/landing-whiteboard.html` on the `landing-mockups` branch, preserved by the tag `landing-mockups-2026-10`. That branch also holds two other directions, Motion Study and Loaded Bar, for reference only. `mockups/` is not merged to `main`, so none of the mockups are published on GitHub Pages.
 
 **Banner.** The page opens with a banner across the top of the board: a thick printed bar along the top edge and the title **Strength Training Tracker** lettered in the board's marker font. There is no separate navigation bar, category line or tagline. Faint "ghost" writing from earlier workouts (for example "LEG DAY") shows through behind the banner and elsewhere on the board.
 
@@ -59,15 +59,18 @@ On desktop the list sits above the loop on the left, with both phones to the rig
 **Decisions for the first release.**
 
 - **Media:** each exercise image slot shows the app's built-in placeholder (`PLACEHOLDER_GIF` in `app/js/seed/catalog.js`). The page tries `app/img/<file>` first, so local copies still show during development, and falls back to the placeholder when the file is missing, as it is on GitHub Pages. Real media can replace the placeholder later without changing the page, once its rights are recorded under section 6.
-- **Description:** not shown on the page. It goes in the `<meta name="description">` tag, the Open Graph and Twitter card description, and JSON-LD `SoftwareApplication` structured data. It is not hidden text in the page body.
+- **Description:** "An open-source strength training tracker: log sets and reps on your phone, see how each lift moves, and start every session from your own numbers." It is not shown on the page. It goes in the `<meta name="description">` tag (the snippet under the title in search results), the Open Graph and Twitter card description (shared-link previews), and JSON-LD `SoftwareApplication` structured data. It is not hidden text in the page body.
 - **Fonts:** served from the site itself rather than Google Fonts, so the page makes no third-party requests. All three fonts use the SIL Open Font License.
-- **Page metadata:** the title is **Strength Training Tracker**, with a canonical URL, favicon, and link-preview image made from synthetic screens.
+- **Page metadata:** the title is **Strength Training Tracker**, with a canonical URL and a favicon.
+- **Link-preview image:** a 1200×630 screenshot of the page's hero: the marker banner with its taped tags, the Today list with the red circle, and the two phones, showing placeholder images and synthetic data. Regenerate it whenever the hero changes.
+- **Files:** the root `index.html`, plus a `landing/` folder for the page's script and styles (including the phone preview, which the demo can reuse later), self-hosted fonts and the preview image.
 
 **Before launch.**
 
 - Publish the self-hosting guide; the Host tag links to it.
 - Point the README, product spec and GitHub markers at their files in the repository.
-- Make sure the GitHub Pages build succeeds with the landing page's files, including any symbolic links under `mockups/`.
+- Tag the `landing-mockups` branch as `landing-mockups-2026-10`, and leave `mockups/` out of the merge to `main`.
+- Make sure the GitHub Pages build succeeds with the landing page's files.
 
 ## 3. Interactive demo
 
@@ -258,7 +261,7 @@ A custom domain must not be required to complete these steps.
 - It writes the `<file>.posted` marker only after every batch succeeds.
 - Tests: a file of more than 200 events goes out in several batches with none over 200; a failure partway stops without writing the marker; a rerun sends the same events again and the server counts them as duplicates.
 
-**Costs and permissions (for the guide).** The stack has no always-on servers: S3 storage, CloudFront transfer, Lambda and API calls, and Cognito sign-ins for one person are expected to stay within or near the AWS free tier, with no fixed monthly charge. The guide states this as an estimate and points to AWS pricing. Deploying needs permission to manage CloudFormation, S3, CloudFront, Cognito, API Gateway, Lambda, IAM roles (`CAPABILITY_IAM`) and CloudWatch Logs, plus ACM read access when a custom domain is used. The guide recommends an administrator profile for the first deploy, and lists these services for anyone writing a narrower policy.
+**Costs and permissions (for the guide).** The stack has no always-on servers: S3 storage, CloudFront transfer, Lambda and API calls, and Cognito sign-ins for one person are expected to stay within or near the AWS free tier, with no fixed monthly charge. The guide states this as an estimate and points to AWS pricing. Deploying needs permission to manage CloudFormation, S3, CloudFront, Cognito, API Gateway, Lambda, IAM roles (`CAPABILITY_IAM`) and CloudWatch Logs, plus ACM read access when a custom domain is used. The guide recommends an administrator profile for the first deploy, and lists these services for anyone writing a narrower policy. The repository does not ship a ready-made IAM policy, so there is nothing to keep in step with the template.
 
 **Moving the project owner's stack to this setup.**
 
@@ -281,6 +284,8 @@ None of it is in git, so none of it is backed up or versioned by the repository.
 Code licensing is resolved. The root [`LICENSE`](../LICENSE) applies the MIT License to original code and documentation, with ArjunTech LLC as the copyright holder. The README states that third-party images, trademarks, and external assets are excluded.
 
 Media publication is resolved for the initial showcase/self-host release by excluding the current third-party image set and using local placeholders by default. The [media rights audit](MEDIA-RIGHTS-AUDIT.md) records the 58 URLs and findings. Do not treat source URLs or attribution as permission. If an asset is proposed for a public demo or distributable image pack later, obtain and record permission or a suitable license for that file first.
+
+The copies of these images already uploaded to the project owner's private site (`strength.logbook.me`) stay for now; whether to remove them or seek permission is deferred, as the media rights audit notes.
 
 ## 7. Repository and documentation changes
 
