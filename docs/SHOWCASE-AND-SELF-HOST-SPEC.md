@@ -186,7 +186,7 @@ A fork owner may deploy a private, single-user copy into their own AWS account. 
 - Replace the manual edits to `app/js/config.js` with a repeatable setup step that reads stack outputs and writes a local, git-ignored deployment config. The checked-in defaults must not point to the project owner's production API.
 - Make the stack name, AWS region, and AWS profile explicit inputs. Deployment and cleanup commands must target only that fork owner's named stack.
 - Document AWS resources created, account permissions required, image prerequisites, expected operational costs at a high level, backup/export, and stack teardown. Retain or export user data before destructive teardown.
-- Keep the existing failure-safe image deployment: failed image acquisition must stop before any destructive image sync, and dry-run must not download or upload files.
+- Keep image deployment failure-safe: the deploy never downloads images, a missing local image folder never deletes the remote images, and dry-run must not download or upload files.
 
 ### Setup experience
 
@@ -200,6 +200,68 @@ The quick-start should let a technically comfortable user:
 6. Verify that a sample workout syncs and that only their own stack contains their data.
 
 A custom domain must not be required to complete these steps.
+
+### Self-hosting design
+
+**Deployment settings file.** Every AWS script reads one file, `private/deploy.env`. The `private/` folder is git-ignored, so each person's copy names their own deployment: the repository's scripts and docs stay generic, and whoever's `private/deploy.env` is present decides which stack a command acts on. No script has built-in defaults for a stack, region or domain, and every script stops with a clear message if `private/deploy.env` is missing or incomplete. Bucket names and the distribution ID are never stored; scripts read them from the stack's outputs each time.
+
+| Variable | Required | Set by |
+|---|---|---|
+| `STACK` | yes | `init-deploy.sh` |
+| `AWS_REGION` | yes | `init-deploy.sh` |
+| `AWS_PROFILE` | no (empty uses the default credentials) | `init-deploy.sh` |
+| `DOMAIN` | no (empty means the CloudFront address) | `init-deploy.sh` |
+| `CERT_ARN` | only with `DOMAIN` | `init-deploy.sh` (looked up in ACM, us-east-1) |
+| `OWNER_SUB` | after `create-owner.sh` | `create-owner.sh` |
+
+`scripts/aws-env.sh` sources `private/deploy.env` and adds the stack outputs: `SITE_BUCKET`, `DIST_ID`, `SITE_URL`, `API_URL`, `USER_POOL_ID`, `USER_POOL_CLIENT_ID` and `DATA_BUCKET`. The Node scripts that call the API (`export-data.mjs`, `post-events.mjs`) read the same values through a small `scripts/stack-config.mjs`, instead of importing `app/js/config.js`.
+
+**Setup commands.** Four scripts, each safe to rerun on its own and used again for later updates:
+
+1. `scripts/init-deploy.sh` asks for the stack name (it suggests `strength-<your name>`), region, AWS profile, and an optional custom domain. If a domain is given, it finds an issued ACM certificate for it in us-east-1 or explains how to request one. It writes `private/deploy.env`, showing the file and asking before it overwrites an existing one.
+2. `scripts/deploy-stack.sh` runs `npm ci` for the Lambda, then `sam validate`, `sam build` and `sam deploy`, always passing every parameter from `private/deploy.env`, so an update can never drop the domain or `OwnerSub` by leaving them out. It shows the change set before applying it.
+3. `scripts/create-owner.sh <email>` creates the single Cognito user with self-signup off, asks for the 6-digit PIN without echoing it, makes the password permanent, writes the user's `sub` to `private/deploy.env` as `OWNER_SUB`, and reruns `deploy-stack.sh`. Until then the Lambda answers 403 to every request, as it does today.
+4. `scripts/deploy-app.sh` runs the tests, copies `app/` into a git-ignored staging folder (`.deploy/site/`), writes `js/config.js` there from the stack outputs, uploads the staged copy, and refreshes CloudFront. It prints `SITE_URL` at the end.
+
+**App config written at deploy time.** The checked-in `app/js/config.js` holds no deployment values, so a fork, a local preview and the GitHub Pages copy all open in local-only mode (section 4). Only the staged copy uploaded by `deploy-app.sh` contains a deployment's values, taken from its own stack outputs every time, so a deployment can never ship another stack's config. The app code and the service worker's file list are unchanged.
+
+**Stack template changes** (`infra/template.yaml`):
+
+- `DomainName` and `CertificateArn` default to empty. The condition `HasDomain` is true when `DomainName` is set, and a template rule requires `CertificateArn` whenever `DomainName` is set.
+- The CloudFront distribution uses the domain alias and ACM certificate only under `HasDomain`; otherwise it uses CloudFront's own certificate and address.
+- The API's CORS origins always include `https://<CloudFront domain>`, plus `https://<DomainName>` under `HasDomain`. The distribution does not depend on the API, so the API can refer to the distribution's address in the same deploy; there is no second deploy for CORS.
+- The `SiteUrl` output is the custom domain under `HasDomain`, otherwise the CloudFront address.
+- The template description no longer mentions a single production stack or a particular DNS provider.
+- Resource names already derive from the stack name, so several stacks can share one AWS account.
+
+**Media.** The deploy never downloads images. Without `--include-images`, the images already uploaded to a stack are left untouched. With it, the stack's `img/` is made to match the local `app/img/`, including deletions; a missing local folder skips the image sync instead of deleting anything.
+
+**Verifying isolation.** After signing in and logging a set, listing `s3://$DATA_BUCKET/u/` shows exactly one prefix, equal to `OWNER_SUB`. The guide gives the command.
+
+**Backup and teardown.** `scripts/export-data.mjs <email>` exports from the stack named in `private/deploy.env`. `scripts/teardown.sh`:
+
+1. shows the stack name, region and the resources it will delete, and asks you to type the stack name;
+2. offers to run the export first;
+3. empties the site bucket and deletes the stack;
+4. lists the resources that remain: the data bucket and the user pool, which the template keeps when a stack is deleted. The guide explains how to delete them by hand, including emptying every version in the data bucket.
+
+**Costs and permissions (for the guide).** The stack has no always-on servers: S3 storage, CloudFront transfer, Lambda and API calls, and Cognito sign-ins for one person are expected to stay within or near the AWS free tier, with no fixed monthly charge. The guide states this as an estimate and points to AWS pricing. Deploying needs permission to manage CloudFormation, S3, CloudFront, Cognito, API Gateway, Lambda, IAM roles (`CAPABILITY_IAM`) and CloudWatch Logs, plus ACM read access when a custom domain is used. The guide recommends an administrator profile for the first deploy, and lists these services for anyone writing a narrower policy.
+
+**Moving the project owner's stack to this setup.**
+
+- Create `private/deploy.env` for `strength-prod`: `us-west-2`, `strength.logbook.me`, its certificate, and the current `OWNER_SUB`.
+- Run `deploy-stack.sh` and check the change set. Expect only the template description and the extra CORS origin to change, with no resource replaced.
+- Clear the deployment values from the checked-in `config.js` in the same change that adds staged deploys, then run `deploy-app.sh`.
+- `create-owner.sh` replaces the git-ignored `private/create-user.sh`.
+- Move the owner's personal notes from BUILD.md into `private/OPERATIONS.md` and retire BUILD.md (section 7).
+
+**The `private/` folder.** It holds everything that belongs to one person's deployment and stays out of the public repository:
+
+- `deploy.env`: the deployment settings above.
+- `OPERATIONS.md`: the owner's own runbook, such as DNS records at their provider, how they load a past workout, and their backup routine.
+- Workout files for `scripts/build-events.mjs` and `scripts/post-events.mjs`, and the `export/` folder written by `scripts/export-data.mjs`.
+
+None of it is in git, so none of it is backed up or versioned by the repository. The guide tells owners to keep a copy elsewhere, such as a private repository, a password manager or cloud storage, especially of `deploy.env`.
 
 ## 6. Code and media reuse
 
@@ -217,12 +279,51 @@ The README and landing page must distinguish these three experiences:
 
 Document that the existing `strength.logbook.me` instance is private and is not the public demo or a service for forks. Keep the detailed workout behavior in `docs/SPEC-strength.md`; put setup steps in a focused self-hosting guide.
 
+### Self-hosting guide outline
+
+The guide is `docs/SELF-HOSTING.md`, and it is what the landing page's **Host** tag opens. It is the only setup document; BUILD.md is retired when the guide is complete (section 9, step 4):
+
+- Its generic content moves into the guide: the Lambda build and deploy steps go into guide section 4, and the Phase B, D and E manual checks become an optional full check in guide section 6.
+- Its project-owner content moves into the owner's `private/OPERATIONS.md`: the `strength-prod` values, GoDaddy DNS for `logbook.me`, loading a workout from `private/`, and the export routine.
+- Links to BUILD.md in the README, `DEPLOYMENT-PLAN.md`, `app/js/config.js`, `app/js/main.js`, `scripts/deploy-app.sh`, `scripts/export-data.mjs` and `scripts/post-events.mjs` point to the guide instead. Files under `archive/` keep their historical references.
+
+1. **Pick how to run it.** The three experiences from this section, with one line each on where data lives and what setup it needs.
+2. **Local only (no AWS).**
+   - Fork and clone, then serve `app/` locally (`python3 -m http.server`) or publish your fork with GitHub Pages.
+   - Data stays in that browser. Export a backup and clear data from Settings.
+   - To move to AWS later, set up a stack and sign in on the same browser; waiting workouts upload.
+3. **Before you deploy to AWS.**
+   - Prerequisites: Node 22, AWS CLI v2, SAM CLI, and an AWS account with the permissions listed in section 5.
+   - What gets created, and what it costs (the estimate from section 5).
+   - Images are optional, with a link to the media rights audit.
+4. **Deploy in four commands.** `init-deploy.sh`, `deploy-stack.sh`, `create-owner.sh <email>`, `deploy-app.sh`. For each: what it asks, what it changes, what success looks like, and that it is safe to rerun.
+5. **Optional custom domain.** Request an ACM certificate in us-east-1 and validate it, rerun `init-deploy.sh` with the domain, rerun `deploy-stack.sh` and `deploy-app.sh`, then add a CNAME at your DNS provider pointing to the `CloudFrontDomain` output.
+6. **Check it works.**
+   - Sign in at `SITE_URL` and log a set.
+   - Open the app on a second device and see the set arrive.
+   - Run the isolation check: listing `s3://$DATA_BUCKET/u/` shows only your `OWNER_SUB`.
+7. **Day to day.**
+   - Update the app (`deploy-app.sh`) or the stack (`deploy-stack.sh`).
+   - Export a backup (`export-data.mjs`), and keep a copy of `private/` outside the repository.
+   - Reset a forgotten PIN.
+   - Read the Lambda logs.
+   - Install the app on a phone's home screen.
+8. **Tear down.**
+   - Run `teardown.sh`.
+   - It keeps the data bucket and the user pool.
+   - To delete those too, follow the manual steps, including emptying every object version.
+9. **Troubleshooting.**
+   - API calls from `localhost` are blocked by CORS by design.
+   - Every request gets 403 until `create-owner.sh` has run.
+   - A missing or incomplete `private/deploy.env` stops every script.
+   - After a deploy, hard-reload or reopen the installed app to get the new files.
+
 ## 8. Acceptance criteria
 
 ### Landing page
 
 - The repository's root page opens a project landing page rather than redirecting to the private sign-in page.
-- The three primary paths (demo, source, self-host) are obvious and work on phone and desktop.
+- The three primary paths (demo, source, self-host) are obvious and work on phone and desktop. Until the demo is published, the Demo tag reads "coming soon".
 - All example images and copy use synthetic content.
 
 ### Demo
@@ -244,6 +345,9 @@ Document that the existing `strength.logbook.me` instance is private and is not 
 - A clean fork can deploy without the project owner's AWS account, production endpoint, or custom domain.
 - The setup writes deployment-specific config without committing it.
 - A deployment failure before upload cannot delete the remote image set.
+- Every AWS script stops when `private/deploy.env` is missing or incomplete, and none has a built-in stack, region or domain.
+- A deploy without a custom domain serves the app at the CloudFront address with sign-in and sync working.
+- Teardown requires typing the stack name, offers an export first, and keeps the data bucket and user pool.
 - The README/self-host guide includes setup, verification, backup, and teardown steps.
 
 ### Release hygiene
@@ -256,10 +360,10 @@ Document that the existing `strength.logbook.me` instance is private and is not 
 
 ## 9. Suggested delivery order
 
-1. Replace the root redirect with the landing page. The Demo tag reads "coming soon"; publish a first version of the self-hosting guide with the page, since the Host tag links to it.
+1. Replace the root redirect with the landing page. The Demo tag reads "coming soon". Publish a first version of `docs/SELF-HOSTING.md` with the page, since the Host tag links to it. That version has guide sections 1 and 3, and says the AWS setup currently follows BUILD.md and needs a custom domain until step 4 below. Each later step fills in its own guide section.
 2. Build the app modes (section 3), then publish the synthetic interactive demo and turn the Demo tag into a link.
 3. Add local-only personal use, including export and clear controls.
-4. Make AWS self-hosting independent of the production domain, account, and config; complete and validate the guide.
+4. Make AWS self-hosting independent of the production domain, account, and config (section 5 design), move the project owner's stack to `private/deploy.env` and `private/OPERATIONS.md`, complete and validate the guide on a fresh test stack without a custom domain, and retire BUILD.md.
 5. Feature the repo and demo from the project showcase site after the landing page, demo, and self-hosting guide are ready.
 
 ## 10. Existing public history
