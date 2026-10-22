@@ -1,0 +1,267 @@
+# Showcase and self-hosting specification
+
+**Status:** Proposed
+
+**Purpose:** Make Strength Training Tracker easy to try as a project showcase and practical for another person to fork and run for themselves. The public demo is synthetic and isolated from the existing private deployment.
+
+## 1. Product goals
+
+1. Let a visitor understand the app and try its main workout logging and history flows without creating an account.
+2. Keep the demo safe to publish: it contains fictional data and sends no workout or authentication requests to the production backend.
+3. Let a person run a personal copy from a fork, first in a browser on one device and optionally with sync in their own AWS account.
+4. Keep the existing private production account and its stored data separate from the public demo and all self-hosted copies.
+
+## 2. Public project landing page
+
+The repository's GitHub Pages site, `https://kathishah.github.io/strength/`, becomes the project landing page. It is served from the repository root's `index.html` on `main`, which currently redirects to `strength.logbook.me`; replace that redirect with a responsive landing page. The page accompanies the code: it is the public entry point for the repository and for links from the project showcase website.
+
+`strength.logbook.me` stays the project owner's private hosted copy and is unchanged by this work. Opening it shows the sign-in page when no one is signed in and the workout home page when someone is. The landing page does not redirect or link visitors to it as a demo.
+
+It must include:
+
+- A short description of Strength Training Tracker and what a visitor can try. It lives in the page metadata for search engines and link previews and is not displayed; the product name and screens carry the page.
+- A clear **Demo** link, a **Fork on GitHub** link, and a **Self-host** link.
+- A few representative screenshots or a short recording made with synthetic data.
+- A concise architecture summary: static web app, local event log, and optional personal AWS sync stack.
+- A visible note that demo data is fictional and the hosted private instance is separate.
+- Links to the README, product spec, and self-hosting instructions.
+
+The page must not show personal workout or health information, production credentials, or private account details. Avoid third-party analytics in the initial release.
+
+### Chosen design: Gym Whiteboard
+
+The landing page is designed as a gym's dry-erase board in an aluminium frame, written in marker. The reference implementation is [`mockups/landing-whiteboard.html`](../mockups/landing-whiteboard.html). Two other directions, Motion Study and Loaded Bar, stay in `mockups/` for reference only.
+
+**Banner.** The page opens with a banner across the top of the board: a thick printed bar along the top edge and the title **Strength Training Tracker** lettered in the board's marker font. There is no separate navigation bar, category line or tagline. Faint "ghost" writing from earlier workouts (for example "LEG DAY") shows through behind the banner and elsewhere on the board.
+
+**Primary actions.** Two paper tags taped to the right side of the banner, stacked vertically and pinned close to the board's frame at every width:
+
+- **Demo →** (red) opens the public demo. Until the demo is published, the tag reads **Demo · coming soon** and is not a link.
+- **Host** with GitHub's fork icon opens the self-hosting guide, which starts with forking the repository.
+
+The **Fork on GitHub** link is the GitHub marker in the footer tray.
+
+The banner keeps about 140 px clear on its right for the tags. On desktop the title fits on one line; on tablets and phones it wraps, and the tags sit in the space beside the shorter lines. Each tag is at least 44 px tall.
+
+**Hero.** Below the banner, four elements show what the app does, all with synthetic data:
+
+1. **Today: Workout A**: the six Workout A lifts with their sets × reps, written in marker. A hand-drawn red circle marks the exercise the phone is showing, and finished lifts are crossed out as the preview moves on.
+2. **Workout screen**: a phone held by magnets, showing the real workout card at actual app size. It rotates among the first three Workout A exercises with each exercise's image slot (see Media below), keeps the Options and TRX alternatives expanded, and scrolls slowly to show the weight and rep dials. On desktop a marker arrow points from the circled lift to this phone.
+3. **Useful Loop**: a hand-drawn cycle (log it → see it → add 5 lb) with "Useful Loop" and "every session" at its centre. It replaces the separate loop section and needs no step text.
+4. **History screen**: a second phone showing the exercise history for the same exercise (last increase, top-set chart with increases marked, past sessions), changing with the workout phone.
+
+On desktop the list sits above the loop on the left, with both phones to the right. On tablets the list and the loop sit side by side above the two phones. On phones (720 px and narrower) the four elements become a horizontal swipe carousel in the order above, with snap scrolling, dots that can be tapped, and a handwritten label for the current slide.
+
+**Lower sections.** "Three ways to run it" compares the public demo, local-only use and a personal AWS copy in a table drawn in marker. "How it's built" sketches the static app, the local event log, and the optional AWS stack drawn as a dashed cloud. The footer is the board's marker tray: the README, product spec, self-hosting guide and GitHub links are drawn as markers, and the tray holds the note that all numbers are fictional and that the private instance is separate.
+
+**Visual system.** Permanent Marker for the title and headings, Kalam for handwritten text, and Atkinson Hyperlegible for running copy. The phone previews keep the app's system font and colours. In light mode the page is a white board; in dark mode it becomes a black glass board with bright markers. Motion respects `prefers-reduced-motion`.
+
+**Decisions for the first release.**
+
+- **Media:** each exercise image slot shows the app's built-in placeholder (`PLACEHOLDER_GIF` in `app/js/seed/catalog.js`). The page tries `app/img/<file>` first, so local copies still show during development, and falls back to the placeholder when the file is missing, as it is on GitHub Pages. Real media can replace the placeholder later without changing the page, once its rights are recorded under section 6.
+- **Description:** not shown on the page. It goes in the `<meta name="description">` tag, the Open Graph and Twitter card description, and JSON-LD `SoftwareApplication` structured data. It is not hidden text in the page body.
+- **Fonts:** served from the site itself rather than Google Fonts, so the page makes no third-party requests. All three fonts use the SIL Open Font License.
+- **Page metadata:** the title is **Strength Training Tracker**, with a canonical URL, favicon, and link-preview image made from synthetic screens.
+
+**Before launch.**
+
+- Publish the self-hosting guide; the Host tag links to it.
+- Point the README, product spec and GitHub markers at their files in the repository.
+- Make sure the GitHub Pages build succeeds with the landing page's files, including any symbolic links under `mockups/`.
+
+## 3. Interactive demo
+
+Publish a no-login demo at a stable public URL linked from the landing page. It should use the same core screens and logging logic as the app where practical, with an isolated demo entry point and fixture data.
+
+### App modes (shared by the demo and local-only use)
+
+The app runs in one of three modes. All three use the same screens, logging actions, engine and event log; they differ only in where events are stored and whether anything goes over the network.
+
+| Mode | Entry point | Chosen when | Local storage | Network |
+|---|---|---|---|---|
+| **Synced** | `app/index.html` | The sync settings in the app config are complete | IndexedDB `strength`; `localStorage` keys `strength.*` (unchanged from today) | Cognito and the events API, as today |
+| **Local only** | `app/index.html` | The sync settings are missing or incomplete | Same as synced: IndexedDB `strength`, keys `strength.*` | None |
+| **Demo** | `demo/index.html` | Always, for that entry point | IndexedDB `strength-demo`; keys `strength-demo.*` | None |
+
+- **Startup.** Today's `app/js/main.js` becomes a shared `startApp({ mode })` in `app/js/boot.js`. `main.js` calls it with `synced` or `local` depending on `isConfigured()`, replacing today's "Not configured yet" message. The demo's entry script calls it with `demo`.
+- **No network outside synced mode.** `store/auth.js`, `store/api.js` and `store/sync.js` are loaded with a dynamic `import()` only in synced mode, so local-only and demo pages never load the code that talks to Cognito or the API. The sign-in screen, the sign-out button and the sync panel exist only in synced mode.
+- **Storage names.** `startApp` passes a storage profile (`{ dbName, keyPrefix }`) to `openStorage`, `getDeviceId` and `createDraftStore`, which today hard-code `strength` and `strength.`. The refresh-token key is used only by `store/auth.js`, so local-only and demo pages never read it. The theme preference (`strengthTheme`) is shared, since it is a display choice, not data.
+- **Moving from local only to synced.** Local-only and synced share storage, so events logged locally stay in the upload queue. When the fork owner later adds sync settings, the app opens in synced mode. The sign-in screen already says how many events are waiting, and they upload to that owner's stack on first sign-in. No migration step is needed.
+- **The demo cannot reach real data.** The demo is served from GitHub Pages, a different origin from any synced deployment. It also uses its own storage names, so a reset or a fixture write cannot touch `strength` or `strength.*` even on the same origin.
+
+### Behavior
+
+- Start with a fictional user and a small, realistic event history that demonstrates Home, exercise history, completed sessions, and progression suggestions.
+- Let visitors interact with the workout UI in a sandbox so they can tick exercises, edit values, and explore history.
+- Provide a prominent **Reset demo** action that restores the original sample state.
+- Keep demo changes local to that browser and demo namespace. They are disposable and are never uploaded.
+- Do not require email, password, PIN, Cognito, or an AWS account.
+
+### Isolation and privacy
+
+- The demo entry point must not call the production API, Cognito, or any user-data endpoint.
+- Do not reuse the production refresh-token key, local database, drafts, or device/account identifiers for demo state.
+- Use only fictional sample data. Do not copy real user events, health measurements, credentials, or identifiers into fixtures, screenshots, logs, or demo assets.
+- Do not collect analytics or transmit demo interaction data in the initial release.
+- Label the app clearly as a demo and explain that reset clears the sandbox.
+
+### Fallback behavior
+
+The demo must remain usable if exercise media is unavailable. Each image slot needs a local fallback, and the demo must not fail to load because a third-party media host is offline.
+
+### Demo design
+
+**Location.** `https://kathishah.github.io/strength/demo/`, served by GitHub Pages from a top-level `demo/` folder with `index.html` and a small entry script. It loads `../app/css/app.css` and `../app/js/boot.js`, so it runs the same code as the app. `demo/` is outside `app/`, so `scripts/deploy-app.sh` never uploads it to a synced deployment. The demo has no web app manifest and registers no service worker; it is not meant to be installed or used offline.
+
+**Sample history.** On first open, and after each reset, the demo writes a fixture into its own storage: four weeks of the A/B/C rotation for a fictional lifter, three sessions a week, 12 finished sessions in all. The dates are counted back from the day the demo is opened, so the history always looks recent; the last session is the day before. The history is made by running the real logging actions with a fixed clock and seeded random numbers, so every event is valid and the same start date always gives the same events. It includes:
+
+- at least two exercises with an increase marked on their history chart;
+- one exercise whose scheduled increase is due in today's workout, so its card shows the increase note;
+- one finished session that used an alternative exercise;
+- one finished session with an exercise left unticked, so History by date shows its "missing" tag.
+
+Today's workout is the next one in the rotation, with nothing logged yet.
+
+**Demo label and reset.** A strip above the app header on every screen reads "Demo · a fictional lifter · changes stay in this browser" and holds a **Reset demo** button. Reset uses the app's two-tap armed button (`armedIconButton`): the first tap shows "Tap again to reset", the second deletes the `strength-demo` database and `strength-demo.*` keys, rebuilds the fixture, and reloads the page. The header's save chip reads "Demo" instead of a sync state. Settings shows a short explanation of the demo, the same Reset button, and a link back to the landing page.
+
+**Images.** Every exercise image slot shows the app's placeholder (`PLACEHOLDER_GIF`); the demo requests no image files.
+
+**Tests.**
+
+- A static check: following the static `import` statements from the demo's entry script never reaches `store/auth.js`, `store/api.js` or `store/sync.js`.
+- A boot test in demo mode with `fetch` replaced by a function that fails the test if called, through logging a set and resetting.
+- Fixture tests: replaying the fixture gives 12 finished sessions, the increases, the alternative, the missing exercise and an increase due today, and the same start date always gives the same events.
+- Storage tests: the demo writes only `strength-demo` and `strength-demo.*`, and reset leaves `strength` and `strength.*` untouched.
+
+## 4. Personal use without cloud services
+
+Provide a local-only mode for a fork owner who wants to use the app on one browser and device without configuring AWS.
+
+- Workout events persist in that browser's IndexedDB.
+- The app clearly indicates that local-only data does not sync to other devices.
+- Local-only mode never attempts Cognito sign-in or API synchronization.
+- Provide an in-app export of the local event data as JSON so the user can make a backup.
+- Provide a way to clear local data, with a confirmation step.
+- If browser storage is unavailable, explain that the session is temporary and data may be lost when the page closes.
+
+The public demo and personal local-only mode must use separate storage namespaces so demo reset cannot delete personal workouts and personal sign-in state cannot enter the demo.
+
+### Local-only design
+
+**Turning it on.** Local-only mode needs no setting: the app uses it whenever the sync settings in its config are missing or incomplete (see App modes in section 3). A fresh fork therefore opens straight into local-only mode once the checked-in config holds no deployment values, which section 5 already requires. Until that section 5 change lands, the checked-in `app/js/config.js` still holds the project owner's values, so a fork opens in synced mode.
+
+**What the person sees.**
+
+- No sign-in screen. The app opens on the workout home page.
+- The header's save chip reads "On this device" instead of a sync state. Opening the header panel shows "Saved in this browser only. Not synced to other devices."
+- The first time the app opens in local-only mode, Home shows a one-time note: "Your workouts are saved in this browser only. Export a backup from Settings." Dismissing it sets `strength.localNoticeSeen`.
+- If IndexedDB is unavailable (the memory fallback in `store/open.js`, where `persistent` is false), a notice stays at the top of every screen: "This browser isn't saving your workouts. They will be lost when you close the page. Export a backup before you leave."
+- No sign-out button.
+
+**Settings.** In local-only mode, Settings replaces the sync panel with:
+
+- **Storage:** whether data is saved on this device, and how many events and finished workouts it holds.
+- **Export backup:** downloads `strength-events-<date>.json` in the same format as `scripts/export-data.mjs` (`{ exportedAt, count, events }`), using the browser's file download. There is no in-app import in this release.
+- **Clear data on this device:** a two-tap armed button whose first tap reads "Tap again to delete all workouts on this device. Export first if you want a copy." The second tap deletes the `strength` database and the `strength.*` keys (the theme preference stays) and reloads into an empty app.
+
+**Tests.**
+
+- A boot test in local-only mode with `fetch` replaced by a function that fails the test if called, through logging and finishing a workout.
+- The exported file replays to the same state as the live event log, and matches the `scripts/export-data.mjs` format.
+- Clear needs two taps, removes the events and `strength.*` keys, and keeps `strengthTheme`.
+- Events logged in local-only mode stay in the upload queue, and a later synced boot reports them as waiting.
+
+**Product spec changes when this ships.** Section 6.7 of `docs/SPEC-strength.md` describes Settings as sync only and export as a script. When local-only mode ships, add a changelog entry and amend 6.7: synced mode is unchanged, local-only Settings has Storage, Export backup and Clear, and demo Settings has Reset.
+
+## 5. Optional AWS sync for a self-hosted copy
+
+A fork owner may deploy a private, single-user copy into their own AWS account. The first self-hosting release remains single-user per stack; it does not create a shared multi-user service.
+
+### Requirements
+
+- Preserve the current architecture: static PWA, Cognito user pool, API Gateway HTTP API, Lambda, and private S3 event storage.
+- Keep event storage isolated to the self-hosted user's Cognito `sub`, using the existing `u/<sub>/events/` layout and JWT claims. Never use the public demo or production stack for a fork's workout data.
+- Keep the current admin-created owner model for a personal stack; no public signup service is part of self-hosting.
+- Make the custom domain optional. A fresh deployment should work at the CloudFront-generated domain; custom domain and certificate configuration can be documented as an optional setup.
+- Replace the manual edits to `app/js/config.js` with a repeatable setup step that reads stack outputs and writes a local, git-ignored deployment config. The checked-in defaults must not point to the project owner's production API.
+- Make the stack name, AWS region, and AWS profile explicit inputs. Deployment and cleanup commands must target only that fork owner's named stack.
+- Document AWS resources created, account permissions required, image prerequisites, expected operational costs at a high level, backup/export, and stack teardown. Retain or export user data before destructive teardown.
+- Keep the existing failure-safe image deployment: failed image acquisition must stop before any destructive image sync, and dry-run must not download or upload files.
+
+### Setup experience
+
+The quick-start should let a technically comfortable user:
+
+1. Fork and clone the repo.
+2. Install documented prerequisites.
+3. Choose local-only mode or AWS sync mode.
+4. For AWS mode, build and deploy a uniquely named stack with one documented command or short guided sequence.
+5. Create the owner account, configure the app from stack outputs, and open the returned site URL.
+6. Verify that a sample workout syncs and that only their own stack contains their data.
+
+A custom domain must not be required to complete these steps.
+
+## 6. Code and media reuse
+
+Code licensing is resolved. The root [`LICENSE`](../LICENSE) applies the MIT License to original code and documentation, with ArjunTech LLC as the copyright holder. The README states that third-party images, trademarks, and external assets are excluded.
+
+Media publication is resolved for the initial showcase/self-host release by excluding the current third-party image set and using local placeholders by default. The [media rights audit](MEDIA-RIGHTS-AUDIT.md) records the 58 URLs and findings. Do not treat source URLs or attribution as permission. If an asset is proposed for a public demo or distributable image pack later, obtain and record permission or a suitable license for that file first.
+
+## 7. Repository and documentation changes
+
+The README and landing page must distinguish these three experiences:
+
+1. **Public demo:** synthetic data, browser sandbox, no account, no server sync.
+2. **Local-only personal use:** a user's own data in one browser, with local export and clear.
+3. **AWS self-hosted personal copy:** that user's own AWS resources and optional cross-device sync.
+
+Document that the existing `strength.logbook.me` instance is private and is not the public demo or a service for forks. Keep the detailed workout behavior in `docs/SPEC-strength.md`; put setup steps in a focused self-hosting guide.
+
+## 8. Acceptance criteria
+
+### Landing page
+
+- The repository's root page opens a project landing page rather than redirecting to the private sign-in page.
+- The three primary paths (demo, source, self-host) are obvious and work on phone and desktop.
+- All example images and copy use synthetic content.
+
+### Demo
+
+- A visitor can open the demo without signing in and explore the main screens.
+- A visitor can make a sample workout edit, see it reflected in the demo, and reset the sandbox.
+- Network inspection shows no requests from demo mode to Cognito or the production API.
+- Demo state is separate from the normal app database, refresh token, drafts, and local account state.
+- Missing media does not prevent the demo from working.
+
+### Local-only mode
+
+- A user can record and revisit workouts after a reload without configuring Cognito, AWS, or an API URL.
+- The interface explains the single-browser storage boundary.
+- Export produces a usable backup; clear requires confirmation.
+
+### AWS self-hosting
+
+- A clean fork can deploy without the project owner's AWS account, production endpoint, or custom domain.
+- The setup writes deployment-specific config without committing it.
+- A deployment failure before upload cannot delete the remote image set.
+- The README/self-host guide includes setup, verification, backup, and teardown steps.
+
+### Release hygiene
+
+- Tests cover demo isolation, no-auth behavior, local persistence/export/clear, and per-stack configuration where applicable.
+- No real user workout data, health profile, credentials, or production refresh tokens appear in the demo or its fixtures.
+- [x] MIT license is added for original code and documentation, and its scope is described in the README.
+- [x] The initial public demo and default self-host package exclude the uncleared third-party images and use local placeholders. The [media rights audit](MEDIA-RIGHTS-AUDIT.md) records the source review.
+- [ ] Before adding any media to a public demo or distributable image pack, record rights and attribution for each included asset.
+
+## 9. Suggested delivery order
+
+1. Replace the root redirect with the landing page. The Demo tag reads "coming soon"; publish a first version of the self-hosting guide with the page, since the Host tag links to it.
+2. Build the app modes (section 3), then publish the synthetic interactive demo and turn the Demo tag into a link.
+3. Add local-only personal use, including export and clear controls.
+4. Make AWS self-hosting independent of the production domain, account, and config; complete and validate the guide.
+5. Feature the repo and demo from the project showcase site after the landing page, demo, and self-hosting guide are ready.
+
+## 10. Existing public history
+
+The public Git history was rewritten to remove the former personal profile and body-composition data. This changed commit IDs; existing clones and forks may still contain the old history and should be re-cloned or reset before contributing. Copies already made elsewhere cannot be removed by rewriting this repository.

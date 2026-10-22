@@ -1,6 +1,6 @@
 # Recomp Tracker — Product Spec (v1.19)
 
-A mobile-first strength-training log that records workouts and suggests what to lift next. It is designed for a single private demo account, with data synced across that user’s devices. Activity tracking and body metrics are out of scope.
+A mobile-first strength-training log that records workouts and suggests what to lift next. It is designed for a single private account, with data synced across that user’s devices. Activity tracking and body metrics are out of scope.
 
 ## Changelog
 - **v1.19**

@@ -43,22 +43,27 @@
     .ghost { position: absolute; z-index: 0; color: var(--ghost); font: 400 var(--s, 80px)/1 var(--marker); white-space: nowrap; pointer-events: none; filter: blur(.6px); user-select: none; }
 
     /* banner across the top of the board, lettered in the board's own marker; transparent so the ghosting shows through */
-    .banner { position: relative; z-index: 1; border-top: 12px solid var(--print); border-bottom: 4px solid var(--print); }
-    .banner-in { position: relative; padding-block: 26px 24px; }
-    .banner h1 { margin: 0; font: 400 clamp(46px, 6.4vw, 96px)/1 var(--marker); letter-spacing: -.01em; color: var(--print); text-wrap: balance; }
-    .banner p { margin: 6px 0 0; font: 700 21px var(--hand); color: var(--print); opacity: .8; }
-    /* taped over the banner's bottom rule, so the title keeps the full width */
-    .taped { position: absolute; z-index: 4; right: max(24px, env(safe-area-inset-right, 0px)); bottom: -28px; display: flex; gap: 20px; }
-    .tag { position: relative; display: inline-flex; align-items: center; gap: 10px; min-height: 54px; padding: 12px 20px 10px; background: var(--paper); color: var(--paper-ink); font: 700 23px/1 var(--hand); text-decoration: none; box-shadow: 0 2px 2px rgb(0 0 0 / .08), 0 14px 22px -14px rgb(0 0 0 / .45); transform: rotate(var(--r)); transition: transform .15s; }
-    .tag::before { content: ""; position: absolute; top: -12px; left: 50%; width: 66px; height: 24px; margin-left: -33px; background: var(--tape); transform: rotate(var(--tr)); }
+    .banner { position: relative; z-index: 1; border-top: 12px solid var(--print); }
+    /* the right gutter always leaves ~140px between the title and the board edge for the stacked tags */
+    .banner-in { position: static; padding-block: 26px 24px; padding-right: max(24px, calc(140px - max(0px, (100vw - 1308px) / 2))); }
+    .banner h1 { margin: 0; font: 400 clamp(46px, 6vw, 92px)/1 var(--marker); letter-spacing: -.01em; color: var(--print); text-wrap: balance; }
+    /* stacked on the right of the banner, pinned near the board's frame */
+    .taped { position: absolute; z-index: 4; top: 50%; right: max(14px, env(safe-area-inset-right, 0px)); translate: 0 -50%; display: flex; flex-direction: column; align-items: flex-end; gap: 20px; }
+    .tag { position: relative; display: inline-flex; align-items: center; gap: 10px; min-height: 48px; padding: 11px 15px 9px; background: var(--paper); color: var(--paper-ink); font: 700 20px/1 var(--hand); text-decoration: none; box-shadow: 0 2px 2px rgb(0 0 0 / .08), 0 14px 22px -14px rgb(0 0 0 / .45); transform: rotate(var(--r)); transition: transform .15s; }
+    .tag::before { content: ""; position: absolute; top: -10px; left: 50%; width: 54px; height: 20px; margin-left: -27px; background: var(--tape); transform: rotate(var(--tr)); }
     .tag:hover { transform: rotate(0deg) translateY(-2px); }
     .tag.demo { --r: -2.5deg; --tr: 4deg; background: #d2322a; color: #fff; }
     .tag.host { --r: 2deg; --tr: -5deg; }
-    .tag svg { width: 22px; height: 22px; fill: currentColor; }
+    .tag svg { width: 19px; height: 19px; fill: currentColor; }
 
     /* hero */
     .hero { position: relative; padding-block: 44px 72px; }
-    .hero-grid { position: relative; z-index: 1; display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 56px 80px; align-items: start; }
+    .hero-grid { position: relative; z-index: 1; display: grid; grid-template-columns: minmax(0, 1fr) auto auto; grid-template-areas: "today phone hist" "loop phone hist"; gap: 36px 80px; align-items: start; }
+    .today { position: relative; grid-area: today; }
+    #phone-wrap { grid-area: phone; grid-row: 1 / 3; }
+    .loop-wrap { grid-area: loop; }
+    .phone-wrap.history { grid-area: hist; grid-row: 1 / 3; }
+    .dots { display: none; }
     .today h2 { margin: 0 0 6px; font: 400 40px/1 var(--marker); color: var(--mk-red); }
     .today .sub { margin: 0 0 20px; font: 700 18px var(--hand); opacity: .75; }
     .today ol { margin: 0; padding: 0; list-style: none; display: grid; gap: 6px; }
@@ -67,7 +72,7 @@
     .today li .n { width: 1.1em; flex: none; opacity: .55; }
     .today li .rx { margin-left: auto; white-space: nowrap; color: var(--mk-blue); }
     .today li.done { opacity: .55; }
-    .cycle { display: block; width: 100%; max-width: 460px; height: auto; margin-top: 36px; overflow: visible; }
+    .cycle { display: block; width: 100%; max-width: 460px; height: auto; overflow: visible; }
     .cycle path { fill: none; stroke: var(--mk-black); stroke-width: 3.5; stroke-linecap: round; stroke-linejoin: round; }
     .cycle text { font: 700 30px var(--hand); fill: var(--mk-black); }
     .cycle .title { font: 400 38px var(--marker); fill: var(--mk-red); }
@@ -76,6 +81,7 @@
     .phone-wrap .pp-device { --pp-zoom: .74; transform: rotate(1.5deg); }
     .phone-wrap.history .pp-device { transform: rotate(-1.5deg); }
     .magnet { position: absolute; z-index: 2; top: 2px; width: 34px; height: 34px; border-radius: 50%; background: radial-gradient(circle at 35% 30%, rgb(255 255 255 / .7), transparent 40%), var(--c); box-shadow: 0 4px 0 rgb(0 0 0 / .18), 0 8px 14px rgb(0 0 0 / .2); }
+    .magnet.l { left: 34px; } .magnet.r { right: 34px; }
     .overlay { position: absolute; inset: 0; z-index: 3; width: 100%; height: 100%; pointer-events: none; overflow: visible; }
     .overlay path { fill: none; stroke-linecap: round; stroke-linejoin: round; }
 
@@ -115,24 +121,38 @@
     .footnote { margin: 22px 0 0; font-size: 13.5px; color: #20242c; max-width: 90ch; }
 
     @media (max-width: 1100px) {
-      .hero-grid { grid-template-columns: auto auto; justify-content: center; }
-      .today { grid-column: 1 / -1; width: 100%; max-width: 560px; justify-self: center; }
+      .hero-grid { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); grid-template-areas: "today loop" "phone hist"; gap: 40px 32px; }
+      #phone-wrap, .phone-wrap.history { grid-row: auto; justify-self: center; }
+      .loop-wrap { align-self: center; }
+      .today h2 { font-size: clamp(30px, 4.6vw, 40px); }
     }
     @media (max-width: 720px) {
       .board { border-width: 8px; }
       .wrap { padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
-      .banner-in { padding-bottom: 46px; }
-      .taped { right: max(16px, env(safe-area-inset-right, 0px)); }
-      .hero { padding-top: 60px; }
-      .hero-grid { grid-template-columns: 1fr; gap: 36px; }
-      .phone-wrap { justify-self: center; }
-      .today { max-width: none; }
-      .today h2 { font-size: 32px; }
+      /* the title wraps to three short lines, so the tags fit beside it without a reserved gutter */
+      .banner-in { padding-bottom: 22px; padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+      .taped { right: max(6px, env(safe-area-inset-right, 0px)); gap: 18px; }
+      .tag { min-height: 44px; padding: 10px 12px 8px; gap: 6px; font-size: 18px; }
+      .tag::before { top: -9px; width: 46px; height: 18px; margin-left: -23px; }
+      .tag svg { width: 17px; height: 17px; }
+      .hero { padding-block: 24px 40px; }
+      /* carousel: today's list, workout screen, loop, history; swipe or tap a dot */
+      .hero-grid { display: flex; gap: 0; align-items: flex-start; margin-inline: calc(-1 * max(16px, env(safe-area-inset-left, 0px))); overflow-x: auto; overscroll-behavior-x: contain; scroll-snap-type: x mandatory; scrollbar-width: none; }
+      .hero-grid::-webkit-scrollbar { display: none; }
+      .hero-grid > * { flex: 0 0 100%; min-width: 0; padding-inline: max(16px, env(safe-area-inset-left, 0px)); scroll-snap-align: center; }
+      .phone-wrap { display: flex; justify-content: center; }
+      .magnet.l { left: calc(50% - 104px); } .magnet.r { right: calc(50% - 104px); }
+      .dots { display: flex; justify-content: center; align-items: center; gap: 4px; margin-top: 18px; }
+      .dots button { width: 44px; height: 44px; display: grid; place-items: center; padding: 0; border: 0; background: none; cursor: pointer; }
+      .dots button::before { content: ""; width: 12px; height: 12px; border-radius: 50%; border: 2.5px solid var(--mk-black); }
+      .dots button[aria-current="true"]::before { background: var(--mk-red); border-color: var(--mk-red); }
+      .dots span { min-width: 9.5em; margin-left: 8px; font: 700 17px var(--hand); color: var(--mk-blue); white-space: nowrap; }
       .phone-wrap .pp-device { --pp-zoom: .7; }
       .overlay .arrow { display: none; }
       section.zone { padding-block: 52px; }
       .eraser { margin-left: 0; }
     }
+    @media (max-width: 360px) { .banner h1 { font-size: 40px; } }
     @media (prefers-reduced-motion: reduce) { .tag, .marker { transition: none; } }
   </style>
 </head>
@@ -146,7 +166,6 @@
       <div class="wrap banner-in">
         <div>
           <h1>Strength Training Tracker</h1>
-          <p>Open-source workout logbook · runs in your browser</p>
         </div>
         <nav class="taped" aria-label="Get started">
           <a class="tag demo" href="#">Demo →</a>
@@ -157,9 +176,8 @@
 
     <main>
       <section class="wrap hero" id="hero">
-
-        <div class="hero-grid">
-          <div class="today">
+        <div class="hero-grid" id="slides">
+          <div class="today" data-label="Today's workout">
             <h2>Today: Workout A</h2>
             <p class="sub">full body · 6 lifts · sample lifter</p>
             <ol id="list">
@@ -170,6 +188,16 @@
               <li><span class="n">5</span><span class="nm">Dead bug</span><span class="rx">2 × 8/side</span></li>
               <li><span class="n">6</span><span class="nm">Face pull</span><span class="rx">2 × 12–15</span></li>
             </ol>
+            <svg class="overlay" id="overlay" aria-hidden="true"></svg>
+          </div>
+
+          <div class="phone-wrap" id="phone-wrap" data-label="Logging a workout">
+            <span class="magnet l" style="--c: #d2322a"></span>
+            <span class="magnet r" style="--c: #1d4fcf"></span>
+            <div id="phone"></div>
+          </div>
+
+          <div class="loop-wrap" data-label="The useful loop">
             <svg class="cycle" viewBox="0 0 560 470" role="img" aria-label="A useful loop drawn in marker, every session: log it, see it, add weight, back to log it.">
               <text x="200" y="60">log it</text><text class="small" x="196" y="88">25 lb × 10, ✓</text>
               <text x="392" y="330">see it</text><text class="small" x="372" y="358">history + chart</text>
@@ -182,19 +210,13 @@
             </svg>
           </div>
 
-          <div class="phone-wrap" id="phone-wrap">
-            <span class="magnet" style="--c: #d2322a; left: 34px"></span>
-            <span class="magnet" style="--c: #1d4fcf; right: 34px"></span>
-            <div id="phone"></div>
-          </div>
-
-          <div class="phone-wrap history">
-            <span class="magnet" style="--c: #17834a; left: 34px"></span>
-            <span class="magnet" style="--c: #d2322a; right: 34px"></span>
+          <div class="phone-wrap history" data-label="Exercise history">
+            <span class="magnet l" style="--c: #17834a"></span>
+            <span class="magnet r" style="--c: #d2322a"></span>
             <div id="history-phone"></div>
           </div>
         </div>
-        <svg class="overlay" id="overlay" aria-hidden="true"></svg>
+        <div class="dots" id="dots" role="group" aria-label="Choose a slide"></div>
       </section>
 
       <section class="wrap zone" id="ways">
@@ -250,7 +272,8 @@
     const ctl = PhonePreview.create({ interval: 7500 });
     ctl.mount(document.getElementById('phone'));
     ctl.mount(document.getElementById('history-phone'), 'history');
-    const hero = document.getElementById('hero');
+    const today = document.querySelector('.today');
+    const carousel = matchMedia('(max-width: 720px)');
     const overlay = document.getElementById('overlay');
     const items = [...document.querySelectorAll('#list li')];
     const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -290,7 +313,7 @@
 
     function draw(animate) {
       overlay.innerHTML = '';
-      const base = hero.getBoundingClientRect();
+      const base = today.getBoundingClientRect();
       const rel = (r) => ({ l: r.left - base.left, t: r.top - base.top, r: r.right - base.left, b: r.bottom - base.top });
       // finished lifts get a strike-through
       items.forEach((li, i) => {
@@ -302,11 +325,12 @@
       });
       const li = rel(items[current].getBoundingClientRect());
       const cx = (li.l + li.r) / 2, cy = (li.t + li.b) / 2;
-      const circle = stroke(roughEllipse(cx, cy, (li.r - li.l) / 2 + 22, (li.b - li.t) / 2 + 12), 'var(--mk-red)', 4);
+      // in the carousel the slide edge would clip a wider loop
+      const circle = stroke(roughEllipse(cx, cy, (li.r - li.l) / 2 + (carousel.matches ? 10 : 22), (li.b - li.t) / 2 + 12), 'var(--mk-red)', 4);
       if (animate) drawIn(circle, 650);
-      // arrow from the circled lift to the phone, only when the phone sits beside the list
+      // arrow from the circled lift to the phone, only when the phone sits beside the list on the page
       const ph = rel(document.querySelector('#phone .pp-device').getBoundingClientRect());
-      if (ph.l > li.r) {
+      if (!carousel.matches && ph.l > li.r) {
         // from the end of the circle across to the phone's exercise card
         const sx = li.r + 26, sy = cy, ex = ph.l - 8, ey = cy + 56;
         const arrow = stroke(`M${sx} ${sy} C ${sx + 40} ${sy - 14}, ${ex - 46} ${ey - 6}, ${ex} ${ey}`, 'var(--mk-red)', 4, 'arrow');
@@ -317,6 +341,27 @@
 
     ctl.onChange((i) => { current = i; requestAnimationFrame(() => draw(true)); });
     addEventListener('resize', () => draw(false));
+
+    // Phone carousel: one dot per slide, kept in step with the swipe position.
+    const slides = document.getElementById('slides');
+    const panels = [...slides.children];
+    const dots = document.getElementById('dots');
+    const caption = document.createElement('span');
+    panels.forEach((panel, i) => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.setAttribute('aria-label', panel.dataset.label);
+      b.addEventListener('click', () => slides.scrollTo({ left: panel.offsetLeft - slides.offsetLeft, behavior: reduced ? 'auto' : 'smooth' }));
+      dots.append(b);
+    });
+    dots.append(caption);
+    function markSlide() {
+      const i = Math.round(slides.scrollLeft / slides.clientWidth) || 0;
+      [...dots.querySelectorAll('button')].forEach((b, k) => b.setAttribute('aria-current', String(k === i)));
+      caption.textContent = panels[i].dataset.label.toLowerCase();
+    }
+    slides.addEventListener('scroll', () => requestAnimationFrame(markSlide), { passive: true });
+    markSlide();
     document.fonts.ready.then(() => draw(false));
     ctl.start();
   </script>
