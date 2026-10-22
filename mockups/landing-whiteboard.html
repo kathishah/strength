@@ -64,6 +64,11 @@
     .today li .n { width: 1.1em; flex: none; opacity: .55; }
     .today li .rx { margin-left: auto; white-space: nowrap; color: var(--mk-blue); }
     .today li.done { opacity: .55; }
+    .cycle { display: block; width: 100%; max-width: 460px; height: auto; margin-top: 36px; overflow: visible; }
+    .cycle path { fill: none; stroke: var(--mk-black); stroke-width: 3.5; stroke-linecap: round; stroke-linejoin: round; }
+    .cycle text { font: 700 30px var(--hand); fill: var(--mk-black); }
+    .cycle .title { font: 400 38px var(--marker); fill: var(--mk-red); }
+    .cycle .small { font: 700 19px var(--hand); fill: var(--mk-blue); }
     .phone-wrap { position: relative; padding-top: 18px; }
     .phone-wrap .pp-device { --pp-zoom: .76; transform: rotate(1.5deg); }
     .magnet { position: absolute; z-index: 2; top: 2px; width: 34px; height: 34px; border-radius: 50%; background: radial-gradient(circle at 35% 30%, rgb(255 255 255 / .7), transparent 40%), var(--c); box-shadow: 0 4px 0 rgb(0 0 0 / .18), 0 8px 14px rgb(0 0 0 / .2); }
@@ -85,17 +90,6 @@
     section.zone { position: relative; padding-block: 72px; }
     .zone h2 { position: relative; z-index: 1; margin: 0 0 8px; font: 400 clamp(40px, 5.4vw, 72px)/1 var(--marker); }
     .zone .intro { position: relative; z-index: 1; max-width: 56ch; margin: 0 0 36px; }
-    .loop { position: relative; z-index: 1; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 48px; align-items: center; }
-    .cycle { width: 100%; max-width: 560px; height: auto; overflow: visible; }
-    .cycle path { fill: none; stroke: var(--mk-black); stroke-width: 3.5; stroke-linecap: round; stroke-linejoin: round; }
-    .cycle .blue { stroke: var(--mk-blue); }
-    .cycle text { font: 700 30px var(--hand); fill: var(--mk-black); }
-    .cycle .small { font: 700 19px var(--hand); fill: var(--mk-blue); }
-    .loop-steps { display: grid; gap: 22px; }
-    .loop-steps div { display: grid; grid-template-columns: 48px minmax(0, 1fr); gap: 14px; }
-    .loop-steps b { display: grid; place-items: center; width: 44px; height: 44px; font: 700 22px var(--hand); }
-    .loop-steps h3 { margin: 4px 0 2px; font: 700 26px/1.1 var(--hand); }
-    .loop-steps p { margin: 0; max-width: 46ch; }
 
     .grid-wrap { position: relative; z-index: 1; overflow-x: auto; padding: 10px 8px; }
     table.drawn { min-width: 720px; width: 98%; margin: 0 auto; border-collapse: collapse; transform: rotate(-.3deg); }
@@ -130,7 +124,6 @@
     @media (max-width: 1100px) {
       .hero-grid { grid-template-columns: minmax(0, 1fr) auto; }
       .note { grid-column: 1 / -1; order: -1; max-width: 640px; }
-      .loop { grid-template-columns: 1fr; }
     }
     @media (max-width: 720px) {
       .board { border-width: 8px; }
@@ -149,13 +142,12 @@
 <body>
   <div class="board">
     <span class="ghost" style="--s: 120px; left: 52%; top: 40px; transform: rotate(-6deg)">LEG DAY</span>
-    <span class="ghost" style="--s: 70px; left: 6%; top: 980px; transform: rotate(4deg)">PR!! 3×10</span>
     <span class="ghost" style="--s: 90px; right: 4%; top: 1650px; transform: rotate(-3deg)">deload wk</span>
     <span class="ghost" style="--s: 64px; left: 30%; top: 2500px; transform: rotate(2deg)">|||| |||| ||</span>
 
     <header class="wrap top">
       <a class="name" href="#">strength tracker</a>
-      <nav aria-label="Main"><a href="#loop">the loop</a><a href="#ways">run your own</a><a href="#">github</a><a class="keep" href="#">demo →</a></nav>
+      <nav aria-label="Main"><a href="#ways">run your own</a><a href="#">github</a><a class="keep" href="#">demo →</a></nav>
     </header>
 
     <main>
@@ -175,6 +167,16 @@
               <li><span class="n">5</span><span class="nm">Dead bug</span><span class="rx">2 × 8/side</span></li>
               <li><span class="n">6</span><span class="nm">Face pull</span><span class="rx">2 × 12–15</span></li>
             </ol>
+            <svg class="cycle" viewBox="0 0 560 470" role="img" aria-label="A useful loop drawn in marker, every session: log it, see it, add weight, back to log it.">
+              <text x="200" y="60">log it</text><text class="small" x="196" y="88">25 lb × 10, ✓</text>
+              <text x="392" y="330">see it</text><text class="small" x="372" y="358">history + chart</text>
+              <text x="22" y="330">add 5 lb</text><text class="small" x="10" y="358">next time: 30</text>
+              <path d="M330 70 C 430 90, 470 170, 456 270"/><path d="M440 252 456 276 470 250"/>
+              <path d="M400 400 C 330 450, 220 450, 150 400"/><path d="M174 392 148 400 160 424"/>
+              <path d="M90 280 C 70 190, 110 110, 180 74"/><path d="M152 72 182 72 170 98"/>
+              <text class="title" x="272" y="236" text-anchor="middle">Useful Loop</text>
+              <text class="small" x="272" y="272" text-anchor="middle">every session</text>
+            </svg>
           </div>
 
           <div class="phone-wrap" id="phone-wrap">
@@ -195,27 +197,6 @@
           </div>
         </div>
         <svg class="overlay" id="overlay" aria-hidden="true"></svg>
-      </section>
-
-      <section class="wrap zone" id="loop">
-        <h2>A useful loop</h2>
-        <p class="intro">It goes round once a session. The app keeps the numbers so the board doesn't have to.</p>
-        <div class="loop">
-          <svg class="cycle" viewBox="0 0 560 470" role="img" aria-label="A loop drawn in marker: log it, see it, add weight, back to log it.">
-            <text x="200" y="60">log it</text><text class="small" x="196" y="88">25 lb × 10, ✓</text>
-            <text x="392" y="330">see it</text><text class="small" x="372" y="358">history + chart</text>
-            <text x="22" y="330">add 5 lb</text><text class="small" x="10" y="358">next time: 30</text>
-            <path d="M330 70 C 430 90, 470 170, 456 270"/><path d="M440 252 456 276 470 250"/>
-            <path d="M400 400 C 330 450, 220 450, 150 400"/><path d="M174 392 148 400 160 424"/>
-            <path d="M90 280 C 70 190, 110 110, 180 74"/><path d="M152 72 182 72 170 98"/>
-            <text class="small" x="218" y="250">every session</text>
-          </svg>
-          <div class="loop-steps">
-            <div><b class="rough">1</b><span><h3>Log while you train</h3><p>Spin the dials for weight and reps and tap done. It works offline on the gym floor.</p></span></div>
-            <div><b class="rough">2</b><span><h3>See the history</h3><p>Each exercise keeps its past sessions and a top-set chart, with every increase marked.</p></span></div>
-            <div><b class="rough">3</b><span><h3>Start from a suggestion</h3><p>When an increase is due, the next workout opens at the new weight. You can change it.</p></span></div>
-          </div>
-        </div>
       </section>
 
       <section class="wrap zone" id="ways">
