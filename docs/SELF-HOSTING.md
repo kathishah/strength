@@ -139,8 +139,9 @@ scripts/deploy-app.sh
 ```
 
 - **Does** run the tests, copy `app/` into a git-ignored staging folder (`.deploy/site/`), write `js/config.js` there from your stack's outputs, upload the staged copy to the site bucket and refresh CloudFront. A deployment can only ever receive its own stack's settings.
+- **Dry run:** it still stages the copy locally and runs no tests; it only skips the upload, the deletes and the CloudFront refresh.
 - **Options:** `--skip-tests`; `--include-images` makes the site's `img/` match your local `app/img/`, deletions included (skipped, deleting nothing, if `app/img/` is missing or empty). Without it, images already on the site are left alone. The deploy never downloads images.
-- **Success** is `Deployed to https://…`: the address of your site. Open it.
+- **Success** is `Deployed to https://…`: the address of your site. Open it; the CloudFront refresh can take a minute or two to finish, though the new files usually show sooner.
 
 To keep the stack's values in your terminal for your own `aws` commands, run `source scripts/aws-env.sh`. It sets `SITE_BUCKET`, `DIST_ID`, `SITE_URL`, `API_URL`, `USER_POOL_ID`, `USER_POOL_CLIENT_ID` and `DATA_BUCKET`.
 
@@ -244,18 +245,19 @@ export AWS_REGION=<region>
 for kind in Versions DeleteMarkers; do
   while :; do
     batch="$(aws s3api list-object-versions --bucket "$DATA_BUCKET" --max-items 1000 \
-      --query "{Objects: $kind[].{Key: Key, VersionId: VersionId}}" --output json)"
+      --query "{Objects: ${kind}[].{Key: Key, VersionId: VersionId}}" --output json)"
     case "$batch" in *'"Key"'*) ;; *) break ;; esac
     aws s3api delete-objects --bucket "$DATA_BUCKET" --delete "$batch" >/dev/null
   done
 done
 
-# 2. Delete the bucket, then the user pool.
-aws s3api delete-bucket --bucket "$DATA_BUCKET"
-aws cognito-idp delete-user-pool --user-pool-id "$POOL_ID"
+# 2. Delete the bucket, and only if that worked, the user pool (the login stays until the data is gone).
+aws s3api delete-bucket --bucket "$DATA_BUCKET" && aws cognito-idp delete-user-pool --user-pool-id "$POOL_ID"
 ```
 
-If `aws s3api list-object-versions --bucket "$DATA_BUCKET"` still lists anything afterwards, run the loop again. The console's **Empty bucket** button does the same job. Also remove the SAM-managed bucket named like `aws-sam-cli-managed-default-…` if you no longer need it for other stacks.
+The block works in bash and in zsh (the default shell on a Mac).
+
+If `aws s3api list-object-versions --bucket "$DATA_BUCKET"` still lists anything afterwards, run the loop again. The console's **Empty bucket** button does the same job. The SAM-managed bucket named like `aws-sam-cli-managed-default-…` holds the packaged code of every stack SAM deployed in this account and region. Leave it unless no other stack uses it (check with `aws cloudformation list-stacks`); what your stack left in it is one small template file.
 
 ## 9. Troubleshooting
 
