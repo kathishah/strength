@@ -19,7 +19,7 @@ test('the walker follows static imports (sync.js reaches auth.js, format.js reac
 
 test('boot.js reaches the screens, the event store and the logging actions, and none of the network code', () => {
   const reached = rel(staticImports(join(js, 'boot.js')));
-  for (const wanted of ['boot.js', 'profile.js', 'store/events.js', 'store/open.js', 'ui/screens.js', 'ui/app-header.js', 'ui/settings-screen.js', 'logging/index.js', 'modes/demo.js', 'modes/local.js']) {
+  for (const wanted of ['boot.js', 'profile.js', 'store/events.js', 'store/open.js', 'ui/screens.js', 'ui/app-header.js', 'ui/settings-screen.js', 'logging/index.js', 'modes/demo.js', 'modes/local.js', 'ui/local-settings.js', 'ui/state-text.js']) {
     assert.ok(reached.includes(wanted), `boot.js should reach ${wanted}`);
   }
   assert.deepEqual(reached.filter((p) => NETWORK.includes(p)), [], 'network code reachable by static imports from boot.js');
