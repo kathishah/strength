@@ -91,3 +91,23 @@ describe('openStorage', () => {
     }
   });
 });
+
+describe('clearProfile', () => {
+  test('deletes the profile database and its keys only; the other profile and the theme stay', async () => {
+    const { clearProfile } = await import('../app/js/profile.js');
+    const ls = memoryLocalStorage();
+    Object.defineProperty(ls, 'length', { get: () => ls.map.size });
+    ls.key = (i) => [...ls.map.keys()][i] ?? null;
+    for (const k of ['strength-demo.deviceId', 'strength-demo.draft', 'strength.deviceId', 'strengthTheme']) ls.setItem(k, 'x');
+    const deleted = [];
+    const indexedDB = { deleteDatabase(name) { const req = {}; deleted.push(name); queueMicrotask(() => req.onsuccess()); return req; } };
+    let closed = false;
+    await clearProfile(DEMO_PROFILE, { storage: { close: () => { closed = true; } }, indexedDB, localStorage: ls });
+    assert.ok(closed);
+    assert.deepEqual(deleted, ['strength-demo']);
+    assert.deepEqual([...ls.map.keys()].sort(), ['strength.deviceId', 'strengthTheme']);
+    await clearProfile(DEFAULT_PROFILE, { indexedDB, localStorage: ls });
+    assert.deepEqual(deleted, ['strength-demo', 'strength']);
+    assert.deepEqual([...ls.map.keys()], ['strengthTheme']);
+  });
+});

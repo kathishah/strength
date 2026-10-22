@@ -15,3 +15,23 @@ export function storageProfile(mode) {
   if (mode === 'synced' || mode === 'local') return DEFAULT_PROFILE;
   throw new RangeError(`unknown app mode "${mode}"`);
 }
+
+// Deletes everything a profile stored: its IndexedDB database and every localStorage key under its prefix. Shared by local-only
+// "Clear data on this device" and the demo's "Reset demo". storage is the open storage (closed first, or the delete would wait for it).
+// Other profiles and the theme key are never touched: the prefix ends in "." and "strengthTheme" has none.
+export async function clearProfile(profile, { storage, indexedDB = globalThis.indexedDB, localStorage: ls } = {}) {
+  try { await storage?.close?.(); } catch { /* already closed */ }
+  if (indexedDB) {
+    await new Promise((resolve) => {
+      let req;
+      try { req = indexedDB.deleteDatabase(profile.dbName); } catch { resolve(); return; }
+      req.onsuccess = req.onerror = req.onblocked = () => resolve();
+    });
+  }
+  try {
+    const backend = ls ?? globalThis.localStorage;
+    const keys = [];
+    for (let i = 0; i < backend.length; i++) keys.push(backend.key(i));
+    for (const key of keys) if (key.startsWith(profile.keyPrefix)) backend.removeItem(key);
+  } catch { /* storage blocked: nothing stored */ }
+}

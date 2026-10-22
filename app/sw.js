@@ -40,6 +40,7 @@ const SHELL = [
   'js/modes/demo.js',
   'js/modes/local.js',
   'js/profile.js',
+  'js/ui/state-text.js',
   'js/seed/catalog.js',
   'js/seed/index.js',
   'js/seed/program.js',

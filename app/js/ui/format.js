@@ -1,6 +1,6 @@
 // Text for the screens. Pure functions, so they are tested without a DOM.
 
-import { TIME_ZONE } from '../time.js';
+import { describeEvent, describeState, timeOfDay } from './state-text.js';
 import { AuthError } from '../store/auth.js';
 import { ApiError } from '../store/api.js';
 
@@ -34,8 +34,8 @@ export function describeError(err) {
   return 'Something went wrong on this device.';
 }
 
-const clock = new Intl.DateTimeFormat('en-US', { timeZone: TIME_ZONE, hour: 'numeric', minute: '2-digit', second: '2-digit' });
-export const timeOfDay = (ms) => clock.format(ms);
+// The network-free helpers live in state-text.js (local-only and demo modes use them without loading this file); re-exported for the synced screens.
+export { describeEvent, describeState, timeOfDay };
 
 // The one-line sync state: { text, kind: 'info' | 'ok' | 'error' }.
 export function describeSync(status, { pending = 0, now = Date.now() } = {}) {
@@ -54,24 +54,6 @@ export function describeRoundTrip(status) {
   if (status.rttMs === null || status.rttMs === undefined) return 'none yet';
   const slow = status.rttMs >= COLD_START_MS ? ' (slow: probably a Lambda cold start)' : ' (warm)';
   return `${status.lastRttLabel} ${status.rttMs} ms${slow}`;
-}
-
-// A short description of an event's payload for the list.
-export function describeEvent(ev) {
-  const p = ev.payload ?? {};
-  if (typeof p.notes === 'string') return p.notes;
-  const s = JSON.stringify(p);
-  return s.length > 120 ? `${s.slice(0, 117)}...` : s;
-}
-
-// "3 sessions, 12 sets, 2 settings"
-export function describeState(state) {
-  const n = (count, word) => `${count} ${word}${count === 1 ? '' : 's'}`;
-  return [
-    n(Object.keys(state.sessions).length, 'session'),
-    n(Object.keys(state.sets).length, 'set'),
-    n(Object.keys(state.settings).length, 'setting'),
-  ].join(', ');
 }
 
 // The header's one-line answer to "is my workout safe?" (the person may be offline at the gym). { text, kind }
