@@ -86,7 +86,9 @@ The app runs in one of three modes. All three use the same screens, logging acti
 - **Startup.** Today's `app/js/main.js` becomes a shared `startApp({ mode })` in `app/js/boot.js`. `main.js` calls it with `synced` or `local` depending on `isConfigured()`, replacing today's "Not configured yet" message. The demo's entry script calls it with `demo`.
 - **No network outside synced mode.** `store/auth.js`, `store/api.js` and `store/sync.js` are loaded with a dynamic `import()` only in synced mode, so local-only and demo pages never load the code that talks to Cognito or the API. The sign-in screen, the sign-out button and the sync panel exist only in synced mode.
 - **Storage names.** `startApp` passes a storage profile (`{ dbName, keyPrefix }`) to `openStorage`, `getDeviceId` and `createDraftStore`, which today hard-code `strength` and `strength.`. The refresh-token key is used only by `store/auth.js`, so local-only and demo pages never read it. The theme preference (`strengthTheme`) is shared, since it is a display choice, not data.
-- **Moving from local only to synced.** Local-only and synced share storage, so events logged locally stay in the upload queue. When the fork owner later adds sync settings, the app opens in synced mode. The sign-in screen already says how many events are waiting, and they upload to that owner's stack on first sign-in. No migration step is needed.
+- **Moving from local only to synced.** Browser storage belongs to one site address, so how local workouts reach a new stack depends on where the synced app runs:
+  - **Usual case, a different address.** Local-only use is typically at `localhost` or the fork's GitHub Pages, and a new stack serves the app at its CloudFront address or a custom domain. The new site cannot see the old site's storage. The owner exports a backup from local-only Settings and uploads it to the new stack with `scripts/post-events.mjs` (section 5).
+  - **Same address.** Local-only and synced use the same storage, so events logged locally stay in the upload queue. When sync settings are added at that address, the sign-in screen says how many events are waiting, and they upload on first sign-in.
 - **The demo cannot reach real data.** The demo is served from GitHub Pages, a different origin from any synced deployment. It also uses its own storage names, so a reset or a fixture write cannot touch `strength` or `strength.*` even on the same origin.
 
 ### Behavior
@@ -164,12 +166,14 @@ The public demo and personal local-only mode must use separate storage namespace
 - **Export backup:** downloads `strength-events-<date>.json` in the same format as `scripts/export-data.mjs` (`{ exportedAt, count, events }`), using the browser's file download. There is no in-app import in this release.
 - **Clear data on this device:** a two-tap armed button whose first tap reads "Tap again to delete all workouts on this device. Export first if you want a copy." The second tap deletes the `strength` database and the `strength.*` keys (the theme preference stays) and reloads into an empty app.
 
+**Moving to AWS.** Settings shows one line under Export: "Moving to your own AWS deployment? Export a backup, then upload it with `scripts/post-events.mjs` (see the self-hosting guide)." The exported file is the input that script expects.
+
 **Tests.**
 
 - A boot test in local-only mode with `fetch` replaced by a function that fails the test if called, through logging and finishing a workout.
 - The exported file replays to the same state as the live event log, and matches the `scripts/export-data.mjs` format.
 - Clear needs two taps, removes the events and `strength.*` keys, and keeps `strengthTheme`.
-- Events logged in local-only mode stay in the upload queue, and a later synced boot reports them as waiting.
+- Events logged in local-only mode stay in the upload queue, and a later synced boot at the same address reports them as waiting.
 
 **Product spec changes when this ships.** Section 6.7 of `docs/SPEC-strength.md` describes Settings as sync only and export as a script. When local-only mode ships, add a changelog entry and amend 6.7: synced mode is unchanged, local-only Settings has Storage, Export backup and Clear, and demo Settings has Reset.
 
@@ -245,6 +249,15 @@ A custom domain must not be required to complete these steps.
 3. empties the site bucket and deletes the stack;
 4. lists the resources that remain: the data bucket and the user pool, which the template keeps when a stack is deleted. The guide explains how to delete them by hand, including emptying every version in the data bucket.
 
+**Uploading a backup** (`scripts/post-events.mjs <file> <email>`). This moves local-only workouts to a new stack, and it also loads workouts written with `scripts/build-events.mjs`.
+
+- It accepts any file with an `events` array, including the local-only export (`{ exportedAt, count, events }`) and the `build-events.mjs` output.
+- It reads the API and Cognito settings from `private/deploy.env` and the stack outputs, and shows the stack name, `SITE_URL` and the event count before asking to send.
+- It sends the events in batches of at most 200, the API's limit per request (`MAX_EVENTS_PER_REQUEST` in `lambda/events/registry.mjs`), in replay order, and reports progress and the accepted and duplicate counts after each batch.
+- The API skips events it already has, so rerunning after a failure is safe. A failed batch stops the run with a message saying how many events were sent and that the same command can be rerun.
+- It writes the `<file>.posted` marker only after every batch succeeds.
+- Tests: a file of more than 200 events goes out in several batches with none over 200; a failure partway stops without writing the marker; a rerun sends the same events again and the server counts them as duplicates.
+
 **Costs and permissions (for the guide).** The stack has no always-on servers: S3 storage, CloudFront transfer, Lambda and API calls, and Cognito sign-ins for one person are expected to stay within or near the AWS free tier, with no fixed monthly charge. The guide states this as an estimate and points to AWS pricing. Deploying needs permission to manage CloudFormation, S3, CloudFront, Cognito, API Gateway, Lambda, IAM roles (`CAPABILITY_IAM`) and CloudWatch Logs, plus ACM read access when a custom domain is used. The guide recommends an administrator profile for the first deploy, and lists these services for anyone writing a narrower policy.
 
 **Moving the project owner's stack to this setup.**
@@ -291,7 +304,7 @@ The guide is `docs/SELF-HOSTING.md`, and it is what the landing page's **Host** 
 2. **Local only (no AWS).**
    - Fork and clone, then serve `app/` locally (`python3 -m http.server`) or publish your fork with GitHub Pages.
    - Data stays in that browser. Export a backup and clear data from Settings.
-   - To move to AWS later, set up a stack and sign in on the same browser; waiting workouts upload.
+   - To move to AWS later: export a backup from Settings, deploy a stack (section 4 of the guide), then upload the backup with `node scripts/post-events.mjs <backup.json> <email>`. Workouts waiting in the browser upload by themselves only when the synced app runs at the same address as the local-only one.
 3. **Before you deploy to AWS.**
    - Prerequisites: Node 22, AWS CLI v2, SAM CLI, and an AWS account with the permissions listed in section 5.
    - What gets created, and what it costs (the estimate from section 5).
@@ -339,6 +352,7 @@ The guide is `docs/SELF-HOSTING.md`, and it is what the landing page's **Host** 
 - A user can record and revisit workouts after a reload without configuring Cognito, AWS, or an API URL.
 - The interface explains the single-browser storage boundary.
 - Export produces a usable backup; clear requires confirmation.
+- A local-only backup of more than 200 events uploads to a new stack with `scripts/post-events.mjs`, and the stack then replays to the same state as the local-only app.
 
 ### AWS self-hosting
 
