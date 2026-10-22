@@ -5,27 +5,39 @@
 //
 //   node scripts/export-data.mjs you@example.com [out-dir]
 //
+// It exports from the stack named in private/deploy.env (and reads that stack's outputs with the AWS CLI).
 // Read-only: it only calls GET /events. The PIN comes from a hidden prompt and is never written anywhere.
 
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { askHidden } from './prompt.mjs';
-import { config, isConfigured } from '../app/js/config.js';
+import { signIn } from './cognito.mjs';
+import { StackConfigError, loadStackConfig } from './stack-config.mjs';
 import { pacificDate } from '../app/js/time.js';
 import { eventsToCsv, fetchAllEvents } from './export-lib.mjs';
 
 const [email, outDir = 'private/export'] = process.argv.slice(2);
 if (!email) { console.error('usage: node scripts/export-data.mjs <email> [out-dir]'); process.exit(2); }
-if (!isConfigured()) { console.error('Fill in app/js/config.js first (BUILD.md step 6).'); process.exit(2); }
+
+let stack;
+try {
+  stack = loadStackConfig();
+} catch (err) {
+  if (!(err instanceof StackConfigError)) throw err;
+  console.error(err.message);
+  process.exit(2);
+}
+const { config } = stack;
+console.log(`Exporting from stack ${stack.STACK} (${stack.SITE_URL})`);
 
 const pin = await askHidden('PIN: ');
-const auth = await fetch(`https://cognito-idp.${config.region}.amazonaws.com/`, {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/x-amz-json-1.1', 'X-Amz-Target': 'AWSCognitoIdentityProviderService.InitiateAuth' },
-  body: JSON.stringify({ AuthFlow: 'USER_PASSWORD_AUTH', ClientId: config.userPoolClientId, AuthParameters: { USERNAME: email, PASSWORD: pin } }),
-}).then((r) => r.json());
-const token = auth.AuthenticationResult?.IdToken;
-if (!token) { console.error(`Sign-in failed: ${auth.__type ?? auth.ChallengeName ?? 'unknown'}`); process.exit(1); }
+let token;
+try {
+  token = await signIn(config, email, pin);
+} catch (err) {
+  console.error(err.message);
+  process.exit(1);
+}
 
 const events = await fetchAllEvents(async (path) => {
   const res = await fetch(new URL(path, config.apiUrl), { headers: { Authorization: `Bearer ${token}` } });

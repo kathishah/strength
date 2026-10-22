@@ -1,21 +1,34 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
-Description: Recomp Tracker v1 (single prod stack) - static site (S3 + CloudFront), Cognito login, HTTP API + Lambda, private S3 event log (DEPLOYMENT-PLAN.md sections 2, 6, 7)
+Description: Strength Training Tracker - one personal stack - static site (S3 + CloudFront), Cognito login, HTTP API + Lambda, private S3 event log
 
 Parameters:
   DomainName:
     Type: String
-    Default: strength.logbook.me
-    Description: Hostname for the site (a CloudFront alias). DNS is at GoDaddy.
+    Default: ''
+    AllowedPattern: '^$|^([a-z0-9]([a-z0-9-]*[a-z0-9])?\.)+[a-z]{2,}$'
+    ConstraintDescription: Must be empty or a lowercase hostname such as strength.example.com.
+    Description: Optional hostname for the site (a CloudFront alias). Empty serves the site at the CloudFront address. DNS is managed outside this stack.
   CertificateArn:
     Type: String
-    AllowedPattern: '^arn:aws:acm:us-east-1:[0-9]{12}:certificate/.+$'
-    ConstraintDescription: Must be an ACM certificate ARN in us-east-1 that covers DomainName.
-    Description: ACM certificate ARN in us-east-1 covering DomainName.
+    Default: ''
+    AllowedPattern: '^$|^arn:aws:acm:us-east-1:[0-9]{12}:certificate/.+$'
+    ConstraintDescription: Must be empty or an ACM certificate ARN in us-east-1 that covers DomainName.
+    Description: ACM certificate ARN in us-east-1 covering DomainName. Required when DomainName is set, ignored otherwise.
   OwnerSub:
     Type: String
     Default: ''
     Description: Cognito sub of the single owner. May be empty on the first deploy; the Lambda then answers 403 to every request until it is set.
+
+Conditions:
+  HasDomain: !Not [!Equals [!Ref DomainName, '']]
+
+Rules:
+  CertificateRequiredWithDomain:
+    RuleCondition: !Not [!Equals [!Ref DomainName, '']]
+    Assertions:
+      - Assert: !Not [!Equals [!Ref CertificateArn, '']]
+        AssertDescription: CertificateArn is required when DomainName is set.
 
 Resources:
   # ---------------------------------------------------------------- site
@@ -93,6 +106,11 @@ Resources:
 
   Distribution:
     Type: AWS::CloudFront::Distribution
+    Metadata:
+      cfn-lint:
+        config:
+          # CertificateArn defaults to empty; it is only used under HasDomain, where the rule above requires it.
+          ignore_checks: [W1030]
     Properties:
       DistributionConfig:
         Enabled: true
@@ -101,11 +119,13 @@ Resources:
         IPV6Enabled: true
         PriceClass: PriceClass_100
         DefaultRootObject: index.html
-        Aliases: [!Ref DomainName]
-        ViewerCertificate:
-          AcmCertificateArn: !Ref CertificateArn
-          SslSupportMethod: sni-only
-          MinimumProtocolVersion: TLSv1.2_2021
+        Aliases: !If [HasDomain, [!Ref DomainName], !Ref 'AWS::NoValue']
+        ViewerCertificate: !If
+          - HasDomain
+          - AcmCertificateArn: !Ref CertificateArn
+            SslSupportMethod: sni-only
+            MinimumProtocolVersion: TLSv1.2_2021
+          - CloudFrontDefaultCertificate: true
         Origins:
           - Id: site
             DomainName: !GetAtt SiteBucket.RegionalDomainName
@@ -221,8 +241,10 @@ Resources:
     Type: AWS::Serverless::HttpApi
     Properties:
       CorsConfiguration:
+        # The distribution does not depend on this API, so its address is known in the same deploy.
         AllowOrigins:
-          - !Sub 'https://${DomainName}'
+          - !Sub 'https://${Distribution.DomainName}'
+          - !If [HasDomain, !Sub 'https://${DomainName}', !Ref 'AWS::NoValue']
         AllowHeaders: [Authorization, Content-Type]
         AllowMethods: [GET, POST, OPTIONS]
         MaxAge: 3600
@@ -302,21 +324,21 @@ Resources:
 
 Outputs:
   CloudFrontDomain:
-    Description: CloudFront domain. Point the GoDaddy CNAME for DomainName at this.
+    Description: CloudFront domain. With a custom domain, point a CNAME for DomainName at this.
     Value: !GetAtt Distribution.DomainName
   DistributionId:
     Description: CloudFront distribution id (for cache invalidation after an app deploy)
     Value: !Ref Distribution
   SiteUrl:
-    Description: Where the app is served
-    Value: !Sub 'https://${DomainName}'
+    Description: Where the app is served - the custom domain when DomainName is set, otherwise the CloudFront address
+    Value: !If [HasDomain, !Sub 'https://${DomainName}', !Sub 'https://${Distribution.DomainName}']
   ApiUrl:
-    Description: HTTP API base URL (goes in app/js/config.js)
+    Description: HTTP API base URL (scripts/deploy-app.sh writes it into the deployed site config)
     Value: !Sub 'https://${HttpApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}'
   UserPoolId:
     Value: !Ref UserPool
   UserPoolClientId:
-    Description: App client id (goes in app/js/config.js)
+    Description: App client id (scripts/deploy-app.sh writes it into the deployed site config)
     Value: !Ref UserPoolClient
   SiteBucketName:
     Value: !Ref SiteBucket
