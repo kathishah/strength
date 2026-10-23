@@ -20,3 +20,7 @@
 .demo-about p { margin: 0 0 10px; }
 .demo-about h3 { margin-top: 0; }
 .demo-about .actions { margin-top: 14px; }
+
+/* The line under an exercise image that is only the placeholder (demo-ui.js, markPlaceholders). */
+.demo-get-app { margin: 6px 0 0; font-size: 0.75rem; line-height: 1.3; color: var(--muted); }
+.demo-get-app a { color: var(--accent); font-weight: 600; }

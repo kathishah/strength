@@ -16,7 +16,7 @@ Setup for all three is in the [self-hosting guide](docs/SELF-HOSTING.md).
 
 ## Local preview
 
-Exercise images are third-party media and are not included. The app uses a built-in placeholder when local image files are absent. To preview the app in local-only mode:
+The app's own exercise images (`app/img/`) are third-party media and are not included; the app uses a built-in placeholder when local image files are absent. The demo and the landing page use original animations in `demo/media/`. To preview the app in local-only mode:
 
 ```sh
 python3 -m http.server 4173 --directory app
@@ -50,4 +50,4 @@ Per-deployment settings live in a git-ignored `private/` folder, so the reposito
 
 ## License
 
-The original code and documentation in this repository are licensed under the [MIT License](LICENSE). This license does not grant rights to third-party exercise images, trademarks, or other external assets; those remain subject to their respective rights holders and terms. Exercise media is skipped by default; see [the media rights audit](docs/MEDIA-RIGHTS-AUDIT.md). The landing page's fonts have their own licenses, in `landing/fonts/`.
+The original code and documentation in this repository are licensed under the [MIT License](LICENSE). This license does not grant rights to third-party exercise images, trademarks, or other external assets (the original animations in `demo/media/` are part of the MIT-licensed repository); those remain subject to their respective rights holders and terms. Exercise media is skipped by default; see [the media rights audit](docs/MEDIA-RIGHTS-AUDIT.md). The landing page's fonts have their own licenses, in `landing/fonts/`.

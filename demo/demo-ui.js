@@ -3,50 +3,50 @@
 // same Reset button and a link back to the landing page). Kept here, outside app/, so scripts/deploy-app.sh never uploads it.
 
 import { clearProfile, DEMO_PROFILE } from '../app/js/profile.js';
-import { EXERCISES } from '../app/js/seed/index.js';
+import { EXERCISES, PLACEHOLDER_GIF } from '../app/js/seed/index.js';
 import { pacificDate } from '../app/js/time.js';
 import { armedIconButton, h, svgIcon } from '../app/js/ui/dom.js';
 import { buildFixture } from './fixture.js';
+import { DEMO_MEDIA, mediaPath } from './media.js';
+
+export { DEMO_MEDIA, mediaPath };
 
 export const STRIP_TEXT = 'Demo · a fictional lifter · changes stay in this browser';
 export const LANDING_URL = '../';
 const RESET_PATHS = ['M3 12a9 9 0 1 0 3-6.7', 'M3 4v5h5'];
 
-// The demo's own exercise art: original animated figures drawn for this project (demo/media/<exercise id>.gif, MIT with the repository).
-// The catalog's gifUrl values ("img/<name>.gif") point at third-party files that are not published, so the page's copy of the catalog
-// gets the demo's own file for each exercise listed here and no image path for the rest: those image slots show the app's built-in
-// placeholder (PLACEHOLDER_GIF, a data: URI) without asking for a missing file. The art credit goes too, since the demo has no
-// third-party art to credit. Only this page's copy of the catalog changes. Add an id here together with its file.
-export const DEMO_MEDIA = [
-  'back-extension-45',
-  'chest-supported-row',
-  'db-bench-press',
-  'db-romanian-deadlift',
-  'face-pull',
-  'farmer-carry',
-  'goblet-squat',
-  'hip-thrust',
-  'incline-db-press',
-  'lat-pulldown',
-  'leg-press',
-  'machine-chest-press',
-  'machine-high-row',
-  'pushup',
-  'reverse-lunge',
-  'seated-cable-row',
-  'seated-db-shoulder-press',
-  'trap-bar-deadlift',
-];
-
-// Relative to demo/index.html.
-export const mediaUrl = (id) => `media/${id}.gif`;
-
+// The demo's own exercise art (demo/media.js lists it; the files are in demo/media/). The catalog's gifUrl values ("img/<name>.gif")
+// point at third-party files that are not published, so the page's copy of the catalog gets the demo's own file for each listed
+// exercise and no image path for the rest: those image slots show the app's built-in placeholder (PLACEHOLDER_GIF, a data: URI)
+// without asking for a missing file. The art credit goes too, since the demo has no third-party art to credit. Only this page's
+// copy of the catalog changes.
 export function useDemoMedia(exercises = EXERCISES, media = DEMO_MEDIA) {
   for (const [id, exercise] of Object.entries(exercises)) {
-    if (media.includes(id)) exercise.gifUrl = mediaUrl(id);
+    if (media.includes(id)) exercise.gifUrl = mediaPath(id);
     else delete exercise.gifUrl;
     delete exercise.attribution;
   }
+}
+
+// Under every big image that is only the placeholder, a line that says why and where to get the real thing: the landing page's "three
+// ways to run it". The app draws the image; this adds the line next to it, and takes it away again if the image becomes real.
+// markPlaceholders is idempotent, so watchPlaceholders can run it after every change to the page.
+export function markPlaceholders(root = document) {
+  for (const wrapper of root.querySelectorAll('.gif-wrapper')) {
+    const holder = wrapper.parentNode;
+    const note = holder.querySelector('.demo-get-app');
+    const placeholder = wrapper.querySelector('img')?.getAttribute('src') === PLACEHOLDER_GIF;
+    if (placeholder && !note) {
+      holder.append(h('p', { class: 'demo-get-app' }, 'No animation for this exercise in the demo. ', h('a', { href: `${LANDING_URL}#ways`, text: 'Get the full app' })));
+    } else if (!placeholder && note) note.remove();
+  }
+}
+
+export function watchPlaceholders(root = document.body) {
+  if (typeof MutationObserver === 'undefined') return;
+  const observer = new MutationObserver(() => markPlaceholders(root));
+  observer.observe(root, { childList: true, subtree: true, attributes: true, attributeFilter: ['src'] });
+  markPlaceholders(root);
 }
 
 // reload: how the page restarts after a reset (by default, the demo's Home: the same address without the #/route). now: the clock that

@@ -9,7 +9,7 @@ import { doWorkout } from '../test-support/logging-world.mjs';
 import { staticImports } from '../test-support/import-walk.mjs';
 import { finishedSessions, inProgressSessions, nextTemplate, sessionView } from '../app/js/logging/index.js';
 import { EXERCISES, PLACEHOLDER_GIF } from '../app/js/seed/index.js';
-import { DEMO_MEDIA, LANDING_URL, STRIP_TEXT, createDemoUi, useDemoMedia } from '../demo/demo-ui.js';
+import { DEMO_MEDIA, LANDING_URL, STRIP_TEXT, createDemoUi, markPlaceholders, useDemoMedia } from '../demo/demo-ui.js';
 
 const demoDir = new URL('../demo/', import.meta.url).pathname;
 const appJs = new URL('../app/js/', import.meta.url).pathname;
@@ -327,6 +327,48 @@ describe('images: the demo\'s own art, the placeholder for the rest', () => {
     assert.ok(sources.includes(PLACEHOLDER_GIF), 'an exercise without art shows the placeholder');
     assert.equal(all(dom, (e) => e.className === 'gif-attribution').length, 0, 'no art credit');
     assert.deepEqual(log.fetches, []);
+  });
+});
+
+describe('placeholders say where to get the full app', () => {
+  const noteOf = (wrapper) => wrapper.parentNode.children.filter((c) => c.className === 'demo-get-app');
+
+  test('a big placeholder image gets one "Get the full app" link to the landing page\'s ways section; an image with art gets none; repeating changes nothing', async () => {
+    const { dom, log } = setup();
+    useDemoMedia();
+    await boot(log);
+    markPlaceholders(dom.document.body);
+    markPlaceholders(dom.document.body);
+    const wrappers = all(dom, (e) => /\bgif-wrapper\b/.test(e.className));
+    const placeholders = wrappers.filter((w) => w.querySelector('img').getAttribute('src') === PLACEHOLDER_GIF);
+    assert.ok(wrappers.length >= 6 && placeholders.length >= 1 && placeholders.length < wrappers.length, `${placeholders.length} of ${wrappers.length}`);
+    for (const w of wrappers) {
+      const notes = noteOf(w);
+      if (!placeholders.includes(w)) { assert.equal(notes.length, 0); continue; }
+      assert.equal(notes.length, 1);
+      const link = notes[0].querySelector('a');
+      assert.equal(link.textContent, 'Get the full app');
+      assert.equal(link.getAttribute('href'), `${LANDING_URL}#ways`);
+    }
+    assert.match(html, /<script type="module" src="demo\.js">/);
+  });
+
+  test('the line is taken away when the image turns out to be real', async () => {
+    const { dom, log } = setup();
+    useDemoMedia();
+    await boot(log);
+    markPlaceholders(dom.document.body);
+    const wrapper = all(dom, (e) => /\bgif-wrapper\b/.test(e.className)).find((w) => noteOf(w).length);
+    wrapper.querySelector('img').setAttribute('src', 'media/dead-bug.gif');
+    markPlaceholders(dom.document.body);
+    assert.equal(noteOf(wrapper).length, 0);
+  });
+
+  test('the landing page\'s phone previews take their images from demo/media.js and request nothing from app/img', () => {
+    const text = readFileSync(new URL('../landing/phone-preview.js', import.meta.url), 'utf8');
+    assert.match(text, /from '\.\.\/demo\/media\.js'/);
+    assert.doesNotMatch(text, /app\/img|gifUrl|[`'"]app\//);
+    for (const id of ['goblet-squat', 'db-bench-press', 'db-romanian-deadlift']) assert.ok(DEMO_MEDIA.includes(id), `${id} (a rotating lift) has art`);
   });
 });
 

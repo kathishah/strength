@@ -4,9 +4,9 @@
 
 ## Original art in the demo
 
-The public demo uses a separate, original set: animated GIFs of anatomical figures with the worked muscles in red, created by the repository owner for this project and released under the repository's MIT license. They are in `demo/media/<exercise id>.gif` (listed in `DEMO_MEDIA` in `demo/demo-ui.js`), are not derived from any file in the inventory below, and are not part of the app's deploy. The 58 third-party images below stay uncleared and stay out of the demo.
+The public demo uses a separate, original set: animated GIFs of anatomical figures with the worked muscles in red, created by the repository owner for this project and released under the repository's MIT license. They are in `demo/media/<exercise id>.gif` (listed in `DEMO_MEDIA` in `demo/media.js`), are not derived from any file in the inventory below, and are not part of the app's deploy. The 58 third-party images below stay uncleared and stay out of the demo.
 
-Per-file record: `goblet-squat`, `db-bench-press`, `db-romanian-deadlift`, `incline-db-press`, `reverse-lunge`, `leg-press`, `seated-cable-row`, `farmer-carry`: creator is the repository owner; license is MIT with the repository; no attribution required.
+Per-file record: every file in `demo/media/` (18 exercises): creator is the repository owner; license is MIT with the repository; no attribution required.
 
 ## Inventory
 

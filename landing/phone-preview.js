@@ -6,8 +6,8 @@
 // createPreview() returns a controller. mount() draws a workout or history screen into a container, and every mounted screen shows the
 // same exercise and follows the same slide. The page calls go(i) when someone picks a lift in its list.
 //
-// Images. Every image slot tries the app's own file first (app/img/<file>, which exists on a developer's machine) and falls back to the
-// app's placeholder (PLACEHOLDER_GIF) when it is missing, as it is on GitHub Pages. Each file is tried once.
+// Images. An exercise with original art (demo/media.js lists them) shows its animated figure from demo/media/; every other image slot
+// shows the app's placeholder (PLACEHOLDER_GIF). No third-party image is requested, so the page looks the same everywhere.
 
 import { h } from '../app/js/ui/dom.js';
 import { createDial } from '../app/js/ui/dial.js';
@@ -16,6 +16,7 @@ import { dialNotches, formatNumber } from '../app/js/logging/input.js';
 import { formatDay, increaseText, lastText, phaseText, setsText } from '../app/js/logging/text.js';
 import { EXERCISES, PLACEHOLDER_GIF } from '../app/js/seed/index.js';
 import { WORKOUTS } from '../app/js/seed/program.js';
+import { DEMO_MEDIA, mediaPath } from '../demo/media.js';
 
 // Today in the story is Fri Oct 16. Workout A was done every Friday since Sep 4 (six sessions).
 const DATES = ['2026-09-04', '2026-09-11', '2026-09-18', '2026-09-25', '2026-10-02', '2026-10-09'];
@@ -38,7 +39,7 @@ const SLIDES = slots.map((slot, i) => {
     sets: syn.reps[k].map((reps) => ({ weightLbs: syn.weights[k], reps, levelNumber: null, distanceM: null })),
   }));
   return {
-    id: slot.exercise, index: i, name: ex.name, gifUrl: ex.gifUrl, notes: ex.notes, tags: ex.tags,
+    id: slot.exercise, index: i, name: ex.name, notes: ex.notes, tags: ex.tags,
     prescription: `${slot.sets} × ${slot.reps}`, sets: Number(slot.sets),
     options: slot.alternatives, trx: slot.trxAlternatives,
     increased, next: syn.next, repsNow: syn.repsNow, sessions,
@@ -49,17 +50,11 @@ const SLIDES = slots.map((slot, i) => {
   };
 });
 
-// ---- images: the app's file first, then the placeholder ----
-// The big card images each try their own file. The small thumbnails in the Options and TRX lists only try theirs when the first card's
-// image was found, so a site without app/img (GitHub Pages) makes three failed requests rather than sixteen.
-const known = new Map(); // file -> true when it loaded, false when it did not
-const folderMissing = () => known.get(SLIDES[0].gifUrl) === false;
-function image(gifUrl, props, { thumb = false } = {}) {
-  if (!gifUrl || (thumb && folderMissing())) known.set(gifUrl, false); // no image of its own (as in the app), or the folder is absent
-  const src = `app/${gifUrl}`; // relative to the landing page (the site root)
-  const img = h('img', { alt: '', loading: 'eager', decoding: 'async', referrerpolicy: 'no-referrer', ...props, src: known.get(gifUrl) === false ? PLACEHOLDER_GIF : src });
-  img.addEventListener('error', () => { known.set(gifUrl, false); img.src = PLACEHOLDER_GIF; }, { once: true });
-  img.addEventListener('load', () => { if (!img.src.startsWith('data:')) known.set(gifUrl, true); });
+// ---- images: the demo's own art, else the placeholder ----
+// The path is relative to the landing page (the site root).
+function image(id, props) {
+  const img = h('img', { alt: '', loading: 'eager', decoding: 'async', referrerpolicy: 'no-referrer', ...props, src: DEMO_MEDIA.includes(id) ? `demo/${mediaPath(id)}` : PLACEHOLDER_GIF });
+  img.addEventListener('error', () => { img.src = PLACEHOLDER_GIF; }, { once: true });
   return img;
 }
 
@@ -79,7 +74,7 @@ function altPanel(slide, group) {
   const ids = group === 'trx' ? slide.trx : slide.options;
   return h('div', { class: 'alt-panel', 'data-group': group === 'trx' ? 'trxAlternatives' : 'alternatives', role: 'group' },
     ids.map((id) => h('div', { class: 'alt-item' },
-      h('div', { class: 'alt-thumb' }, image(EXERCISES[id].gifUrl, { width: 56, height: 42 }, { thumb: true })),
+      h('div', { class: 'alt-thumb' }, image(id, { width: 56, height: 42 })),
       h('div', { class: 'alt-name', text: EXERCISES[id].name }),
       h('button', { type: 'button', class: 'alt-use', tabindex: '-1', text: 'Use this' }))));
 }
@@ -103,7 +98,7 @@ function workoutScreen(slide, dials) {
         h('div', { class: 'ex-meta' }, h('strong', { text: slide.prescription }), h('span', { text: 'Sets × Reps' }))),
       slide.increaseText ? h('p', { class: 'up', text: slide.increaseText }) : null),
     h('div', { class: 'ex-media' },
-      h('div', { class: 'gif-wrapper' }, image(slide.gifUrl, { width: 640, height: 400, alt: `${slide.name} demonstration` }), h('div', { class: 'gif-label' }, h('span'), 'Live form reference'))),
+      h('div', { class: 'gif-wrapper' }, image(slide.id, { width: 640, height: 400, alt: `${slide.name} demonstration` }), h('div', { class: 'gif-label' }, h('span'), 'Live form reference'))),
     h('div', { class: 'ex-rest' },
       h('div', { class: 'exercise-body', text: slide.notes }),
       h('div', { class: 'tags' }, slide.tags.map((t) => h('span', { class: 'tag', text: t }))),
@@ -209,14 +204,7 @@ export function createPreview({ interval = 7500 } = {}) {
       return device;
     },
     onChange(fn) { listeners.push(fn); },
-    // The first card's image decides whether app/img exists; wait for that before drawing so the thumbnails know.
     async start() {
-      await new Promise((resolve) => {
-        const probe = new Image();
-        probe.addEventListener('load', () => { known.set(SLIDES[0].gifUrl, true); resolve(); });
-        probe.addEventListener('error', () => { known.set(SLIDES[0].gifUrl, false); resolve(); });
-        probe.src = `app/${SLIDES[0].gifUrl}`;
-      });
       render();
       restart();
     },
