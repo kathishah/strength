@@ -22,6 +22,7 @@ export const DEMO_MEDIA = [
   'chest-supported-row',
   'db-bench-press',
   'db-romanian-deadlift',
+  'face-pull',
   'farmer-carry',
   'goblet-squat',
   'hip-thrust',
