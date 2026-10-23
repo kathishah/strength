@@ -1,6 +1,12 @@
 # Exercise media rights audit
 
-**Status:** No current source is cleared for the public demo or a distributable image pack. The default distribution will use local placeholders. Revisit this audit before adding any image or animation to a downloadable pack or public showcase build.
+**Status:** No third-party source is cleared for the public demo or a distributable image pack. The default distribution will use local placeholders. Revisit this audit before adding any image or animation to a downloadable pack or public showcase build.
+
+## Original art in the demo
+
+The public demo uses a separate, original set: animated GIFs of anatomical figures with the worked muscles in red, created by the repository owner for this project and released under the repository's MIT license. They are in `demo/media/<exercise id>.gif` (listed in `DEMO_MEDIA` in `demo/demo-ui.js`), are not derived from any file in the inventory below, and are not part of the app's deploy. The 58 third-party images below stay uncleared and stay out of the demo.
+
+Per-file record: `goblet-squat`, `db-bench-press`, `db-romanian-deadlift`, `incline-db-press`, `reverse-lunge`, `leg-press`, `seated-cable-row`, `farmer-carry`: creator is the repository owner; license is MIT with the repository; no attribution required.
 
 ## Inventory
 

@@ -129,7 +129,7 @@ Today's workout is the next one in the rotation, with nothing logged yet.
 
 **Demo label and reset.** A strip above the app header on every screen reads "Demo · a fictional lifter · changes stay in this browser" and holds a **Reset demo** button. Reset uses the app's two-tap armed button (`armedIconButton`): the first tap shows "Tap again to reset", the second deletes the `strength-demo` database and `strength-demo.*` keys, rebuilds the fixture, and reloads the page. The header's save chip reads "Demo" instead of a sync state. Settings shows a short explanation of the demo, the same Reset button, and a link back to the landing page.
 
-**Images.** Every exercise image slot shows the app's placeholder (`PLACEHOLDER_GIF`); the demo requests no image files.
+**Images.** The demo has its own exercise art: original animated GIFs (male and female musculature, worked muscles in red) in `demo/media/<exercise id>.gif`, listed in `DEMO_MEDIA` in `demo/demo-ui.js`, drawn for this project and released under the repository's MIT license. The page's copy of the catalog points each listed exercise at its file; every other image slot shows the app's placeholder (`PLACEHOLDER_GIF`), and no third-party image path or art credit appears. The files are outside `app/`, so the app's deploy and service worker never include them.
 
 **Tests.**
 

@@ -35,7 +35,7 @@ node --test
 ## Architecture
 
 - `app/`: static progressive web app and workout logic. One local event log; it runs in local-only mode, or in synced mode when the deployed config holds sync settings.
-- `demo/`: the public demo's entry page and sample history, built on the same app code.
+- `demo/`: the public demo's entry page, sample history and its own exercise art (`demo/media/`), built on the same app code.
 - `index.html`, `landing/`: the project landing page (GitHub Pages).
 - `lambda/events/`: authenticated event API.
 - `infra/template.yaml`: AWS SAM infrastructure.

@@ -1,5 +1,5 @@
 // The demo page (demo/): no network code reachable, boot in demo mode with the sample history, the strip and Reset, Settings, the
-// placeholder images, and the demo's storage names (spec section 3, "Demo design", Tests).
+// demo images, and the demo's storage names (spec section 3, "Demo design", Tests).
 import { test, describe, afterEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync, readdirSync } from 'node:fs';
@@ -9,7 +9,7 @@ import { doWorkout } from '../test-support/logging-world.mjs';
 import { staticImports } from '../test-support/import-walk.mjs';
 import { finishedSessions, inProgressSessions, nextTemplate, sessionView } from '../app/js/logging/index.js';
 import { EXERCISES, PLACEHOLDER_GIF } from '../app/js/seed/index.js';
-import { LANDING_URL, STRIP_TEXT, createDemoUi, removeMedia } from '../demo/demo-ui.js';
+import { DEMO_MEDIA, LANDING_URL, STRIP_TEXT, createDemoUi, useDemoMedia } from '../demo/demo-ui.js';
 
 const demoDir = new URL('../demo/', import.meta.url).pathname;
 const appJs = new URL('../app/js/', import.meta.url).pathname;
@@ -94,7 +94,7 @@ describe('the demo page has no network code', () => {
   });
 
   test('every demo file only imports from the demo or from app/js; nothing is fetched by URL', () => {
-    for (const name of readdirSync(demoDir)) {
+    for (const name of readdirSync(demoDir).filter((n) => /\.(js|html|css)$/.test(n))) {
       const text = readFileSync(join(demoDir, name), 'utf8');
       assert.doesNotMatch(text, /\bfetch\s*\(|XMLHttpRequest|WebSocket|sendBeacon|EventSource/, `${name} makes requests`);
       assert.doesNotMatch(text, /https?:\/\/(?!www\.w3\.org\/)/, `${name} names an outside address`);
@@ -289,24 +289,43 @@ describe('Settings in the demo', () => {
   });
 });
 
-describe('images: the placeholder only', () => {
-  test('removeMedia drops every image path and art credit from the page\'s catalog', () => {
-    const sample = { a: { name: 'A', gifUrl: 'img/a.gif', attribution: { label: 'x', url: 'y' }, tags: [] }, b: { name: 'B', tags: [] } };
-    removeMedia(sample);
-    assert.deepEqual(sample, { a: { name: 'A', tags: [] }, b: { name: 'B', tags: [] } });
+describe('images: the demo\'s own art, the placeholder for the rest', () => {
+  const mediaDir = join(demoDir, 'media');
+
+  test('useDemoMedia points the listed exercises at demo/media and drops every other image path and all art credits', () => {
+    const credit = { label: 'x', url: 'y' };
+    const sample = { a: { name: 'A', gifUrl: 'img/a.gif', attribution: credit, tags: [] }, b: { name: 'B', gifUrl: 'img/b.gif', attribution: credit, tags: [] }, c: { name: 'C', tags: [] } };
+    useDemoMedia(sample, ['a', 'c']);
+    assert.deepEqual(sample, { a: { name: 'A', gifUrl: 'media/a.gif', tags: [] }, b: { name: 'B', tags: [] }, c: { name: 'C', gifUrl: 'media/c.gif', tags: [] } });
   });
 
-  test('after removeMedia every image on Home, in the Options lists too, is the built-in placeholder data URI', async () => {
+  test('every listed exercise is in the catalog and has its own GIF (640 x 400, under 700 KB); the folder holds nothing else', () => {
+    assert.deepEqual([...DEMO_MEDIA].sort(), DEMO_MEDIA, 'the list is kept sorted');
+    assert.deepEqual(readdirSync(mediaDir).filter((f) => f !== '.DS_Store').sort(), DEMO_MEDIA.map((id) => `${id}.gif`));
+    for (const id of DEMO_MEDIA) {
+      assert.ok(EXERCISES[id], `${id} is not in the catalog`);
+      const bytes = readFileSync(join(mediaDir, `${id}.gif`));
+      assert.match(bytes.subarray(0, 6).toString('latin1'), /^GIF8[79]a$/, `${id} is not a GIF`);
+      assert.deepEqual([bytes.readUInt16LE(6), bytes.readUInt16LE(8)], [640, 400], `${id} size`);
+      assert.ok(bytes.length < 700 * 1024, `${id} is ${bytes.length} bytes`);
+    }
+  });
+
+  test('on Home, in the Options lists too, an image is the demo\'s own file or the built-in placeholder data URI, never a third-party path', async () => {
     const { dom, log } = setup();
-    removeMedia();
-    assert.ok(Object.values(EXERCISES).every((e) => !e.gifUrl && !e.attribution));
+    useDemoMedia();
+    assert.ok(Object.values(EXERCISES).every((e) => !e.attribution));
+    assert.ok(Object.entries(EXERCISES).every(([id, e]) => (DEMO_MEDIA.includes(id) ? e.gifUrl === `media/${id}.gif` : !e.gifUrl)));
     await boot(log);
     // Open the Options and TRX lists so their thumbnails are drawn too.
     for (const toggle of all(dom, (e) => e.tagName === 'BUTTON' && /alt-toggle/.test(e.className))) { toggle.click(); await settle(); }
     const pics = imgs(dom);
     assert.ok(pics.length >= 6, `${pics.length} images`);
-    for (const img of pics) assert.equal(img.getAttribute('src'), PLACEHOLDER_GIF);
-    assert.equal(all(dom, (e) => e.className === 'gif-attribution').length, 0, 'no art credit without art');
+    const sources = pics.map((img) => img.getAttribute('src'));
+    for (const src of sources) assert.ok(src === PLACEHOLDER_GIF || /^media\/[\w-]+\.gif$/.test(src), src);
+    assert.ok(sources.includes('media/goblet-squat.gif'), 'the first card shows the goblet squat art');
+    assert.ok(sources.includes(PLACEHOLDER_GIF), 'an exercise without art shows the placeholder');
+    assert.equal(all(dom, (e) => e.className === 'gif-attribution').length, 0, 'no art credit');
     assert.deepEqual(log.fetches, []);
   });
 });

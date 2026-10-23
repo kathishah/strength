@@ -12,12 +12,29 @@ export const STRIP_TEXT = 'Demo · a fictional lifter · changes stay in this br
 export const LANDING_URL = '../';
 const RESET_PATHS = ['M3 12a9 9 0 1 0 3-6.7', 'M3 4v5h5'];
 
-// The demo requests no image files. The catalog's gifUrl values ("img/<name>.gif") point at files that are not published, and the
-// page would ask for each one before falling back; with none, every image slot shows the app's own placeholder (PLACEHOLDER_GIF, a
-// data: URI). The art credit goes too, since there is no art to credit. Only this page's copy of the catalog changes.
-export function removeMedia(exercises = EXERCISES) {
-  for (const exercise of Object.values(exercises)) {
-    delete exercise.gifUrl;
+// The demo's own exercise art: original animated figures drawn for this project (demo/media/<exercise id>.gif, MIT with the repository).
+// The catalog's gifUrl values ("img/<name>.gif") point at third-party files that are not published, so the page's copy of the catalog
+// gets the demo's own file for each exercise listed here and no image path for the rest: those image slots show the app's built-in
+// placeholder (PLACEHOLDER_GIF, a data: URI) without asking for a missing file. The art credit goes too, since the demo has no
+// third-party art to credit. Only this page's copy of the catalog changes. Add an id here together with its file.
+export const DEMO_MEDIA = [
+  'db-bench-press',
+  'db-romanian-deadlift',
+  'farmer-carry',
+  'goblet-squat',
+  'incline-db-press',
+  'leg-press',
+  'reverse-lunge',
+  'seated-cable-row',
+];
+
+// Relative to demo/index.html.
+export const mediaUrl = (id) => `media/${id}.gif`;
+
+export function useDemoMedia(exercises = EXERCISES, media = DEMO_MEDIA) {
+  for (const [id, exercise] of Object.entries(exercises)) {
+    if (media.includes(id)) exercise.gifUrl = mediaUrl(id);
+    else delete exercise.gifUrl;
     delete exercise.attribution;
   }
 }
