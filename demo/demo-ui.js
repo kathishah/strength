@@ -18,14 +18,23 @@ const RESET_PATHS = ['M3 12a9 9 0 1 0 3-6.7', 'M3 4v5h5'];
 // placeholder (PLACEHOLDER_GIF, a data: URI) without asking for a missing file. The art credit goes too, since the demo has no
 // third-party art to credit. Only this page's copy of the catalog changes. Add an id here together with its file.
 export const DEMO_MEDIA = [
+  'back-extension-45',
+  'chest-supported-row',
   'db-bench-press',
   'db-romanian-deadlift',
   'farmer-carry',
   'goblet-squat',
+  'hip-thrust',
   'incline-db-press',
+  'lat-pulldown',
   'leg-press',
+  'machine-chest-press',
+  'machine-high-row',
+  'pushup',
   'reverse-lunge',
   'seated-cable-row',
+  'seated-db-shoulder-press',
+  'trap-bar-deadlift',
 ];
 
 // Relative to demo/index.html.
