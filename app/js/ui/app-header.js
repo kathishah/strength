@@ -12,7 +12,8 @@ const SETTINGS_PATHS = [
   'M9 12a3 3 0 1 0 6 0a3 3 0 0 0-6 0',
 ];
 
-// handlers: { onPickDay(weekday), onNavigate(hash), onSignOut() }. Returns the controls the screens use.
+// handlers: { onPickDay(weekday), onNavigate(hash), onSignOut() }. onSignOut is optional: without it there is no sign-out button
+// (local-only and demo modes have no account). Returns the controls the screens use.
 export function mountHeader({ root }, handlers) {
   let expanded = false;
   let lastY = 0;
@@ -22,7 +23,8 @@ export function mountHeader({ root }, handlers) {
   const status = h('button', { type: 'button', class: 'hdr-status', 'aria-expanded': 'false', 'aria-controls': 'hdr-panel', onclick: () => setExpanded(!expanded) }, text, chev);
   const dot = h('span', { class: 'save-dot', 'aria-hidden': 'true' });
   const count = h('span', { class: 'save-count' });
-  const chip = h('span', { class: 'save-chip', role: 'status', 'data-kind': 'info' }, dot, count);
+  const chipLabel = h('span', { class: 'save-label' }); // words in the chip, for modes where a count means nothing
+  const chip = h('span', { class: 'save-chip', role: 'status', 'data-kind': 'info' }, dot, count, chipLabel);
   const theme = h('button', { type: 'button', class: 'theme-btn', onclick() { cycleTheme(); paintTheme(); } });
   const pills = h('div', { class: 'pills', role: 'group', 'aria-label': 'Day' });
   const saveLine = h('p', { class: 'save-line small' });
@@ -54,9 +56,9 @@ export function mountHeader({ root }, handlers) {
     type: 'button', class: 'pill iconbtn', 'aria-label': label, title: label,
     onclick() { setExpanded(false); handlers.onNavigate(hash); },
   }, svgIcon(paths));
-  const signOut = armedIconButton({
+  const signOut = handlers.onSignOut ? armedIconButton({
     label: 'Sign out', armedText: 'Sign out?', className: 'pill signout', icon: svgIcon(LOGOUT_PATHS), onConfirm: () => handlers.onSignOut(),
-  });
+  }) : null;
 
   return {
     collapse: () => setExpanded(false),
@@ -72,11 +74,13 @@ export function mountHeader({ root }, handlers) {
         h('span', { class: 'pill-icons' }, h('span', { class: 'pill-sep', 'aria-hidden': 'true' }), navButton('History', HISTORY_PATHS, '#/history'), navButton('Settings', SETTINGS_PATHS, '#/settings'), signOut),
       );
     },
-    // { text, kind, pending }: the dot and count in the bar, the sentence in the panel.
-    setSave({ text: sentence, kind, pending }) {
+    // { text, kind, pending, label? }: the dot and count in the bar, the sentence in the panel. A label ("Demo", "On this device")
+    // shows in the chip in place of the count; that is how a mode words its own save state.
+    setSave({ text: sentence, kind, pending, label = '' }) {
       chip.dataset.kind = kind;
-      chip.setAttribute('aria-label', sentence);
-      count.textContent = pending > 0 ? String(pending) : '';
+      chip.setAttribute('aria-label', label ? `${label}. ${sentence}` : sentence);
+      chipLabel.textContent = label;
+      count.textContent = !label && pending > 0 ? String(pending) : '';
       saveLine.textContent = sentence;
     },
     show(visible) { root.hidden = !visible; if (!visible) setExpanded(false); },

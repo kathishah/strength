@@ -2,8 +2,8 @@
 //
 // Install caches the shell listed below. Every same-origin GET is answered network first, from the cache only when the network fails, and
 // a good network answer refreshes the cache. So online you always get what was deployed (scripts/deploy-app.sh takes effect on the next
-// load) and offline you get the last copy. Cognito and the API are other origins and are never touched here. The exercise images (img/, about 160 MB) are not
-// in the list below: each is cached the first time it is shown, by the same network-first rule.
+// load) and offline you get the last copy. Cognito and the API are other origins and are never touched here. Optional image files in img/
+// are not in the list below; if present, each is cached the first time it is shown, by the same network-first rule.
 // test/sw.test.mjs fails if this list differs from the files in app/.
 
 const CACHE = 'strength-shell-v1';
@@ -13,6 +13,7 @@ const SHELL = [
   'icons/apple-touch-icon.png',
   'icons/icon-192.png',
   'icons/icon-512.png',
+  'js/boot.js',
   'js/config.js',
   'js/engine/calendar.js',
   'js/engine/config.js',
@@ -36,6 +37,10 @@ const SHELL = [
   'js/logging/summary.js',
   'js/logging/text.js',
   'js/main.js',
+  'js/modes/demo.js',
+  'js/modes/local.js',
+  'js/profile.js',
+  'js/ui/state-text.js',
   'js/seed/catalog.js',
   'js/seed/index.js',
   'js/seed/program.js',
@@ -61,6 +66,7 @@ const SHELL = [
   'js/ui/exercise-screen.js',
   'js/ui/format.js',
   'js/ui/history-screen.js',
+  'js/ui/local-settings.js',
   'js/ui/router.js',
   'js/ui/screens.js',
   'js/ui/settings-screen.js',

@@ -3,4 +3,5 @@ node_modules/
 samconfig.toml
 .DS_Store
 private/
+.deploy/
 app/img/

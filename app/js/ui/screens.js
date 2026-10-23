@@ -12,8 +12,9 @@ import { mountHistory } from './history-screen.js';
 import { mountExercise } from './exercise-screen.js';
 import { mountSettings } from './settings-screen.js';
 
-// headerRoot: the header element. handlers: { onSignOut }. onRoute(route): called after each screen is shown.
-export function mountScreens({ root, headerRoot, events, actions, notify, handlers, now = Date.now, onRoute }) {
+// headerRoot: the header element. handlers: { onSignOut } (optional: no sign-out button without it). onRoute(route): called after each
+// screen is shown. settingsSection(host, ctx) -> { update?, destroy? } | void: a mode's content for Settings, below its heading.
+export function mountScreens({ root, headerRoot, events, actions, notify, handlers = {}, now = Date.now, onRoute, settingsSection = null }) {
   let current = null;
   let router = null;
   // What the header chose: a weekday pill, and "show the workout" on a recovery day.
@@ -31,7 +32,7 @@ export function mountScreens({ root, headerRoot, events, actions, notify, handle
     const host = document.createElement('div');
     host.className = `screen screen-${route.name}`;
     root.replaceChildren(host);
-    const ctx = { events, actions, now, notify, header, day, navigate: (hash) => router.navigate(hash) };
+    const ctx = { events, actions, now, notify, header, day, settingsSection, navigate: (hash) => router.navigate(hash) };
     if (route.name === 'summary') current = mountSummary(host, ctx, route.id);
     else if (route.name === 'history') current = mountHistory(host, ctx, route.view);
     else if (route.name === 'exercise') current = mountExercise(host, ctx, route.id);

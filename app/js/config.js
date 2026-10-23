@@ -1,9 +1,11 @@
-// Deployment values. Filled in after the first deploy (BUILD.md step 6). None of these are secrets:
-// a Cognito app client without a secret and an API URL only work together with a valid login.
+// Sync settings. Empty on purpose: with any value missing the app runs in local-only mode (boot.js, mode "local"), saving workouts in
+// this browser and making no network requests. scripts/deploy-app.sh writes the deployed copy of this file from your stack's outputs
+// (docs/SELF-HOSTING.md), so the values below never need editing by hand and never belong in git. None of them are secrets: a Cognito
+// app client without a secret and an API URL only work together with a valid login.
 export const config = {
-  region: 'us-west-2',
-  userPoolClientId: '2m5s02gvb1c0lckaaig9h0rdno', // stack output UserPoolClientId
-  apiUrl: 'https://133kwfn42a.execute-api.us-west-2.amazonaws.com', // stack output ApiUrl, https://<id>.execute-api.us-west-2.amazonaws.com
+  region: '',
+  userPoolClientId: '',
+  apiUrl: '',
 };
 
 export const isConfigured = () =>

@@ -1,12 +1,15 @@
-# Recomp Tracker — Product Spec (v1.19)
+# Recomp Tracker — Product Spec (v1.20)
 
-A mobile-first strength-training log that records workouts and suggests what to lift next. It is designed for a single private demo account, with data synced across that user’s devices. Activity tracking and body metrics are out of scope.
+A mobile-first strength-training log that records workouts and suggests what to lift next. It is designed for a single private account, with data synced across that user’s devices. Activity tracking and body metrics are out of scope.
 
 ## Changelog
+- **v1.20**
+  - Local-only mode (6.7, 6.2): when the app's sync settings are missing or incomplete it runs with no account and no network, keeping events in the browser's IndexedDB (docs/SHOWCASE-AND-SELF-HOST-SPEC.md, sections 3 and 4). The header chip reads "On this device" and its panel says "Saved in this browser only. Not synced to other devices."; Home shows a one-time note about it; if the browser keeps nothing (IndexedDB unavailable) a notice on every screen says the workouts will be lost when the page closes.
+  - Settings (6.7) depends on the mode. Synced mode is unchanged. Local-only Settings has Storage, Export backup (a JSON file in the format of `scripts/export-data.mjs`) and Clear data on this device (two taps). There is no in-app import: a backup moves to an AWS deployment with `scripts/post-events.mjs`. Demo Settings has the demo explanation and Reset.
 - **v1.19**
   - More alternatives (4.5): 16 new exercises (hack squat, leg extension, seated leg curl, cable glute kickback, cable chest press, pec deck fly, incline machine press, machine high row, one-arm dumbbell row, single-arm cable row, cable reverse fly, chest-supported rear delt raise, dumbbell lateral raise, plank, goblet carry, trap bar carry), and existing exercises offered in more slots, so every slot has 1 to 4 non-TRX alternatives (it was 0 to 2). The catalog goes from 49 to 65. The new exercises use existing exercise types, so the engine, events and export are unchanged. Their starting weights, the slots they fit and their images are in 4.5.2 and 4.5.3. A variation of the same movement (another grip, machine or stride) is not an alternative; the equipment is a full gym with all machines and a landmine, no sled.
   - No supersets (4.3, 6.3, 6.6, 8): a workout is a list of exercises done one at a time, all sets of one before the next, in the same slot order. Cards say "Exercise 2 of 6" with no coloured edge and "Rest about 90 s between sets". The TRX pairing tip (4.5.1) is removed. Reason: alternating two stations is hard in a busy gym. Layout and seed data only: the superset number was never stored, so logged workouts and swaps stay valid.
-  - Exercise images are our own copies in `app/img/` (downloaded by `scripts/fetch-images.mjs`, uploaded by `scripts/deploy-app.sh`, not in git), not hotlinks, and the art credit under each is very small (4.5.3). The Content-Security-Policy in `app/index.html` is removed.
+  - Exercise cards may show locally supplied images. The source list is third-party media without documented redistribution rights; images are optional and the default deploy skips them (4.5.3 and `docs/MEDIA-RIGHTS-AUDIT.md`). The Content-Security-Policy in `app/index.html` is removed.
   - The frozen v0.2 viewer is retired (0.C): the root `index.html` is now a redirect to https://strength.logbook.me, and the viewer lives on only in git history. The seed in `app/js/seed/` is the only copy of the program and catalog, so the test that compared it with the viewer is gone.
 - **v1.18**
   - Phone in landscape (6.2): each exercise card is two columns, the form GIF on the left and the title, the log dials and the tick on the right, so a card needs no vertical scroll. The description, tags and Options/TRX follow below the dials. The header and cards use the full width, and the rest bar is slimmer. Portrait is unchanged. Layout only: no data, events or engine changes.
@@ -418,14 +421,15 @@ Catalog entries (name, cue, muscles, type, image) for these 16 are written durin
 
 Load steps are the 5.3 defaults, with the small cable exercises (glute kickback, reverse fly, single-arm row) at +5, like face pull, and trap bar carry at +10 total, like the trap bar deadlift. Goblet carry is one dumbbell, trap bar carry is one total load: a carry card does not say "per hand" for them.
 
-#### 4.5.3 Exercise images (v1.19: our own copies)
-Every exercise image is downloaded once, unchanged, and served from the app's own site, not hotlinked from the publisher: `app/img/<id>.gif` (or `.webp`), shown at `img/<id>.gif`. This replaces hotlinking for all 58 exercises that have an image (the 49 of v1.6 and the 16 new ones, less the 7 with none), because the large GIFs (1 to 11 MB each, 160 MB in all) from other sites were slow and sometimes failed to load in the Options list.
-- `scripts/image-sources.json` lists the source URL of each image (exercise id to URL). `node scripts/fetch-images.mjs` downloads the ones missing from `app/img/` (`--force` re-downloads all).
-- `app/img/` is not in git (160 MB). `scripts/deploy-app.sh` runs the fetch for any missing file, then uploads `app/img/` to the site bucket with a week-long cache, along with the rest of `app/`.
-- Each card keeps an **art credit**: a very small link to the publisher's page (the `attribution` in the catalog), under the image. Exercises with no image (7, as before) show the placeholder.
-- The service worker does not precache the images; each is cached the first time it is shown.
-- The app has **no Content-Security-Policy** (removed in v1.19: it only allowed images from three sites).
-- The images are public static files on the demo site (sign-in protects data, not static files). They are third-party work included for this personal demo with source links; they are not covered by the project code license.
+#### 4.5.3 Exercise images (optional local media)
+The catalog may point to `app/img/<id>.gif` (or `.webp`), but exercise images are optional. The existing 58 source URLs are third-party media without documented redistribution rights; see [`docs/MEDIA-RIGHTS-AUDIT.md`](MEDIA-RIGHTS-AUDIT.md). When a local file is absent, the app uses its built-in placeholder.
+
+- `scripts/image-sources.json` records source URLs for the existing media set. `scripts/fetch-images.mjs` is an optional downloader and is not part of the default preview or deployment path. Fetching a file does not grant rights to use or redistribute it.
+- `app/img/` is not committed. `scripts/deploy-app.sh` skips image upload by default; `--include-images` uploads local files only and requires documented redistribution rights for every included asset.
+- Any media included in a public demo or a distributable image pack must have a per-file record of creator/source, permission or license, required attribution, and permitted redistribution/modification.
+- The service worker does not precache images; a supplied local image is cached the first time it is shown.
+- The app has no Content-Security-Policy (removed in v1.19).
+- The current production site already serves copies of the third-party images as public static files. This showcase spec does not remove those deployed files; review that existing use separately.
 
 Where the 16 new images came from (each source URL was fetched and confirmed to be an image, 4 to 43 frames, except the LoadMuscle files, which are animated WebP):
 
@@ -479,7 +483,7 @@ Implement as **pure functions** with unit tests. These rules drive the "suggeste
 ### 5.1 Phases
 - **Phase 1 (program weeks 1–4):** the full set counts from Section 4.3 (v1.14; it was 2 working sets per exercise). Target effort: stop with ~3 reps left (RIR 3).
 - **Phase 2 (week 5 onward):** the same set counts. Target effort: 1–2 reps left (RIR 1–2).
-- Program week = weeks elapsed since `programStartDate` (stored on UserProfile; user-editable), counted in Pacific-time calendar days. Initial value: **2026-01-05** (a Monday, the first Workout A), so that day is program week 1, Phase 1.
+- Program week = weeks elapsed since `programStartDate` (stored on UserProfile; user-editable), counted in Pacific-time calendar days. Initial value: **2026-09-28** (a Monday, the first Workout A), so that day is program week 1, Phase 1.
 - Display the current phase and target effort on the session screen, in plain words ("stop each set with about 3 reps left").
 
 ### 5.2 Base load and suggestion (weighted exercises)
@@ -718,12 +722,15 @@ Opened from the History icon in the header. A switch at the top picks **By exerc
 - **By date.** Every finished workout, newest first, grouped "This week", "Last week", then by month (Weeks start on Monday, Pacific dates). A row shows the workout letter, the date, exercises done of the total, working sets, duration, and an **Edit** button that opens the workout as in 6.3. A workout with an exercise that was not ticked carries an amber "1 missing" tag (more than one: "2 missing"). This replaces the Home card of v1.15.
 - Empty states say what to do ("No finished workouts yet. Finish one and it shows up here.").
 
-### 6.7 Settings (v1.17: sync only)
-- **Sync.** What the Phase B panel shows, moved here from Home: status, last sync and how long it took, events waiting to upload, events on this device, where they are stored, anything the server set aside, and the recent events. Buttons: **Sync now** and **Add test note**.
-- Sign out stays in the header (6.2).
-- ~~Program start date, rest timer default, recovery days, units.~~ Not built. The start date stays 2026-01-05, the rest timer 90 s, the recovery days Tuesday and Thursday.
+### 6.7 Settings (v1.20: depends on the mode)
+The app runs in one of three modes (docs/SHOWCASE-AND-SELF-HOST-SPEC.md, section 3). Settings is the heading followed by the mode's own content.
+- **Synced** (the sync settings in the app config are complete; unchanged from v1.17). Sync: what the Phase B panel shows, moved here from Home: status, last sync and how long it took, events waiting to upload, events on this device, where they are stored, anything the server set aside, and the recent events. Buttons: **Sync now** and **Add test note**.
+- **Local only** (no sync settings; no account and no network). Three cards. **Storage:** whether workouts are saved on this device (or the browser is keeping them in memory only), how many events it holds and how many workouts are finished. **Export backup:** downloads `strength-events-<date>.json` as `{ exportedAt, count, events }`, the file `scripts/export-data.mjs` writes; there is no import in the app. Under it: "Moving to your own AWS deployment? Export a backup, then upload it with `scripts/post-events.mjs` (see the self-hosting guide)." **Clear data on this device:** two taps; the first reads "Tap again to delete all workouts on this device. Export first if you want a copy."; the second deletes the local database and the app's saved values (the theme choice stays) and reloads into an empty app.
+- **Demo** (the public sandbox). A short explanation, **Reset demo** (two taps) and a link back to the project page.
+- Sign out stays in the header (6.2), in synced mode only (local-only and demo have no account).
+- ~~Program start date, rest timer default, recovery days, units.~~ Not built. The start date stays 2026-09-28, the rest timer 90 s, the recovery days Tuesday and Thursday.
 - ~~Per exercise: starting weight, first-loaded weight, load increment; trap bar weight; scheduled increases on/off, interval, per-exercise on/off.~~ Not built. Defaults apply (5.3, 5.6, 5.12). The engine still reads `setting.changed` events for these keys, so a value can be set by a script if ever needed.
-- ~~Export all data as JSON (and CSV of logged sets).~~ Not a screen: `scripts/export-data.mjs` writes the JSON and the CSV (DEPLOYMENT-PLAN.md section 15e).
+- ~~Export all data as JSON (and CSV of logged sets).~~ Not a screen in synced mode: `scripts/export-data.mjs` writes the JSON and the CSV (DEPLOYMENT-PLAN.md section 15e). Local-only mode has Export backup (above), which writes the JSON.
 
 ---
 
@@ -742,7 +749,7 @@ Opened from the History icon in the header. A switch at the top picks **By exerc
 
 All records belong to an owner (the signed-in user). Storage is an append-only event log (one event per change, edits are later events on the same entity, state is derived by replaying events); see DEPLOYMENT-PLAN.md. The static seed data below ships with the app code; only user-generated records (sessions, set logs, settings, swaps, deloads) are stored as events.
 
-- **UserProfile**: programStartDate (initial value 2026-01-05), restTimerDefaultSec, recoveryDays (default [Tue, Thu]), trapBarWeightLbs (default 45), scheduledIncreasesEnabled (default true), scheduledIncreaseDays (default 21)
+- **UserProfile**: programStartDate (initial value 2026-09-28), restTimerDefaultSec, recoveryDays (default [Tue, Thu]), trapBarWeightLbs (default 45), scheduledIncreasesEnabled (default true), scheduledIncreaseDays (default 21)
 - **Exercise**: name, type (dumbbell | barbell | machine | cable | bodyweight | bodyweight_loadable | bodyweight_ladder | suspension | carry | hold | mobility), repMin, repMax, perSide (bool), holdSeconds (nullable), loadIncrementLbs, startingWeightLbs (nullable), firstLoadedWeightLbs (nullable), startingNote (nullable), startingLevel (nullable; suspension, default 2), levelDescription (nullable; suspension), ~~loadsBack (bool)~~, scheduledIncreasesEnabled (default true), cues (optional text)
 - **WorkoutTemplate**: code (A | B | C), name
 - **TemplateSlot**: templateId, slotNumber (1–6), ~~supersetGroup (1 | 2 | 3 | null)~~ (removed, v1.19), exerciseId, phase2Sets, alternativeExerciseIds[]
@@ -760,7 +767,7 @@ Seed data: exercise catalog (65 exercises from v1.19) with cues, starting weight
 
 ## 9. Non-functional requirements
 - Mobile-first responsive UI; fully usable one-handed on a phone. Works well on desktop too.
-- **Time zone:** all dates and times are US Pacific (`America/Los_Angeles`), stored with an explicit UTC offset (for example `2026-01-05T11:00:00.000-07:00`). Weekdays, the Tuesday/Thursday recovery day, program weeks, and the "date" of a session are Pacific. Timestamps are compared by instant, not as strings, because the offset changes at daylight saving.
+- **Time zone:** all dates and times are US Pacific (`America/Los_Angeles`), stored with an explicit UTC offset (for example `2026-09-28T11:00:00.000-07:00`). Weekdays, the Tuesday/Thursday recovery day, program weeks, and the "date" of a session are Pacific. Timestamps are compared by instant, not as strings, because the offset changes at daylight saving.
 - Installable as a PWA (home screen icon, standalone display).
 - Light and dark mode.
 - Fast: session screen interactive in under 2 seconds on a phone over mobile data.

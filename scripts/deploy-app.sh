@@ -1,25 +1,32 @@
 #!/usr/bin/env bash
-# Redeploys the app (app/) to the site bucket and refreshes CloudFront. Run from anywhere:
+# Deploys the app (app/) to your stack's site bucket and refreshes CloudFront. Run from anywhere:
 #
-#   scripts/deploy-app.sh              run the tests, fetch any missing images, upload, refresh
-#   scripts/deploy-app.sh --dry-run    only list what would be uploaded or deleted (nothing changes)
+#   scripts/deploy-app.sh                         run tests, stage app/, upload the staged copy, refresh
+#   scripts/deploy-app.sh --dry-run               list what would change (nothing is downloaded, uploaded or deleted)
+#   scripts/deploy-app.sh --include-images        also make the site's img/ match your local app/img/ (deletions included)
 #   scripts/deploy-app.sh --skip-tests
 #
-# It exports AWS_REGION, STACK, DOMAIN, SITE_BUCKET and DIST_ID (scripts/aws-env.sh) for its own commands. To keep them in your
-# terminal too, run: source scripts/aws-env.sh
-# The exercise images (app/img/, not in git) are downloaded by scripts/fetch-images.mjs if missing, and uploaded with the app.
-# This changes only the static site. The Lambda, Cognito and the data bucket are never touched (that is BUILD.md steps 2 to 5).
+# It acts on the stack named in private/deploy.env (scripts/init-deploy.sh writes it) and stops if that file is missing or incomplete.
+# app/ is copied to .deploy/site/ (git-ignored) and js/config.js there is written from the stack's outputs, so a deployment always
+# gets its own API and sign-in settings and never another stack's. The staged copy is what gets uploaded. To keep the stack's values in
+# your terminal too, run: source scripts/aws-env.sh
+# Images: the deploy never downloads them. Without --include-images the images already on the site are left alone. With it, the site's
+# img/ is made to match app/img/; if app/img/ is missing or empty the image sync is skipped and nothing is deleted. Use it only when
+# you have redistribution rights for every file in app/img/. scripts/fetch-images.mjs is an optional downloader, not part of this deploy.
+# This changes only the static site. The Lambda, Cognito and the data bucket are never touched (that is scripts/deploy-stack.sh).
 
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
 dry=0
 tests=1
+include_images=0
 for arg in "$@"; do
   case "$arg" in
     --dry-run) dry=1 ;;
     --skip-tests) tests=0 ;;
-    -h|--help) sed -n '2,12p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+    --include-images) include_images=1 ;;
+    -h|--help) sed -n '2,16p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
     *) echo "Unknown option: $arg (try --help)" >&2; exit 2 ;;
   esac
 done
@@ -33,24 +40,43 @@ if [ "$tests" = 1 ] && [ "$dry" = 0 ]; then
   echo "Tests pass."
 fi
 
+# Everything up to the uploads is local: a failure here cannot change the site or its images.
+stage=.deploy/site
+rm -rf "$stage"
+mkdir -p "$stage"
+(cd app && tar cf - --exclude ./img --exclude .DS_Store .) | (cd "$stage" && tar xf -)
+sync_images=0
+if [ "$include_images" = 1 ]; then
+  if [ -d app/img ] && [ -n "$(find app/img -type f ! -name .DS_Store -print -quit)" ]; then
+    mkdir -p "$stage/img"
+    cp -R app/img/. "$stage/img/"
+    find "$stage/img" -name .DS_Store -delete
+    sync_images=1
+  else
+    echo "app/img/ is missing or empty: skipping the image sync. Nothing on the site is deleted."
+  fi
+fi
+node scripts/stack-config.mjs site-config "$stage/js/config.js"
+echo "Staged $stage with the sign-in and API settings of stack $STACK."
+
+dry_flag=()
 if [ "$dry" = 1 ]; then
   echo "Dry run: nothing is downloaded, uploaded, or deleted."
-  aws s3 sync app/ "s3://$SITE_BUCKET" --delete --dryrun --exclude '.DS_Store' --exclude 'img/*'
-  if [ -d app/img ]; then
-    aws s3 sync app/img "s3://$SITE_BUCKET/img" --delete --dryrun --exclude '.DS_Store'
-  else
-    echo "Images are not present locally; image sync would require downloading them first."
-  fi
-  exit 0
+  dry_flag=(--dryrun)
 fi
 
-# Fetch before either --delete sync. Any failed download stops deployment and preserves the remote image set.
-node scripts/fetch-images.mjs
+# The site files. --exclude 'img/*' also keeps --delete away from the images already on the site.
+aws s3 sync "$stage" "s3://$SITE_BUCKET" --delete ${dry_flag[@]+"${dry_flag[@]}"} --exclude 'img/*' --cache-control no-cache
+if [ "$sync_images" = 1 ]; then
+  # Images never change under the same name, so they may be cached for a week.
+  aws s3 sync "$stage/img" "s3://$SITE_BUCKET/img" --delete ${dry_flag[@]+"${dry_flag[@]}"} --cache-control 'public, max-age=604800'
+elif [ "$include_images" = 0 ]; then
+  echo "Leaving the images on the site as they are."
+fi
 
-aws s3 sync app/ "s3://$SITE_BUCKET" --delete --exclude '.DS_Store' --exclude 'img/*' --cache-control no-cache
-# Images never change under the same name, so they may be cached for a week.
-aws s3 sync app/img "s3://$SITE_BUCKET/img" --delete --exclude '.DS_Store' --cache-control 'public, max-age=604800'
-aws s3 cp app/manifest.webmanifest "s3://$SITE_BUCKET/manifest.webmanifest" \
+if [ "$dry" = 1 ]; then exit 0; fi
+
+aws s3 cp "$stage/manifest.webmanifest" "s3://$SITE_BUCKET/manifest.webmanifest" \
   --content-type application/manifest+json --cache-control no-cache
 aws cloudfront create-invalidation --distribution-id "$DIST_ID" --paths '/*' \
   --query 'Invalidation.[Id,Status]' --output text

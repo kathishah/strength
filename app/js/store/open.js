@@ -14,9 +14,10 @@
 import { openIdb } from './idb.js';
 import { createMemoryStorage } from './memory.js';
 
-export async function openStorage({ name, factory } = {}) {
+// name: the database name, or profile: { dbName } from profile.js. Neither means 'strength'.
+export async function openStorage({ name, factory, profile } = {}) {
   try {
-    const storage = await openIdb(name, factory);
+    const storage = await openIdb(name ?? profile?.dbName, factory);
     // Ask the browser not to evict this site's data under storage pressure (best effort; iOS may ignore it).
     try { Promise.resolve(globalThis.navigator?.storage?.persist?.()).catch(() => {}); } catch { /* not supported */ }
     return storage;

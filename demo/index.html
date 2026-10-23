@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Strength Training Tracker demo</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="color-scheme" content="light dark" />
+  <meta name="theme-color" media="(prefers-color-scheme: light)" content="#f8fafc" />
+  <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#050816" />
+  <meta name="description" content="A demo of Strength Training Tracker with a fictional lifter. Nothing is sent anywhere; changes stay in your browser." />
+  <link rel="icon" type="image/png" sizes="192x192" href="../app/icons/icon-192.png" />
+  <link rel="stylesheet" href="../app/css/app.css" />
+  <link rel="stylesheet" href="demo.css" />
+  <script src="../app/js/theme-boot.js"></script>
+  <script type="module" src="demo.js"></script>
+</head>
+<body>
+  <div id="mode-strip" hidden></div>
+  <header id="app-header" class="app-header" hidden></header>
+  <main class="page">
+
+    <p id="notice" class="notice" role="status" aria-live="polite" hidden></p>
+
+    <div id="app" hidden>
+      <div id="screen"></div>
+    </div>
+  </main>
+</body>
+</html>

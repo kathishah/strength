@@ -4,7 +4,7 @@
 
 import { config } from '../config.js';
 
-const ENDPOINT = `https://cognito-idp.${config.region}.amazonaws.com/`;
+const endpoint = () => `https://cognito-idp.${config.region}.amazonaws.com/`;
 const REFRESH_KEY = 'strength.refreshToken';
 const EARLY_MS = 60_000; // refresh a minute before the ID token expires
 
@@ -33,7 +33,7 @@ function clearRefreshToken() {
 async function cognito(target, body) {
   let res;
   try {
-    res = await fetch(ENDPOINT, {
+    res = await fetch(endpoint(), {
       method: 'POST',
       headers: {
         'Content-Type': 'application/x-amz-json-1.1',
