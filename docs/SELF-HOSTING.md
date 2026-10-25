@@ -204,6 +204,7 @@ Run this once after setting up a new stack, on two devices (the installed phone 
 
 - **Update the app:** `scripts/deploy-app.sh`. After a deploy, hard-reload (Cmd+Shift+R on desktop) or swipe the installed app away and reopen it to get the new files.
 - **Update the stack** (the Lambda or the template): `scripts/deploy-stack.sh`, then read the change set before you confirm.
+- **Keep it patched:** your stack runs the Lambda dependencies in `lambda/events/package-lock.json`. Watch this repository's releases or enable Dependabot alerts on your fork, and run `scripts/deploy-stack.sh` after an update. Security problems in the project itself are reported as described in [SECURITY.md](../SECURITY.md).
 - **Back up your workouts:**
 
   ```bash
