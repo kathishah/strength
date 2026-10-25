@@ -10,9 +10,11 @@
 // from this file and fails if one of them is reachable. Keep it that way: no static import of those files here or in anything boot.js imports.
 //
 // startApp({ mode, ui }) -> Promise of { mode, profile, events, actions, screens, storage, ctx } (null if storage could not be opened).
-// The entry page needs #app-header and #screen. These are optional and created when missing: #app (hidden until the app shows),
-// #notice (short messages), and in synced mode the sign-in and sync markup of app/index.html (#signin, #signin-form, #email, #password,
-// #signin-button, #signin-pending, #device and the sync panel's ids). Local and demo modes remove #signin and #device if the page has them.
+// The entry page needs #app-header and #screen. #notice (short messages) and the mode strip, notice and home note are created when missing.
+// #app (hidden until the app shows) is optional in local and demo modes, which work without it, but required in synced mode, which shows
+// and hides it around sign-in and does not create it; both shipped pages (app/index.html, demo/index.html) have it. Synced mode also needs
+// the sign-in and sync markup of app/index.html (#signin, #signin-form, #email, #password, #signin-button, #signin-pending, #device and
+// the sync panel's ids). Local and demo modes remove #signin and #device if the page has them.
 //
 // Mode hooks. Each mode can supply these (modes/local.js, modes/demo.js, or startApp's `ui` option, which wins); all are optional:
 //   prepare(ctx)          async, once, after storage opens and before the first screen (the demo writes its fixture here)
@@ -255,7 +257,7 @@ function wireSynced({ net, el, events, notify }) {
     }
   });
 
-  // Opening the app is the warm-up (plan section 3): the normal sync wakes the Lambda before the first set.
+  // Opening the app is the warm-up (docs/API-CONTRACT.md section 5): the normal sync wakes the Lambda before the first set.
   net.attachSyncTriggers({ sync, events, enabled: () => signedIn });
 
   return {
