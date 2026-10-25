@@ -1,6 +1,6 @@
 # Showcase and self-hosting specification
 
-**Status:** Proposed
+**Status:** Implemented in spec v1.20: the landing page, interactive demo, local-only mode and self-hosting guide are in the repository. Section 9 is the delivery order that was followed, kept for reference. Section 8 stays the acceptance checklist for changes to these features, and its last item (record media rights before adding any media) is a standing rule.
 
 **Purpose:** Make Strength Training Tracker easy to try as a project showcase and practical for another person to fork and run for themselves. The public demo is synthetic and isolated from the existing private deployment.
 
@@ -13,7 +13,7 @@
 
 ## 2. Public project landing page
 
-The repository's GitHub Pages site, `https://kathishah.github.io/strength/`, becomes the project landing page. It is served from the repository root's `index.html` on `main`, which currently redirects to `strength.logbook.me`; replace that redirect with a responsive landing page. The page accompanies the code: it is the public entry point for the repository and for links from the project showcase website.
+The repository's GitHub Pages site, `https://kathishah.github.io/strength/`, is the project landing page. It is served from the repository root's `index.html` on `main`. Before this work that file redirected to `strength.logbook.me`; it is now a responsive landing page. The page accompanies the code: it is the public entry point for the repository and for links from the project showcase website.
 
 `strength.logbook.me` stays the project owner's private hosted copy and is unchanged by this work. Opening it shows the sign-in page when no one is signed in and the workout home page when someone is. The landing page does not redirect or link visitors to it as a demo.
 

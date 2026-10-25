@@ -1,4 +1,4 @@
-// Reopening a finished workout to correct it (plan section 15c, spec 6.3 v1.15): the actions over the real event store, and the
+// Reopening a finished workout to correct it (archive/DEPLOYMENT-PLAN-history.md section 15c, spec 6.3 v1.15): the actions over the real event store, and the
 // Home list and edit view over real logs. Nothing here touches a DOM.
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';

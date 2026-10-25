@@ -36,7 +36,7 @@ A mobile-first strength-training log that records workouts and suggests what to 
   - Load increments (5.3): dumbbell exercises that use two dumbbells go up 2.5 lbs per dumbbell; goblet squat and box squat (one dumbbell) go up 5 lbs. First-loaded weights stay.
   - Scheduled-increase timer with no increase yet now starts at the exercise's first completed session (there is no calibration to end).
 - **v1.12**
-  - Time zone: all dates and times use US Pacific time (`America/Los_Angeles`, PDT/PST), including days of the week, program weeks, and the monthly event-file boundary (Section 9, DEPLOYMENT-PLAN.md).
+  - Time zone: all dates and times use US Pacific time (`America/Los_Angeles`, PDT/PST), including days of the week, program weeks, and the monthly event-file boundary (Section 9; API-CONTRACT.md section 7).
   - Sign-in is email plus a single permanent 6-digit PIN (Section 6.1).
   - Hosting: v1 is served at https://strength.logbook.me from a single stack (`strength-prod`); no dev stack (Section 0.C).
   - Program start date is seeded to the example program start date (Sections 5.1, 6.7, 8).
@@ -50,7 +50,7 @@ A mobile-first strength-training log that records workouts and suggests what to 
   - The Tue/Thu recovery routine stays as a checklist with local-only done state (4.6); it is no longer logged as an activity.
   - Data model trimmed (Section 8): ActivityLog, DexaScan, WaistMeasurement, BodyWeight removed; storage is an append-only event log.
   - Milestones renumbered (Section 10) and acceptance criteria trimmed (Section 11).
-  - Deployment architecture (static site + one Lambda behind an HTTP API + Cognito + private S3 event log) is described in DEPLOYMENT-PLAN.md.
+  - Deployment architecture (static site + one Lambda behind an HTTP API + Cognito + private S3 event log) is described in DEPLOYMENT-PLAN.md and API-CONTRACT.md.
 - **v1.9**
   - v0.2 header collapses again: the status line is a tap target with a chevron that shows or hides the day picker. Picking a day or scrolling down collapses it (0.B.1).
   - v0.2 carousel: Prev/Next buttons, progress dots, and the bottom bar removed; navigation is by swipe only (0.B.1).
@@ -107,12 +107,12 @@ App release versions (v0.x) are separate from spec versions (v1.x in the Changel
 | App version | Status | Program it shows |
 |---|---|---|
 | v0.1 | Shipped (commit `543d99b`) | Spec v1.0 program |
-| v0.2 | Retired (v1.19): `index.html` redirects to https://strength.logbook.me | Spec v1.6 program (Section 4) |
-| v1 | In progress | Full app: logging, progression, history (Sections 5–6). Sync spike (milestone 1) is live at https://strength.logbook.me; see DEPLOYMENT-PLAN.md section 13 |
+| v0.2 | Retired (v1.19). The root `index.html` redirected to the owner's private copy until v1.20, when it became the project landing page | Spec v1.6 program (Section 4) |
+| v1 | Shipped; in daily use by the owner (the app in `app/`, the backend in `lambda/events/`) | Full app: logging, progression, history (Sections 5–6). Hosting and API: [DEPLOYMENT-PLAN.md](../DEPLOYMENT-PLAN.md) and [API-CONTRACT.md](API-CONTRACT.md) |
 
 ### 0.C Hosting of v0.x and v1
-- **v0.2 viewer:** retired in v1.19. The single `index.html` at the repo root, still served by GitHub Pages, is now a page that redirects to https://strength.logbook.me (a meta refresh and a script, with a link as a fallback). The old viewer is in git history (the commit before v1.19). Sections 0.A and 0.B below describe it as it was.
-- **v1:** built in `app/` in the same repo (separate `index.html`, JS modules, PWA files) and deployed to S3 + CloudFront with the backend in DEPLOYMENT-PLAN.md. v1 started from the v0.2 catalog data (copied into `app/js/seed/`) and has diverged: from v1.19 the seed adds exercises and alternatives and has no supersets.
+- **v0.2 viewer:** retired in v1.19. For a time the root `index.html` redirected to the owner's private copy; since v1.20 it is the project landing page (`docs/SHOWCASE-AND-SELF-HOST-SPEC.md`). The old viewer is in git history (the commit before v1.19). Sections 0.A and 0.B below describe it as it was.
+- **v1:** built in `app/` in the same repo (separate `index.html`, JS modules, PWA files) and deployed to S3 + CloudFront with the backend described in [DEPLOYMENT-PLAN.md](../DEPLOYMENT-PLAN.md) and [API-CONTRACT.md](API-CONTRACT.md). v1 started from the v0.2 catalog data (copied into `app/js/seed/`) and has diverged: from v1.19 the seed adds exercises and alternatives and has no supersets.
 - **v1 address:** https://strength.logbook.me (CloudFront alias; DNS is a CNAME at GoDaddy). One stack, `strength-prod`, while the app is unpublished and being tested.
 - v1 is the daily-use app; the viewer is gone (v1.19).
 
@@ -730,7 +730,7 @@ The app runs in one of three modes (docs/SHOWCASE-AND-SELF-HOST-SPEC.md, section
 - Sign out stays in the header (6.2), in synced mode only (local-only and demo have no account).
 - ~~Program start date, rest timer default, recovery days, units.~~ Not built. The start date stays 2026-09-28, the rest timer 90 s, the recovery days Tuesday and Thursday.
 - ~~Per exercise: starting weight, first-loaded weight, load increment; trap bar weight; scheduled increases on/off, interval, per-exercise on/off.~~ Not built. Defaults apply (5.3, 5.6, 5.12). The engine still reads `setting.changed` events for these keys, so a value can be set by a script if ever needed.
-- ~~Export all data as JSON (and CSV of logged sets).~~ Not a screen in synced mode: `scripts/export-data.mjs` writes the JSON and the CSV (DEPLOYMENT-PLAN.md section 15e). Local-only mode has Export backup (above), which writes the JSON.
+- ~~Export all data as JSON (and CSV of logged sets).~~ Not a screen in synced mode: `scripts/export-data.mjs` writes the JSON and the CSV (archive/DEPLOYMENT-PLAN-history.md section 15e). Local-only mode has Export backup (above), which writes the JSON.
 
 ---
 
@@ -747,7 +747,7 @@ The app runs in one of three modes (docs/SHOWCASE-AND-SELF-HOST-SPEC.md, section
 
 ## 8. Data model (logical; adapt to the chosen backend)
 
-All records belong to an owner (the signed-in user). Storage is an append-only event log (one event per change, edits are later events on the same entity, state is derived by replaying events); see DEPLOYMENT-PLAN.md. The static seed data below ships with the app code; only user-generated records (sessions, set logs, settings, swaps, deloads) are stored as events.
+All records belong to an owner (the signed-in user). Storage is an append-only event log (one event per change, edits are later events on the same entity, state is derived by replaying events); see DEPLOYMENT-PLAN.md and API-CONTRACT.md. The static seed data below ships with the app code; only user-generated records (sessions, set logs, settings, swaps, deloads) are stored as events.
 
 - **UserProfile**: programStartDate (initial value 2026-09-28), restTimerDefaultSec, recoveryDays (default [Tue, Thu]), trapBarWeightLbs (default 45), scheduledIncreasesEnabled (default true), scheduledIncreaseDays (default 21)
 - **Exercise**: name, type (dumbbell | barbell | machine | cable | bodyweight | bodyweight_loadable | bodyweight_ladder | suspension | carry | hold | mobility), repMin, repMax, perSide (bool), holdSeconds (nullable), loadIncrementLbs, startingWeightLbs (nullable), firstLoadedWeightLbs (nullable), startingNote (nullable), startingLevel (nullable; suspension, default 2), levelDescription (nullable; suspension), ~~loadsBack (bool)~~, scheduledIncreasesEnabled (default true), cues (optional text)

@@ -1,4 +1,4 @@
-// What the History screens draw (spec 6.6, plan section 15e), as plain data. Pure: replayed state and "today" in, view models out.
+// What the History screens draw (spec 6.6, archive/DEPLOYMENT-PLAN-history.md section 15e), as plain data. Pure: replayed state and "today" in, view models out.
 // A session counts when it is finished; only working sets count (not ramp-up, not `completed: false`).
 
 import { exerciseForSlot, suggestExercise } from '../engine/index.js';

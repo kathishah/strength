@@ -1,4 +1,4 @@
-// The service worker's shell list must be every file of the app (plan section 15e), or an offline first load would miss one.
+// The service worker's shell list must be every file of the app (archive/DEPLOYMENT-PLAN-history.md section 15e), or an offline first load would miss one.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync, readdirSync, statSync } from 'node:fs';

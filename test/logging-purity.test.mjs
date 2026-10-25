@@ -1,5 +1,5 @@
 // The logging modules are pure: no clock, DOM, storage or network. The time, the ids and the storage backends are passed in
-// (plan section 15), so every one of them runs in Node and in tests without stubs.
+// (archive/DEPLOYMENT-PLAN-history.md section 15), so every one of them runs in Node and in tests without stubs.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readdirSync, readFileSync } from 'node:fs';

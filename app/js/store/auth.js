@@ -1,4 +1,4 @@
-// Cognito sign-in with plain fetch (DEPLOYMENT-PLAN.md section 2): InitiateAuth with
+// Cognito sign-in with plain fetch (docs/API-CONTRACT.md section 8): InitiateAuth with
 // USER_PASSWORD_AUTH, then REFRESH_TOKEN_AUTH. No SDK, no redirects.
 // The ID token stays in memory; only the refresh token is kept in localStorage.
 

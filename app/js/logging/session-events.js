@@ -1,4 +1,4 @@
-// The event each action writes (plan section 15). Pure: a payload in, `{ type, entityId?, payload }` out. Every payload here
+// The event each action writes (archive/DEPLOYMENT-PLAN-history.md section 15). Pure: a payload in, `{ type, entityId?, payload }` out. Every payload here
 // is accepted by the server's validator (test/logging-events.test.mjs runs each one through it).
 
 import { pacificIso } from '../time.js';

@@ -1,4 +1,4 @@
-// What counts as history for the engine (plan section 14, decision 4).
+// What counts as history for the engine (archive/DEPLOYMENT-PLAN-history.md section 14, decision 4).
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import { resolveExercise } from '../app/js/engine/config.js';

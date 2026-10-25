@@ -1,4 +1,4 @@
-// The History screens' view models (plan section 15e): by exercise, exercise detail, by date. Built from real replayed logs.
+// The History screens' view models (archive/DEPLOYMENT-PLAN-history.md section 15e): by exercise, exercise detail, by date. Built from real replayed logs.
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import { dateGroupLabel, exerciseDetail, historyByDate, historyByExercise } from '../app/js/logging/index.js';

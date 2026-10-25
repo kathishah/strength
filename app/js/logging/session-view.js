@@ -1,4 +1,4 @@
-// Everything the session screen draws, as plain data (plan section 15). Pure: replayed state, the person's draft and the
+// Everything the session screen draws, as plain data (archive/DEPLOYMENT-PLAN-history.md section 15). Pure: replayed state, the person's draft and the
 // time in; a view model out. The suggestions come from the engine, planned for the Pacific day the session started, so a
 // workout that runs past midnight keeps the suggestions it began with.
 

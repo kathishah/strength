@@ -1,7 +1,7 @@
-// Event type registry and validators (DEPLOYMENT-PLAN.md sections 3 and 4).
+// Event type registry and validators (docs/API-CONTRACT.md sections 4 and 6).
 //
 // Every stored event is { id, ts, v, type, entityId, payload, recvAt }. Clients
-// send everything except recvAt. Payloads are field-level patches (section 4),
+// send everything except recvAt. Payloads are field-level patches (docs/API-CONTRACT.md section 6),
 // so an optional field that is absent means "this event does not touch it".
 //
 // To add a field or type: edit REGISTRY below. Unknown payload fields are
@@ -122,7 +122,7 @@ const SET_VALUE_FIELDS = {
   completed: bool,
 };
 
-// ---- setting keys (spec 6.7 and plan section 4) ----
+// ---- setting keys (spec 6.7 and 8) ----
 // `startingWeight:<exerciseId>` style keys are matched by prefix.
 const SETTING_CHECKS = {
   programStartDate: isoDate,

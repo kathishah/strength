@@ -1,4 +1,4 @@
-// The map from what the person does to the events that get written (plan section 15). It works over the event store
+// The map from what the person does to the events that get written (archive/DEPLOYMENT-PLAN-history.md section 15). It works over the event store
 // (store/events.js) and the draft store (draft.js); the clock and the id generator are passed in, so there is no hidden time
 // here and the whole thing runs in tests against the real store, replay and engine.
 

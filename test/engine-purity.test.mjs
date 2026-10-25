@@ -1,4 +1,4 @@
-// The engine is pure: no clock, DOM, storage or network (DEPLOYMENT-PLAN.md section 14). Today and everything else
+// The engine is pure: no clock, DOM, storage or network (archive/DEPLOYMENT-PLAN-history.md section 14). Today and everything else
 // arrive as arguments; calendar-day arithmetic lives in app/js/time.js.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';

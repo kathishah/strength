@@ -1,4 +1,4 @@
-// Sends the outbox with POST /events (DEPLOYMENT-PLAN.md sections 3 and 5).
+// Sends the outbox with POST /events (docs/API-CONTRACT.md section 4, archive/DEPLOYMENT-PLAN-history.md section 5).
 //
 // The server stores a batch all or nothing and answers duplicates as success, so the whole outbox
 // can be retried safely. One event the server will never accept would otherwise block every later

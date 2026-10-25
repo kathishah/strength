@@ -1,4 +1,4 @@
-// The suggestion for one exercise (plan section 14; spec 5.2, 5.3, 5.6, 5.12 as cut in v1.13). Pure.
+// The suggestion for one exercise (archive/DEPLOYMENT-PLAN-history.md section 14; spec 5.2, 5.3, 5.6, 5.12 as cut in v1.13). Pure.
 //
 // Weighted exercises: the suggestion is last session's base load (its heaviest weight), or that plus one increment when
 // a scheduled increase is due. Nothing else changes a load: not rep performance, not back pain, not the week.
@@ -84,7 +84,7 @@ function suggestRepeat({ cfg, hist }) {
   }
 }
 
-// Suggestion for one exercise in a slot, for a Pacific day `today`. See DEPLOYMENT-PLAN.md section 14 for the shape.
+// Suggestion for one exercise in a slot, for a Pacific day `today`. See archive/DEPLOYMENT-PLAN-history.md section 14 for the shape.
 export function suggestExercise(state, { exerciseId, templateCode = null, slot = null, today }) {
   const cal = calendarFor({ settings: state.settings, today });
   const cfg = resolveExercise(exerciseId, { settings: state.settings, templateCode, slot });

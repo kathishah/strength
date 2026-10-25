@@ -1,5 +1,5 @@
 // The local event log: every event this device knows, its outbox, and the state replayed from them
-// (DEPLOYMENT-PLAN.md sections 4 and 5). Storage is behind the interface in open.js.
+// (docs/API-CONTRACT.md section 6, archive/DEPLOYMENT-PLAN-history.md section 5). Storage is behind the interface in open.js.
 //
 // Local first: append() writes the event to storage and updates state before anything touches the
 // network. The sync code (outbox.js, sync.js) reads pending() and calls ingest() / markSent() / reject().
@@ -99,7 +99,7 @@ export async function createEventStore({ storage, deviceId, clock = createClock(
     },
 
     // Events from GET /events, stored together with the cursor they came with. De-duplicates by id
-    // (the server can hold an event twice; see DEPLOYMENT-PLAN.md section 13). The cursor moves only
+    // (the server can hold an event twice; see docs/API-CONTRACT.md section 8). The cursor moves only
     // if the write succeeds. Resolves with how many events were new.
     async ingest(incoming, nextCursor) {
       const usable = incoming.filter(isEventLike);

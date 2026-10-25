@@ -1,4 +1,4 @@
-// The export script's pure parts (plan section 15e): CSV of logged sets and paging through GET /events.
+// The export script's pure parts (archive/DEPLOYMENT-PLAN-history.md section 15e): CSV of logged sets and paging through GET /events.
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import { CSV_COLUMNS, eventsToCsv, fetchAllEvents } from '../scripts/export-lib.mjs';

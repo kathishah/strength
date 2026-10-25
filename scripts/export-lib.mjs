@@ -1,4 +1,4 @@
-// The pure parts of scripts/export-data.mjs (plan section 15e): paging through GET /events, and turning events into a CSV of logged sets.
+// The pure parts of scripts/export-data.mjs (archive/DEPLOYMENT-PLAN-history.md section 15e): paging through GET /events, and turning events into a CSV of logged sets.
 
 import { replay } from '../app/js/store/replay.js';
 import { EXERCISES, WORKOUTS } from '../app/js/seed/index.js';

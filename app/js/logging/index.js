@@ -1,4 +1,4 @@
-// Workout logging: the pure parts of Phase D (plan section 15). No DOM, no storage, no clock.
+// Workout logging: the pure parts of Phase D (archive/DEPLOYMENT-PLAN-history.md section 15). No DOM, no storage, no clock.
 export { createActions } from './actions.js';
 export { addExtraSet, clearExercise, clearRest, clearRow, createDraftStore, emptyDraft, parseDraft, serializeDraft, setRowField, startEditing, startRest } from './draft.js';
 export { PENDING, dayName, dayPills, dayView, editView, recoveryCards } from './day-view.js';

@@ -1,4 +1,4 @@
-// Field-level reducers and replay (DEPLOYMENT-PLAN.md section 4): the state depends on which events
+// Field-level reducers and replay (docs/API-CONTRACT.md section 6): the state depends on which events
 // exist, never on the order they arrived in.
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';

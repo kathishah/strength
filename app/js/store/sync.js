@@ -1,4 +1,4 @@
-// Background sync (DEPLOYMENT-PLAN.md section 5): push the outbox, then pull everything after the saved
+// Background sync (archive/DEPLOYMENT-PLAN-history.md section 5): push the outbox, then pull everything after the saved
 // cursor. Never blocks logging: writes go through events.append() first and reach the server later.
 //
 //   - One sync at a time; a request made while one runs makes it go around once more.

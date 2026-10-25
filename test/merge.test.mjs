@@ -269,7 +269,7 @@ describe('duplicates: the client de-duplicates by event id', () => {
     await a.sync.sync();
     const sept = server.store.json(monthKey('2026-09')).map((e) => e.id);
     const oct = server.store.json(monthKey('2026-10')).map((e) => e.id);
-    assert.deepEqual(sept, oct, 'the server holds each event twice (DEPLOYMENT-PLAN.md section 13)');
+    assert.deepEqual(sept, oct, 'the server holds each event twice (docs/API-CONTRACT.md section 8)');
 
     assert.equal(a.events.eventCount(), 2, 'the client holds each once');
     assert.equal(Object.keys(a.events.state.sets).length, 1);

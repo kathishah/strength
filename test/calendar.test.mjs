@@ -1,4 +1,4 @@
-// Program week and phase (spec 5.1; plan section 14 decision 8). Deload weeks were removed in v1.13.
+// Program week and phase (spec 5.1; archive/DEPLOYMENT-PLAN-history.md section 14 decision 8). Deload weeks were removed in v1.13.
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import { calendarFor, phaseOf, programWeek, programWeekInfo, targetRir } from '../app/js/engine/calendar.js';

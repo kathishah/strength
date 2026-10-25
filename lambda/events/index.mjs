@@ -1,4 +1,4 @@
-// Lambda "events": POST /events and GET /events (DEPLOYMENT-PLAN.md section 3).
+// Lambda "events": POST /events and GET /events (docs/API-CONTRACT.md sections 4 and 5).
 //
 // Storage: u/<sub>/events/<yyyy-mm>.json, an append-only JSON array per RECEIVE
 // month (US Pacific time, see time.mjs). The GET cursor is "<yyyy-mm>:<index>", a position in those files.

@@ -1,4 +1,4 @@
-// The UI-to-event mapping (plan sections 15 and 15b) run against the real event store, replay and engine, and, for the offline test,
+// The UI-to-event mapping (archive/DEPLOYMENT-PLAN-history.md sections 15 and 15b) run against the real event store, replay and engine, and, for the offline test,
 // the real Lambda handler over a fake S3. Nothing here touches a DOM.
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';

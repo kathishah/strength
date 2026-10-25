@@ -5,7 +5,7 @@
 // (starting and first-loaded weights). test/rules.test.mjs reads those tables out of
 // docs/SPEC-strength.md and compares. A null where a value would be is "the spec gives none":
 //   - repMin/repMax/perSide/targetDistanceM null: an alternative with no range of its own uses the range of the
-//     slot it is swapped into (spec question in plan section 14).
+//     slot it is swapped into (spec question in archive/DEPLOYMENT-PLAN-history.md section 14).
 //   - startingWeightLbs null: no pre-fill; the user is asked for a weight (spec 5.6, swapped-in alternatives).
 
 // How the engine treats an exercise:

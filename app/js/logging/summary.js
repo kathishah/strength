@@ -6,7 +6,7 @@ import { addDays, pacificDate, parseInstant } from '../time.js';
 import { exerciseName, formatDay, formatDuration, setsText } from './text.js';
 
 // The next workout of a kind comes about a week later (three gym days a week, rotating A, B, C). The spec does not say
-// when "next time" is, so the callouts look this far ahead (plan section 15, question 8).
+// when "next time" is, so the callouts look this far ahead (archive/DEPLOYMENT-PLAN-history.md section 15, question 8).
 export const NEXT_TIME_DAYS = 7;
 
 const isWorking = (set) => set.isRampUp !== true && set.completed !== false;

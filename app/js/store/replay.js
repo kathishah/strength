@@ -1,4 +1,4 @@
-// Replay: the event log in, app state out (DEPLOYMENT-PLAN.md section 4). Pure: no DOM, no storage.
+// Replay: the event log in, app state out (docs/API-CONTRACT.md section 6). Pure: no DOM, no storage.
 //
 // replay(events) sorts by ts (by instant, ties by counter, device, then event id) and merges field
 // patches per entity, the last ts winning per field. The result depends only on WHICH events exist,

@@ -7,7 +7,7 @@ import { startApp } from './boot.js';
 
 startApp({ mode: isConfigured() ? 'synced' : 'local' });
 
-// Offline load (plan section 15e): the worker caches the app shell. Sync and logging already work offline once the page is loaded.
+// Offline load (archive/DEPLOYMENT-PLAN-history.md section 15e): the worker caches the app shell. Sync and logging already work offline once the page is loaded.
 // (Here and not in boot.js: the demo registers no service worker.)
 if ('serviceWorker' in navigator) {
   addEventListener('load', () => { navigator.serviceWorker.register('sw.js').catch((err) => console.warn('No service worker:', err)); });

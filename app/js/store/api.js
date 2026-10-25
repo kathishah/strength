@@ -1,4 +1,4 @@
-// Client for POST /events and GET /events (DEPLOYMENT-PLAN.md section 3).
+// Client for POST /events and GET /events (docs/API-CONTRACT.md sections 4 and 5).
 
 import { config } from '../config.js';
 import { getIdToken } from './auth.js';

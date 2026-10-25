@@ -1,4 +1,4 @@
-// The service worker (spec 9, plan section 15e): the installed app opens with no network. Offline load only; sync is unchanged.
+// The service worker (spec 9, archive/DEPLOYMENT-PLAN-history.md section 15e): the installed app opens with no network. Offline load only; sync is unchanged.
 //
 // Install caches the shell listed below. Every same-origin GET is answered network first, from the cache only when the network fails, and
 // a good network answer refreshes the cache. So online you always get what was deployed (scripts/deploy-app.sh takes effect on the next

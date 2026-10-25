@@ -1,4 +1,4 @@
-// IndexedDB storage (DEPLOYMENT-PLAN.md section 5). Interface: see open.js.
+// IndexedDB storage (archive/DEPLOYMENT-PLAN-history.md section 5). Interface: see open.js.
 //
 //   events    every event this device knows, keyed by id (its own, and the server's)
 //   outbox    { id } for events not yet acknowledged by the server

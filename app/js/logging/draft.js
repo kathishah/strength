@@ -1,4 +1,4 @@
-// The local draft of an in-progress session (spec 6.3 draft safety, plan section 15). Pure functions over a plain object;
+// The local draft of an in-progress session (spec 6.3 draft safety, archive/DEPLOYMENT-PLAN-history.md section 15). Pure functions over a plain object;
 // the browser code saves and loads it (ui/draft-store.js).
 //
 // Logged sets are events and need no draft. The draft holds only what is not an event yet: values typed into rows that

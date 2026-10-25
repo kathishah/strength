@@ -7,7 +7,7 @@ const fields = (errs) => errs.map((e) => e.field);
 const withPayload = (patch, base = makeEvent(1)) => ({ ...base, payload: { ...base.payload, ...patch } });
 
 describe('event envelope', () => {
-  test('accepts the example set.logged event from the plan', () => {
+  test('accepts the example set.logged event from docs/API-CONTRACT.md', () => {
     assert.deepEqual(validateEvent(makeEvent(1), NOW), []);
   });
 
@@ -53,7 +53,7 @@ describe('event envelope', () => {
   });
 });
 
-describe('payload ranges (plan section 3)', () => {
+describe('payload ranges (docs/API-CONTRACT.md section 4)', () => {
   const cases = [
     ['weightLbs', 0, 1000, 1001],
     ['reps', 0, 500, 501],
@@ -118,7 +118,7 @@ describe('required fields and unknown fields', () => {
     assert.deepEqual(fields(validateEvent(edited({ exerciseId: 'x' }), NOW)), ['payload.exerciseId', 'payload']);
   });
 
-  test('every registered type has a v1 spec and the plan section 4 types are all present', () => {
+  test('every registered type has a v1 spec and the event types of the archived plan (archive/DEPLOYMENT-PLAN-history.md section 4) are all present', () => {
     const expected = ['session.started', 'session.finished', 'set.logged', 'set.edited', 'session.notes', 'setting.changed', 'swap.set', 'swap.cleared', 'deload.started', 'deload.postponed', 'entity.deleted'];
     assert.deepEqual(Object.keys(REGISTRY).sort(), expected.sort());
     for (const t of expected) assert.ok(REGISTRY[t][1], t);

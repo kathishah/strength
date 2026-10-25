@@ -1,6 +1,6 @@
 # Archived deployment and implementation plan (v1)
 
-This is a historical planning document. Some instructions, architecture notes, status reports, and test counts are obsolete. Current instructions are in [BUILD.md](../BUILD.md) and [DEPLOYMENT-PLAN.md](../DEPLOYMENT-PLAN.md).
+This is a historical planning document. Some instructions, architecture notes, status reports, and test counts are obsolete. Current instructions are in [docs/SELF-HOSTING.md](../docs/SELF-HOSTING.md) (BUILD.md, mentioned below, was retired into it), [DEPLOYMENT-PLAN.md](../DEPLOYMENT-PLAN.md) and, for the API, [docs/API-CONTRACT.md](../docs/API-CONTRACT.md).
 
 
 Companion to `docs/SPEC-strength.md` (v1.18). Covers how v1 is hosted, authenticated, stored, and built. The spec says *what* the app does; this says *how it runs*.
