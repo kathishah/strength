@@ -56,6 +56,7 @@ node --test
 - `docs/SHOWCASE-AND-SELF-HOST-SPEC.md`: design of the landing page, demo, local-only mode and self-hosting.
 - `DEPLOYMENT-PLAN.md`: current high-level hosting and data-flow notes.
 - `CONTRIBUTING.md`, `SECURITY.md`: how to contribute, and how to report a vulnerability.
+- `journal/`: dated log of issues, evaluations, plans and results (rules in `journal/README.md`).
 - `archive/`: retired prototype and completed planning records.
 
 Per-deployment settings live in a git-ignored `private/` folder, so the repository's scripts and docs stay generic.
