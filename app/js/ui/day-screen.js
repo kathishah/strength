@@ -102,7 +102,7 @@ export function mountDay(container, ctx, editId = null) {
   function dialColumn(card, field, rowNumbers, caption, { skippable = false } = {}) {
     const { format, label } = FIELD[field];
     const first = card.rows.find((r) => r.setNumber === rowNumbers[0]);
-    const used = [...card.rows.map((r) => r[field]), field === 'weightLbs' ? card.suggestion.weightLbs : null];
+    const used = [...card.rows.map((r) => r[field]), ...(field === 'weightLbs' ? [card.suggestion.weightLbs, ...(card.suggestion.setWeightsLbs ?? [])] : [])];
     const dial = createDial({
       values: dialNotches(field, used), format, label: `${card.name} ${rowNumbers.length > 1 ? 'all sets' : `set ${rowNumbers[0]}`} ${label}`,
       className: field === 'weightLbs' && card.increased ? 'increase' : '',

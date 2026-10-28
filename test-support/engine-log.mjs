@@ -24,6 +24,15 @@ export function pacificMs(date, time = '11:00') {
 
 // Working sets of one exercise: reps per set at one weight. extra: any set.logged field (suggestionSource, ...).
 export const lift = (exerciseId, weightLbs, reps, extra = {}) => ({ exerciseId, weightLbs, reps, ...extra });
+// Working sets with their own weight each: [[weightLbs, reps], ...] in set order, or [weightLbs, reps, setNumber] to leave a gap
+// (a skipped set). `lift()` gives every set of an entry the same weight; this is how a ramp like 25 / 30 / 35 is logged.
+export const liftSets = (exerciseId, sets, extra = {}) => ({
+  exerciseId, perSet: sets.map(([weightLbs, reps, setNumber]) => ({ weightLbs, reps, ...(setNumber === undefined ? {} : { setNumber }) })), ...extra,
+});
+// The same at a level: [[levelNumber, reps], ...] (suspension, pushup ladder).
+export const levelSets = (exerciseId, sets, extra = {}) => ({
+  exerciseId, perSet: sets.map(([levelNumber, reps, setNumber]) => ({ levelNumber, reps, ...(setNumber === undefined ? {} : { setNumber }) })), ...extra,
+});
 // Sets at a level (suspension, pushup ladder).
 export const atLevel = (exerciseId, levelNumber, reps, extra = {}) => ({ exerciseId, levelNumber, reps, ...extra });
 // Carry sets: distance walked per set.
@@ -60,10 +69,12 @@ export function makeLog({ programStartDate = '2026-09-28', validate = true } = {
       for (const entry of sets) {
         const setBase = { sessionId: id, exerciseId: entry.exerciseId, isCalibration: entry.isCalibration ?? false };
         const extra = { ...entry };
-        for (const k of ['exerciseId', 'reps', 'distances', 'rampUp', 'weightLbs', 'levelNumber', 'isCalibration']) delete extra[k];
+        for (const k of ['exerciseId', 'reps', 'distances', 'rampUp', 'perSet', 'weightLbs', 'levelNumber', 'isCalibration']) delete extra[k];
         const rows = entry.rampUp
           ? entry.rampUp.map((r) => ({ isRampUp: true, weightLbs: r.weightLbs, reps: r.reps }))
-          : (entry.distances ?? entry.reps).map((v) => ({
+          : entry.perSet
+            ? entry.perSet.map((r) => ({ isRampUp: false, ...r }))
+            : (entry.distances ?? entry.reps).map((v) => ({
               isRampUp: false,
               ...(entry.distances ? { distanceM: v } : { reps: v }),
               ...(entry.weightLbs !== undefined ? { weightLbs: entry.weightLbs } : {}),

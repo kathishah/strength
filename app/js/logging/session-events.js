@@ -22,7 +22,7 @@ export function sessionStarted({ templateCode, nowMs, calendar }) {
 // suggestion: the engine's result for the exercise, so the set records what was suggested (spec 8: SetLog).
 export function setLogged({ sessionId, exerciseId, setNumber, values, suggestion }) {
   const payload = { sessionId, exerciseId, setNumber, isRampUp: false, isCalibration: false, completed: true };
-  const defaults = loggedDefaults(suggestion);
+  const defaults = loggedDefaults(suggestion, setNumber);
   for (const [k, v] of Object.entries({ ...defaults, ...values })) if (present(v)) payload[k] = v;
   return { type: 'set.logged', payload };
 }

@@ -20,6 +20,7 @@ const SHELL = [
   'js/engine/history.js',
   'js/engine/index.js',
   'js/engine/load.js',
+  'js/engine/prefill.js',
   'js/engine/session.js',
   'js/engine/suggest.js',
   'js/ids.js',
