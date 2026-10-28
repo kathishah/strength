@@ -56,8 +56,8 @@ const viewOfFinished = (state, s, draft, nowMs) => buildView(
   stateBefore(state, s.startedMs), { sessionId: s.id, session: state.sessions[s.id], templateCode: s.templateCode, date: s.date, startedMs: s.startedMs }, draft, nowMs,
 );
 
-// A finished workout reopened (spec 6.3, v1.15). null when the id is unknown, not finished, or unusable. No swapping, no finish card,
-// no rest timer: the cards are the open workout's, for that workout's day.
+// A finished workout reopened (spec 6.3, v1.15). null when the id is unknown, not finished, or unusable. No swapping, no finish card:
+// the cards are the open workout's, for that workout's day.
 export function editView(state, { sessionId, nowMs, draftFor }) {
   const s = listSessions(state).find((x) => x.id === sessionId);
   if (!s || !s.finished) return null;
@@ -79,7 +79,6 @@ export function editView(state, { sessionId, nowMs, draftFor }) {
     warning: null,
     warningText: null,
     canTrainInstead: false,
-    rest: null,
   };
 }
 

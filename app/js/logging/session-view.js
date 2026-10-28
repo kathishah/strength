@@ -7,13 +7,9 @@ import { EXERCISES, PUSHUP_LADDER, RULES, WORKOUTS } from '../seed/index.js';
 import { pacificDate, parseInstant } from '../time.js';
 import { targetRir } from '../engine/calendar.js';
 import { buildRows, inputsFor } from './rows.js';
-import { restStatus } from './rest-timer.js';
 import {
   exerciseName, formatDay, formatTime, increaseText, lastText, phaseText, repsText, setsRepsText, setsText, sourceLabel, suggestionText,
 } from './text.js';
-
-// The line under the cue on every exercise card (spec 6.3).
-const REST_TEXT = 'Rest about 90 s between sets.';
 
 const isWorking = (set) => set.isRampUp !== true && set.completed !== false;
 
@@ -110,7 +106,6 @@ function buildCard({ state, sessionId, draft, e, slot, defaultExerciseId, swappe
     swappedFromName: swapped ? exerciseName(defaultExerciseId) : null,
     // The position label, filled in by labelCards once every card is known (spec 6.3).
     chipText: '',
-    restText: REST_TEXT,
     // 'input': nothing logged yet; 'done': logged, shown as one summary line; 'editing': a logged exercise reopened.
     mode: loggedCount === 0 ? 'input' : reopened ? 'editing' : 'done',
     done: loggedCount > 0,
@@ -187,7 +182,6 @@ export function buildView(state, { sessionId = null, session = null, templateCod
     canFinish: loggedSets > 0,
     notes: draft.notes ?? session?.notes ?? '',
     savedNotes: session?.notes ?? '',
-    rest: restStatus(draft, nowMs, state.settings),
   };
 }
 

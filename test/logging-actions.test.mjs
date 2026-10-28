@@ -2,7 +2,7 @@
 // the real Lambda handler over a fake S3. Nothing here touches a DOM.
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
-import { createActions, createDraftStore, dayView, emptyDraft, nextTemplate, PENDING, restStatus, sessionView } from '../app/js/logging/index.js';
+import { createActions, createDraftStore, dayView, emptyDraft, nextTemplate, PENDING, sessionView } from '../app/js/logging/index.js';
 import { planSession } from '../app/js/engine/index.js';
 import { ulid } from '../app/js/ids.js';
 import { createMemoryStorage } from '../app/js/store/memory.js';
@@ -54,7 +54,7 @@ describe('starting', () => {
 });
 
 describe('Done on an exercise', () => {
-  test('logs every set with the pre-filled weight and recommended reps, records what was suggested, starts the rest', async () => {
+  test('logs every set with the pre-filled weight and recommended reps, records what was suggested, starts no rest timer', async () => {
     const w = await makeWorld();
     const id = await w.actions.startSession();
     w.advance(120);
@@ -65,9 +65,7 @@ describe('Done on an exercise', () => {
       [1, 20, 8, 20, 'starting', true], [2, 20, 8, 20, 'starting', true], [3, 20, 8, 20, 'starting', true],
     ]);
     assert.ok(logged.every((s) => !Object.hasOwn(s, 'rir')));
-    assert.equal(restStatus(w.actions.draft(id), w.clock.ms).remainingSec, 90);
-    w.advance(30);
-    assert.equal(restStatus(w.actions.draft(id), w.clock.ms).remainingSec, 60);
+    assert.equal(Object.hasOwn(w.actions.draft(id), 'restStartedAtMs'), false);
     w.assertValid();
   });
 
@@ -381,7 +379,7 @@ describe('finishing', () => {
 describe('draft safety', () => {
   const shimOf = (backend) => ({ getItem: (k) => backend.get(k) ?? null, setItem: (k, v) => void backend.set(k, v), removeItem: (k) => void backend.delete(k) });
 
-  test('a reload mid-workout: exercises from the log, typed values, notes and the rest timer from the draft', async () => {
+  test('a reload mid-workout: exercises from the log, typed values and notes from the draft', async () => {
     const storage = createMemoryStorage({ persistent: true });
     const shim = shimOf(new Map());
     const a = await makeWorld({ storage, backend: shim });
@@ -396,7 +394,6 @@ describe('draft safety', () => {
     const shape = (v) => v.cards.map((c) => [c.mode, c.rows.map((r) => [r.weightLbs, r.reps])]);
     assert.deepEqual(shape(after), shape(before));
     assert.equal(after.notes, 'half typed');
-    assert.equal(after.rest.over, false);
     assert.equal(after.exercisesDone, 1);
   });
 

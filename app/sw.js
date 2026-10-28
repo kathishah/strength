@@ -29,7 +29,6 @@ const SHELL = [
   'js/logging/history-view.js',
   'js/logging/index.js',
   'js/logging/input.js',
-  'js/logging/rest-timer.js',
   'js/logging/rotation.js',
   'js/logging/rows.js',
   'js/logging/session-events.js',

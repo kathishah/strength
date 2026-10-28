@@ -1,8 +1,7 @@
-// The local draft and the rest timer (spec 6.3, 9): draft safety and a timer that works from timestamps.
+// The local draft (spec 6.3): draft safety.
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
-import { addExtraSet, clearExercise, clearRest, clearRow, createDraftStore, emptyDraft, parseDraft, serializeDraft, setRowField, startEditing, startRest } from '../app/js/logging/draft.js';
-import { adjustedRestLength, DEFAULT_REST_SEC, formatClock, restLength, restStatus } from '../app/js/logging/rest-timer.js';
+import { addExtraSet, clearExercise, clearRow, createDraftStore, emptyDraft, parseDraft, serializeDraft, setRowField, startEditing } from '../app/js/logging/draft.js';
 
 describe('draft', () => {
   test('typed values, edits and extra sets are kept per exercise and set, without changing the old draft', () => {
@@ -35,8 +34,8 @@ describe('draft', () => {
   test('it survives a save and a load', () => {
     let d = emptyDraft('sess_1');
     d = setRowField(d, 'goblet-squat', 2, 'weightLbs', 22.5);
-    d = startRest(addExtraSet(d, 'goblet-squat'), 1_789_000_000_000);
-    d = { ...d, notes: 'felt good', restSec: 120 };
+    d = addExtraSet(d, 'goblet-squat');
+    d = { ...d, notes: 'felt good' };
     assert.deepEqual(parseDraft(serializeDraft(d), 'sess_1'), d);
   });
 
@@ -53,18 +52,24 @@ describe('draft', () => {
     assert.equal(Object.hasOwn(d, 'backPainAfter'), false);
   });
 
+  test('a draft saved while the app had a rest timer is read with the rest fields ignored', () => {
+    const d = parseDraft(JSON.stringify({ v: 1, sessionId: 's', notes: 'hi', restStartedAtMs: 1_789_000_000_000, restSec: 120 }), 's');
+    assert.deepEqual(d, { ...emptyDraft('s'), notes: 'hi' });
+    assert.equal(Object.hasOwn(d, 'restStartedAtMs') || Object.hasOwn(d, 'restSec'), false);
+    assert.equal(Object.hasOwn(emptyDraft('s'), 'restStartedAtMs'), false);
+  });
+
   test('bad fields are dropped one by one and the good ones kept', () => {
     const text = JSON.stringify({
       v: 1, sessionId: 's',
       rows: { a: { 0: { reps: 5 }, 1: { reps: 'lots', weightLbs: 30 }, x: { reps: 1 } }, b: 'nope', __proto__: { c: 1 } },
       extra: { a: 2, b: -1, c: 1.5, d: 99 },
-      notes: 12, restStartedAtMs: 'soon', restSec: null,
+      notes: 12,
     });
     const d = parseDraft(text, 's');
     assert.deepEqual(d.rows, { a: { 1: { weightLbs: 30 } } });
     assert.deepEqual(d.extra, { a: 2 });
     assert.equal(d.notes, null);
-    assert.equal(d.restStartedAtMs, null);
     assert.equal(Object.getPrototypeOf(d.rows), Object.prototype);
   });
 
@@ -88,64 +93,5 @@ describe('draft', () => {
     store.clear('s');
     assert.deepEqual(store.load('s'), emptyDraft('s'));
     assert.deepEqual(createDraftStore(null).load('s'), emptyDraft('s'));
-  });
-});
-
-describe('rest timer', () => {
-  const T0 = Date.parse('2026-09-28T11:00:00-07:00');
-  const running = (extra = {}) => ({ ...startRest(emptyDraft('s'), T0), ...extra });
-
-  test('no timer until a set is logged', () => assert.equal(restStatus(emptyDraft('s'), T0), null));
-
-  test('counts down from 90 s using the timestamps only', () => {
-    assert.deepEqual(restStatus(running(), T0), { totalSec: 90, remainingMs: 90_000, remainingSec: 90, over: false, overMs: 0 });
-    assert.equal(restStatus(running(), T0 + 30_500).remainingSec, 60);
-    assert.equal(restStatus(running(), T0 + 89_999).remainingSec, 1);
-  });
-
-  test('a locked screen: looking again 40 s later, or after a long gap, is right without any ticks in between', () => {
-    const d = running();
-    assert.equal(restStatus(d, T0 + 50_000).remainingSec, 40);
-    const late = restStatus(d, T0 + 200_000);
-    assert.equal(late.over, true);
-    assert.equal(late.remainingSec, 0);
-    assert.equal(late.overMs, 110_000);
-  });
-
-  test('it ends exactly at the length, and a rest that ended long ago is hidden', () => {
-    assert.equal(restStatus(running(), T0 + 90_000).over, true);
-    assert.equal(restStatus(running(), T0 + 90_000 + 599_000).over, true);
-    assert.equal(restStatus(running(), T0 + 90_000 + 601_000), null);
-  });
-
-  test('a clock that went back a lot hides it; a small step back is treated as just started', () => {
-    assert.equal(restStatus(running(), T0 - 5_000).remainingSec, 90);
-    assert.equal(restStatus(running(), T0 - 120_000), null);
-  });
-
-  test('length: this session\'s adjusted length, else the setting, else 90 s; clamped to 15-600 s', () => {
-    assert.equal(restLength(emptyDraft('s'), {}), DEFAULT_REST_SEC);
-    assert.equal(restLength(emptyDraft('s'), { restTimerDefaultSec: 120 }), 120);
-    assert.equal(restLength({ restSec: 45 }, { restTimerDefaultSec: 120 }), 45);
-    assert.equal(restLength({ restSec: 5000 }, {}), 600);
-    assert.equal(restLength({ restSec: 1 }, {}), 15);
-    assert.equal(restLength({ restSec: NaN }, {}), 90);
-  });
-
-  test('+15 and -15 change the length of the running rest and stop at the limits', () => {
-    assert.equal(adjustedRestLength(emptyDraft('s'), {}, 15), 105);
-    assert.equal(adjustedRestLength({ restSec: 20 }, {}, -15), 15);
-    assert.equal(adjustedRestLength({ restSec: 600 }, {}, 15), 600);
-    const longer = { ...running(), restSec: 105 };
-    assert.equal(restStatus(longer, T0 + 30_000).remainingSec, 75);
-  });
-
-  test('skipping clears it', () => assert.equal(restStatus(clearRest(running()), T0), null));
-
-  test('the clock text', () => {
-    assert.equal(formatClock(83), '1:23');
-    assert.equal(formatClock(5), '0:05');
-    assert.equal(formatClock(-3), '0:00');
-    assert.equal(formatClock(600), '10:00');
   });
 });

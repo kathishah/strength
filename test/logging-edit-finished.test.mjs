@@ -2,7 +2,7 @@
 // Home list and edit view over real logs. Nothing here touches a DOM.
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
-import { dayView, editView, emptyDraft, nextTemplate, restStatus } from '../app/js/logging/index.js';
+import { dayView, editView, emptyDraft, nextTemplate } from '../app/js/logging/index.js';
 import { planSession } from '../app/js/engine/index.js';
 import { parseRoute } from '../app/js/ui/router.js';
 import { lift, makeLog } from '../test-support/engine-log.mjs';
@@ -49,13 +49,6 @@ describe('ticking, editing and undoing in a finished workout', () => {
     assert.equal(edit(w, id).exercisesDone, 6);
     assert.equal(cardOf(edit(w, id), 'pushup').mode, 'done');
     w.assertValid();
-  });
-
-  test('a correction starts no rest timer', async () => {
-    const { w, id } = await bWithoutPushups();
-    const c = cardOf(edit(w, id), 'pushup');
-    await w.actions.saveExercise(id, { exerciseId: 'pushup', rows: c.rows, suggestion: c.suggestion });
-    assert.equal(restStatus(w.actions.draft(id), w.clock.ms), null);
   });
 
   test('Edit changes a logged set (set.edited) and Undo removes the exercise\'s sets, then it can be ticked again', async () => {
@@ -121,10 +114,10 @@ describe('the edit view', () => {
     assert.equal(second.lastText.includes('25'), false);
   });
 
-  test('has the workout\'s own day and exercises, no finish card state, no swapping and no rest', () => {
+  test('has the workout\'s own day and exercises, no finish card state, and no swapping', () => {
     const l = log().swap('A', 1, 'box-squat');
     const v = view(l, 'sess_a1');
-    assert.deepEqual([v.mode, v.templateCode, v.finished, v.rest, v.older, v.warning], ['edit', 'A', true, null, [], null]);
+    assert.deepEqual([v.mode, v.templateCode, v.finished, v.older, v.warning], ['edit', 'A', true, [], null]);
     assert.equal(v.statusText, 'Workout A · Mon, Sep 28 · editing');
     assert.ok(v.cards.every((c) => !c.canSwap && c.swapOptions.length === 0 && c.optionGroups.alternatives.length === 0 && c.optionGroups.trx.length === 0 && c.swappedFromName === null));
   });

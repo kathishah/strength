@@ -6,11 +6,8 @@ import { planSession } from '../engine/index.js';
 import { exerciseForSlot } from '../engine/session.js';
 import { WORKOUTS } from '../seed/index.js';
 import { pacificDate } from '../time.js';
-import {
-  addExtraSet, clearExercise, clearRest, setNotes, setRestLength, setRowField, startEditing, startRest,
-} from './draft.js';
+import { addExtraSet, clearExercise, setNotes, setRowField, startEditing } from './draft.js';
 import { PENDING } from './day-view.js';
-import { adjustedRestLength } from './rest-timer.js';
 import { canLog, inputsFor, pickValues } from './rows.js';
 import { inProgressSessions, nextTemplate } from './rotation.js';
 import * as make from './session-events.js';
@@ -84,10 +81,6 @@ export function createActions({ events, drafts, now, newId }) {
     cancelEdit: (sessionId, exerciseId) => update(sessionId, (d) => clearExercise(d, exerciseId)),
     addSet: (sessionId, exerciseId) => update(sessionId ?? PENDING, (d) => addExtraSet(d, exerciseId)),
     typeNotes: (sessionId, text) => update(sessionId, (d) => setNotes(d, text)),
-    skipRest: (sessionId) => update(sessionId, clearRest),
-    adjustRest(sessionId, delta) {
-      return update(sessionId, (d) => setRestLength(d, adjustedRestLength(d, events.state.settings, delta)));
-    },
 
     // ---- events ----
 
@@ -112,13 +105,11 @@ export function createActions({ events, drafts, now, newId }) {
 
       const id = await ensureSession(sessionId);
       const state = events.state;
-      let logged = 0;
       for (const { setNumber, values } of adds) {
         const exists = Object.values(state.sets).some((x) => x.sessionId === id && x.exerciseId === exerciseId && x.setNumber === setNumber);
         if (exists) continue; // the same tap twice, or the same set from another device
         const nowMs = now();
         await write(make.setLogged({ sessionId: id, exerciseId, setNumber, values, suggestion }), `set_${newId(nowMs)}`);
-        logged++;
       }
       for (const { setId, values } of edits) {
         const set = events.state.sets[setId];
@@ -126,11 +117,7 @@ export function createActions({ events, drafts, now, newId }) {
         const made = make.setEdited({ logged: set, values });
         if (made) await write(made, setId);
       }
-      const finished = Boolean(events.state.sessions[id]?.finishedAt); // a correction made afterwards has no rest
-      update(id, (d) => {
-        const cleared = clearExercise(d, exerciseId);
-        return logged > 0 && !finished ? startRest(cleared, now()) : cleared;
-      });
+      update(id, (d) => clearExercise(d, exerciseId));
       return id;
     },
 

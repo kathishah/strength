@@ -1,7 +1,7 @@
 // The view models the screens draw (home, session, summary) and their text. Built from real replayed logs.
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
-import { dayView, emptyDraft, sessionView, setRowField, startRest, summaryView } from '../app/js/logging/index.js';
+import { dayView, emptyDraft, sessionView, setRowField, summaryView } from '../app/js/logging/index.js';
 import * as text from '../app/js/logging/text.js';
 import { atLevel, carry, lift, makeLog } from '../test-support/engine-log.mjs';
 
@@ -241,11 +241,6 @@ describe('session view', () => {
     assert.ok(cards(a).every((x) => !('ssClass' in x) && !('partnerName' in x)));
   });
 
-  test('every plan card has the rest line, whatever was swapped in', () => {
-    const v = view(open(makeLog().swap('A', 2, 'trx-chest-press')));
-    assert.ok(cards(v).every((c) => c.restText === 'Rest about 90 s between sets.'));
-  });
-
   test('Options and TRX are separate lists; a swapped card says what it was swapped from', () => {
     const v = view(open(makeLog().swap('A', 1, 'box-squat')));
     const c = card(v, 'box-squat');
@@ -300,18 +295,17 @@ describe('session view', () => {
     assert.equal(card(view(open(makeLog(), '2026-10-05', 'B')), 'back-extension-45').cues.notes.startsWith('Start bodyweight only'), true);
   });
 
-  test('draft values and the rest timer show up in the view; notes fall back to the log', () => {
+  test('draft values show up in the view; notes fall back to the log', () => {
     const log = makeLog();
     log.session('2026-10-05', 'A', [], { finished: false, id: 'sess_open' });
     let d = setRowField(emptyDraft('sess_open'), 'goblet-squat', 1, 'weightLbs', 25);
-    d = { ...startRest(d, NOW - 30_000), notes: 'typing…' };
+    d = { ...d, notes: 'typing…' };
     const v = view(log, d);
     assert.deepEqual(card(v, 'goblet-squat').rows.map((r) => r.weightLbs), [25, 25, 25]);
-    assert.equal(v.rest.remainingSec, 60);
     assert.equal(v.notes, 'typing…');
     assert.equal(v.savedNotes, '');
     assert.equal(Object.hasOwn(v, 'backPainBefore') || Object.hasOwn(v, 'backPainAfter'), false, 'no back pain in the view (v1.16)');
-    assert.equal(view(log).rest, null);
+    assert.equal(Object.hasOwn(v, 'rest') || Object.hasOwn(v.cards[0], 'restText'), false, 'no rest timer or rest line in the view');
   });
 });
 
