@@ -1,10 +1,14 @@
 // The set rows of one exercise in one session, with pre-fill carry-over (spec 6.3). Pure.
 //
 // A row is 'done' (a logged set), 'editing' (a logged set being changed, when its exercise is reopened) or 'todo'. The weight and the level of a
-// row that has not been logged come from, in order: what the person typed into it, the row before it (logged or
-// typed), else the suggestion. So a change on one set pre-fills the remaining sets and never the earlier ones.
+// row that has not been logged come from, in order: what the person typed into it, else its own pre-fill (what that set
+// was last time, spec 5.2), except that a row pre-filled with the same value as the row before it follows that row (logged or
+// typed). So a change on one set moves the sets after it that started out equal to it, and never the earlier ones nor
+// sets that last time's ramp made different ("linked while equal", v1.21).
 // Reps (and a carry's distance) start at the recommended number and follow the row before, like the weight: reps rarely change,
 // so one Done logs what was recommended and only a different number needs a tap (v1.14, the owner's call).
+
+import { valueAt } from '../engine/prefill.js';
 
 // Which boxes an exercise's rows show, from the engine's suggestion (its `progression` and `type`).
 export function inputsFor(suggestion) {
@@ -55,8 +59,7 @@ export function buildRows({ suggestion, logged = [], draftRows = {}, planned = 0
   slots.sort((a, b) => a.setNumber - b.setNumber || (a.set ? (b.set ? (a.set.id < b.set.id ? -1 : 1) : -1) : 1));
 
   const rows = [];
-  let carryWeight = suggestion.weightLbs ?? null;
-  let carryLevel = suggestion.level ?? null;
+  let prev = null; // the row before: its own pre-fills and its values
   let carryReps = null; // null until a row sets it: then the recommended number, which can depend on the level
   let carryDistance = suggestion.targetDistanceM ?? null;
   for (const { setNumber, set } of slots) {
@@ -70,6 +73,11 @@ export function buildRows({ suggestion, logged = [], draftRows = {}, planned = 0
       if (set !== null) return orNull(set[field]);
       return carried;
     };
+    // This set's own pre-fill, and the value it takes from the row before when both were pre-filled the same.
+    const ownWeight = valueAt(suggestion.setWeightsLbs, setNumber, suggestion.weightLbs ?? null);
+    const ownLevel = valueAt(suggestion.setLevels, setNumber, suggestion.level ?? null);
+    const carryWeight = prev !== null && ownWeight === prev.ownWeight ? prev.weightLbs : ownWeight;
+    const carryLevel = prev !== null && ownLevel === prev.ownLevel ? prev.levelNumber : ownLevel;
     const levelNumber = inputs.level ? pick('levelNumber', carryLevel) : null;
     const values = {
       weightLbs: inputs.weight ? pick('weightLbs', carryWeight) : null,
@@ -77,13 +85,12 @@ export function buildRows({ suggestion, logged = [], draftRows = {}, planned = 0
       reps: inputs.reps ? pick('reps', carryReps ?? targetRepsFor(levelNumber)) : null,
       distanceM: inputs.distance ? pick('distanceM', carryDistance) : null,
     };
-    carryWeight = values.weightLbs;
-    carryLevel = values.levelNumber;
+    prev = { ownWeight, ownLevel, weightLbs: values.weightLbs, levelNumber: values.levelNumber };
     carryReps = values.reps;
     carryDistance = values.distanceM;
 
-    const suggestedWeightLbs = set ? orNull(set.suggestedWeightLbs) : suggestion.weightLbs;
-    const suggestedLevel = set ? orNull(set.suggestedLevel) : suggestion.level;
+    const suggestedWeightLbs = set ? orNull(set.suggestedWeightLbs) : ownWeight;
+    const suggestedLevel = set ? orNull(set.suggestedLevel) : ownLevel;
     const dirty = editing && FIELDS.some((f) => values[f] !== orNull(set[f]));
     rows.push({
       id: set ? set.id : `${suggestion.exerciseId}:${setNumber}`,

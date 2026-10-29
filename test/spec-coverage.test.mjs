@@ -28,7 +28,7 @@ function registered(section) {
 }
 
 for (const [section, bullets, expectedCount] of [
-  ['5.7', bulletsBetween('### 5.7 Examples', '### ~~5.8 Deload'), 34],
+  ['5.7', bulletsBetween('### 5.7 Examples', '### ~~5.8 Deload'), 40],
   ['5.12', bulletsBetween('Test cases:', '\n---'), 9],
 ]) {
   test(`spec ${section}: every live bullet has exactly one numbered test, and struck bullets have none`, () => {

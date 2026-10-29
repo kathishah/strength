@@ -10,7 +10,7 @@
 // Rendering. A change in structure (an exercise done, a swap, a list opening) rebuilds the carousel and puts it back where it was.
 // Anything else only moves the dials. Typed values live in the draft, so a refresh loses nothing.
 
-import { REST_STEP_SEC, dayView, dialNotches, editView, formatClock, formatNumber, restStatus } from '../logging/index.js';
+import { dayView, dialNotches, editView, formatNumber } from '../logging/index.js';
 import { EXERCISES, PLACEHOLDER_GIF } from '../seed/index.js';
 import { pacificDate } from '../time.js';
 import { createDial } from './dial.js';
@@ -24,7 +24,7 @@ const FIELD = {
 };
 
 const cardKey = (c) => [
-  c.exerciseId, c.mode, c.swapped, c.canSwap, c.chipText, c.restText, c.increaseText, c.suggestionText, c.lastText, c.hints,
+  c.exerciseId, c.mode, c.swapped, c.canSwap, c.chipText, c.increaseText, c.suggestionText, c.lastText, c.hints,
   c.swapBlockedReason, c.summaryText, c.rows.map((r) => [r.id, r.status, r.reps === null]),
 ];
 
@@ -35,45 +35,14 @@ export function mountDay(container, ctx, editId = null) {
   let current = null; // the latest view
   let structure = null;
   let dials = []; // { dial, read() } for every dial on screen, so they follow the values
-  let ticker = null;
-  let wasOver = false;
 
   const body = h('div', { class: 'day-body' });
-  const restEl = h('div', { class: 'rest-bar', role: 'timer', 'aria-label': 'Rest timer', hidden: true });
-  const restText = h('span', { class: 'rest-time' });
-  const restLive = h('span', { class: 'sr-only', 'aria-live': 'polite' });
-  restEl.append(
-    restText, restLive,
-    h('button', { type: 'button', class: 'btn', 'aria-label': 'Shorter rest by 15 seconds', onclick: () => adjustRest(-REST_STEP_SEC) }, '−15'),
-    h('button', { type: 'button', class: 'btn', 'aria-label': 'Longer rest by 15 seconds', onclick: () => adjustRest(REST_STEP_SEC) }, '+15'),
-    h('button', { type: 'button', class: 'btn', onclick() { ctx.actions.skipRest(current.sessionId); updateRest(); } }, 'Skip'),
-  );
-  container.replaceChildren(body, restEl);
+  container.replaceChildren(body);
 
   const guard = async (fn) => {
     try { return await fn(); } catch (err) { ctx.notify(err.message ?? 'Something went wrong.', 'error'); return undefined; } finally { render(); }
   };
   const findCard = (exerciseId) => current.cards.find((c) => c.exerciseId === exerciseId);
-
-  // ---- the rest timer: recomputed from timestamps on every tick and when the page becomes visible ----
-  function adjustRest(delta) {
-    ctx.actions.adjustRest(current.sessionId, delta);
-    updateRest();
-  }
-  function updateRest() {
-    const status = current?.started && current.mode !== 'edit' ? restStatus(ctx.actions.draft(current.sessionId), ctx.now(), ctx.events.state.settings) : null;
-    restEl.hidden = status === null;
-    if (status === null) { wasOver = false; return; }
-    restText.textContent = status.over ? 'Rest over. Ready for the next exercise.' : `Rest ${formatClock(status.remainingSec)}`;
-    restEl.dataset.over = String(status.over);
-    if (status.over && !wasOver) {
-      restLive.textContent = 'Rest over';
-      try { navigator.vibrate?.([200, 100, 200]); } catch { /* not supported */ }
-    }
-    if (!status.over) restLive.textContent = '';
-    wasOver = status.over;
-  }
-  ticker = setInterval(() => { if (!document.hidden) updateRest(); }, 250);
 
   // ---- pieces of a card ----
   const thumb = (id, name) => {
@@ -111,7 +80,6 @@ export function mountDay(container, ctx, editId = null) {
     return [
       h('div', { class: 'exercise-body' },
         c.notes,
-        card.restText ? ` ${card.restText}` : '',
         card.hints.map((t) => h('div', { class: 'pairing-tip', text: t })),
         c.levelText ? h('div', { class: 'start-line', text: `Level: start at 2 of 5. ${c.levelText}` }) : null,
         c.rationale ? h('div', { class: 'start-line', text: c.rationale }) : null,
@@ -134,7 +102,7 @@ export function mountDay(container, ctx, editId = null) {
   function dialColumn(card, field, rowNumbers, caption, { skippable = false } = {}) {
     const { format, label } = FIELD[field];
     const first = card.rows.find((r) => r.setNumber === rowNumbers[0]);
-    const used = [...card.rows.map((r) => r[field]), field === 'weightLbs' ? card.suggestion.weightLbs : null];
+    const used = [...card.rows.map((r) => r[field]), ...(field === 'weightLbs' ? [card.suggestion.weightLbs, ...(card.suggestion.setWeightsLbs ?? [])] : [])];
     const dial = createDial({
       values: dialNotches(field, used), format, label: `${card.name} ${rowNumbers.length > 1 ? 'all sets' : `set ${rowNumbers[0]}`} ${label}`,
       className: field === 'weightLbs' && card.increased ? 'increase' : '',
@@ -336,14 +304,12 @@ export function mountDay(container, ctx, editId = null) {
       window.scrollTo(0, y);
     }
     for (const { dial, read } of dials) dial.set(read());
-    updateRest();
   }
 
   render();
   return {
     update: render,
     destroy() {
-      clearInterval(ticker);
       for (const { dial } of dials) dial.dispose();
     },
   };

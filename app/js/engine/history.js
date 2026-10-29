@@ -5,6 +5,7 @@
 // and not sets with nothing recorded (no reps, or no distance for a carry). Order is by instant, never by string.
 
 import { parseInstant, pacificDate } from '../time.js';
+import { valuesBySet } from './prefill.js';
 
 const bySetNumber = (a, b) => a.setNumber - b.setNumber || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
 
@@ -31,11 +32,13 @@ export const performance = (set, cfg) => (cfg.targetDistanceM !== null ? set.dis
 const max = (xs) => xs.reduce((a, b) => (b > a ? b : a), -Infinity);
 
 // exerciseHistory: the exercise's completed sessions, oldest first:
-//   { sessionId, startedMs, date, templateCode, sets, baseLoad, baseLevel, atBase }
-//   sets:      working sets by set number
-//   baseLoad:  heaviest weight used (spec 5.2); null for exercises with no weight
-//   baseLevel: highest level used (suspension and the pushup ladder); null otherwise
-//   atBase:    the sets at the base load / level
+//   { sessionId, startedMs, date, templateCode, sets, baseLoad, baseLevel, atBase, setWeights, setLevels }
+//   sets:       working sets by set number
+//   baseLoad:   heaviest weight used (spec 5.2); null for exercises with no weight
+//   baseLevel:  highest level used (suspension and the pushup ladder); null otherwise
+//   atBase:     the sets at the base load / level
+//   setWeights: the weight of each set number (a set not logged takes the one before it, prefill.js); null for exercises with no weight
+//   setLevels:  the same for levels; null otherwise
 export function exerciseHistory(state, cfg) {
   const out = [];
   for (const entry of index(state)) {
@@ -63,6 +66,8 @@ export function exerciseHistory(state, cfg) {
       baseLoad,
       baseLevel,
       atBase,
+      setWeights: baseLoad === null ? null : valuesBySet(sets, (s) => s.weightLbs ?? 0),
+      setLevels: baseLevel === null ? null : valuesBySet(sets, (s) => s.levelNumber ?? cfg.startingLevel),
     });
   }
   return out;

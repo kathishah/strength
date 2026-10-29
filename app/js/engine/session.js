@@ -3,6 +3,7 @@
 import { RULES } from '../seed/rules.js';
 import { WORKOUTS } from '../seed/program.js';
 import { calendarFor } from './calendar.js';
+import { valueAt } from './prefill.js';
 import { suggestExercise } from './suggest.js';
 
 // The exercise in a slot: the user's swap if it is one of the slot's options, else the default.
@@ -28,11 +29,13 @@ export function planSession(state, { today, templateCode }) {
   return { templateCode, today, calendar, exercises };
 }
 
-// The fields a set.logged event carries about the suggestion it was made under (spec 8: SetLog).
-export function loggedDefaults(suggestion) {
+// The fields a set.logged event carries about the suggestion it was made under (spec 8: SetLog). With a set number, the
+// suggestion is that set's own pre-fill (spec 5.2); without one, the exercise's single suggested weight or level.
+export function loggedDefaults(suggestion, setNumber = null) {
+  const own = (list, single) => (setNumber === null ? single : valueAt(list, setNumber, single));
   return {
-    suggestedWeightLbs: suggestion.weightLbs,
-    suggestedLevel: suggestion.level,
+    suggestedWeightLbs: own(suggestion.setWeightsLbs, suggestion.weightLbs),
+    suggestedLevel: own(suggestion.setLevels, suggestion.level),
     suggestionSource: suggestion.source,
   };
 }

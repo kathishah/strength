@@ -3,7 +3,7 @@
 import { suggestExercise } from '../engine/index.js';
 import { RULES, WORKOUTS } from '../seed/index.js';
 import { addDays, pacificDate, parseInstant } from '../time.js';
-import { exerciseName, formatDay, formatDuration, setsText } from './text.js';
+import { exerciseName, formatDay, formatDuration, setWeightsList, setsText } from './text.js';
 
 // The next workout of a kind comes about a week later (three gym days a week, rotating A, B, C). The spec does not say
 // when "next time" is, so the callouts look this far ahead (archive/DEPLOYMENT-PLAN-history.md section 15, question 8).
@@ -43,12 +43,15 @@ export function summaryView(state, sessionId) {
     });
     if (next.increased) {
       const diff = Math.round((next.weightLbs - next.fromWeightLbs) * 100) / 100;
+      const perSet = setWeightsList(next);
       callouts.push({
         exerciseId,
         name: exerciseName(exerciseId),
         fromWeightLbs: next.fromWeightLbs,
         weightLbs: next.weightLbs,
-        text: `${exerciseName(exerciseId)}: ${next.weightLbs} lbs next time (+${diff}), scheduled`,
+        text: perSet
+          ? `${exerciseName(exerciseId)}: ${perSet.join(' / ')} lbs next time (+${diff} each set), scheduled`
+          : `${exerciseName(exerciseId)}: ${next.weightLbs} lbs next time (+${diff}), scheduled`,
       });
     }
   }

@@ -1,9 +1,10 @@
 // The suggestion for one exercise (archive/DEPLOYMENT-PLAN-history.md section 14; spec 5.2, 5.3, 5.6, 5.12 as cut in v1.13). Pure.
 //
-// Weighted exercises: the suggestion is last session's base load (its heaviest weight), or that plus one increment when
-// a scheduled increase is due. Nothing else changes a load: not rep performance, not back pain, not the week.
-// Bodyweight-based exercises (dead bug, back extension, TRX, pushup ladder) have no progression: the box is pre-filled
-// with the last value used, or the starting value. What was logged decides everything, not what was suggested.
+// Weighted exercises: each set is pre-filled with the weight it had last time (spec 5.2), or that plus one increment when
+// a scheduled increase is due, on every set. `weightLbs` is the heaviest of them (last session's base load when it holds).
+// Nothing else changes a load: not rep performance, not back pain, not the week.
+// Bodyweight-based exercises (dead bug, back extension, TRX, pushup ladder) have no progression: each set is pre-filled
+// with the value it had last time, or the starting value. What was logged decides everything, not what was suggested.
 
 import { PUSHUP_LADDER } from '../seed/rules.js';
 import { addDays, daysBetween } from '../time.js';
@@ -56,8 +57,11 @@ function suggestLoad({ cfg, hist, today }) {
   const timer = cfg.scheduledOn ? lastIncreaseDate ?? hist[0].date : null;
   out.nextScheduledDate = timer === null ? null : addDays(timer, cfg.scheduledDays);
   const due = timer !== null && daysBetween(timer, today) >= cfg.scheduledDays;
-  if (due) return { ...out, fromWeightLbs: base, weightLbs: increaseLoad(base, cfg), source: 'scheduled', targetReps: cfg.repMin };
-  return { ...out, fromWeightLbs: base, weightLbs: base, source: 'hold', targetReps: holdTarget(last, cfg) };
+  if (due) {
+    const setWeightsLbs = last.setWeights.map((w) => increaseLoad(w, cfg));
+    return { ...out, fromWeightLbs: base, weightLbs: Math.max(...setWeightsLbs), setWeightsLbs, source: 'scheduled', targetReps: cfg.repMin };
+  }
+  return { ...out, fromWeightLbs: base, weightLbs: base, setWeightsLbs: last.setWeights, source: 'hold', targetReps: holdTarget(last, cfg) };
 }
 
 // ---- no progression: repeat the last value used (spec 5.4) ----
@@ -67,13 +71,13 @@ function suggestRepeat({ cfg, hist }) {
   const source = last ? 'hold' : 'starting';
   switch (cfg.progression) {
     case 'loadable':
-      return { ...none(), weightLbs: last?.baseLoad ?? cfg.startingWeightLbs, fromWeightLbs: last?.baseLoad ?? null, source, targetReps: cfg.repMin };
+      return { ...none(), weightLbs: last?.baseLoad ?? cfg.startingWeightLbs, setWeightsLbs: last?.setWeights ?? null, fromWeightLbs: last?.baseLoad ?? null, source, targetReps: cfg.repMin };
     case 'suspension':
-      return { ...none(), level: last?.baseLevel ?? cfg.startingLevel, fromLevel: last?.baseLevel ?? null, source, targetReps: cfg.repMin };
+      return { ...none(), level: last?.baseLevel ?? cfg.startingLevel, setLevels: last?.setLevels ?? null, fromLevel: last?.baseLevel ?? null, source, targetReps: cfg.repMin };
     case 'ladder': {
       const level = last?.baseLevel ?? cfg.startingLevel;
       const { repMin, repMax } = PUSHUP_LADDER[level];
-      return { ...none(), level, fromLevel: last?.baseLevel ?? null, source, repMin, repMax, targetReps: repMin };
+      return { ...none(), level, setLevels: last?.setLevels ?? null, fromLevel: last?.baseLevel ?? null, source, repMin, repMax, targetReps: repMin };
     }
     case 'bodyweight': // dead bug: no weight to show
       return { ...none(), source: null, targetReps: cfg.repMin };
@@ -107,7 +111,9 @@ export function suggestExercise(state, { exerciseId, templateCode = null, slot =
     holdSeconds: cfg.holdSeconds,
     targetDistanceM: cfg.targetDistanceM,
     weightLbs,
+    setWeightsLbs: r.setWeightsLbs ?? null,
     level,
+    setLevels: r.setLevels ?? null,
     targetReps: r.targetReps ?? null,
     source: r.source ?? null,
     fromWeightLbs,

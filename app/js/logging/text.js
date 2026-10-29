@@ -1,5 +1,6 @@
 // The words the screens show, as pure functions (no DOM), so they can be tested. Weights are pounds ("lbs", spec 6.7).
 
+import { valuesForPlan } from '../engine/prefill.js';
 import { EXERCISES } from '../seed/catalog.js';
 import { TIME_ZONE, dayNumber } from '../time.js';
 
@@ -51,19 +52,29 @@ export const SOURCE_LABELS = { starting: 'Starting weight', hold: 'Same as last 
 // A level exercise has a starting level, not a starting weight.
 export const sourceLabel = (source, { level = false } = {}) => (source === 'starting' && level ? 'Starting level' : SOURCE_LABELS[source] ?? null);
 
+// Each set's suggested weight for today's plan, when the sets differ (last time's ramp, spec 5.2); null when they are all the same.
+const differing = (list) => (list && new Set(list).size > 1 ? list : null);
+export const setWeightsList = (s) => differing(valuesForPlan(s.setWeightsLbs, s.sets, s.weightLbs));
+const setLevelsList = (s) => differing(valuesForPlan(s.setLevels, s.sets, s.level));
+
 // The line under the exercise name: what to put in the box.
 export function suggestionText(s) {
-  if (s.level !== null) return `Suggested: level ${s.level}`;
-  if (s.weightLbs !== null) return `Suggested: ${weightText(s.weightLbs)}`;
+  if (s.level !== null) return `Suggested: level ${(setLevelsList(s) ?? [s.level]).join(' / ')}`;
+  if (s.weightLbs !== null) {
+    const list = setWeightsList(s);
+    return list ? `Suggested: ${list.join(' / ')} lbs` : `Suggested: ${weightText(s.weightLbs)}`;
+  }
   if (s.progression === 'load' || s.progression === 'loadable') return 'Enter a weight';
   return null;
 }
 
-// The increase highlight (spec 6.3): "↑ +5 lbs from 25 · Scheduled". Text as well as colour, always. null when not increased.
+// The increase highlight (spec 6.3): "↑ +5 lbs from 25 · Scheduled", or "↑ +5 lbs on each set · Scheduled" when the sets differ.
+// Text as well as colour, always. null when not increased.
 export function increaseText(s) {
   if (!s.increased) return null;
   const diff = Math.round((s.weightLbs - s.fromWeightLbs) * 100) / 100;
-  return `↑ +${diff} lbs from ${s.fromWeightLbs} · ${s.source === 'scheduled' ? 'Scheduled' : 'Increase'}`;
+  const label = s.source === 'scheduled' ? 'Scheduled' : 'Increase';
+  return setWeightsList(s) ? `↑ +${diff} lbs on each set · ${label}` : `↑ +${diff} lbs from ${s.fromWeightLbs} · ${label}`;
 }
 
 // "35 × 12, 12, 11" for weights, "level 2 × 12, 12" for levels, "35 lbs × 40 m, 40 m" for carries, "8, 8" with neither.

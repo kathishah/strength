@@ -25,6 +25,7 @@ To try the app, serve `app/` (`python3 -m http.server 4173 --directory app`); wi
 - Match the surrounding code. There is no linter or formatter on purpose (zero dependencies); [`.editorconfig`](.editorconfig) sets indentation and line endings.
 - New behaviour comes with a test in `test/`, written the way the neighbouring ones are. Pure logic stays pure: `test/engine-purity.test.mjs`, `test/logging-purity.test.mjs` and `test/boot-imports.test.mjs` guard the layering and fail if network code leaks into local-only mode.
 - Behaviour is specified in [docs/SPEC-strength.md](docs/SPEC-strength.md), which has a versioned changelog. A change in behaviour updates the spec in the same pull request.
+- Dated findings, evaluations, plans and results are recorded as new entries in [journal/](journal/README.md), one per unit of work and never edited afterwards. The journal is a log, not a spec: durable behaviour goes in the spec above.
 - Per-deployment settings never go in the repository. They live in the git-ignored `private/` folder, and `app/js/config.js` stays empty in git (a test enforces it).
 - Third-party media does not go in the repository. Read [docs/MEDIA-RIGHTS-AUDIT.md](docs/MEDIA-RIGHTS-AUDIT.md) before adding any image.
 - Commit messages: a short summary line, then what and why.

@@ -340,14 +340,6 @@ textarea {
   border: 1px solid var(--border); border-radius: 10px; resize: vertical;
 }
 
-.rest-bar {
-  position: fixed; left: 0; right: 0; bottom: 0; z-index: 10; display: flex; align-items: center; gap: 8px;
-  padding: 10px max(16px, env(safe-area-inset-right)) max(10px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
-  background: var(--surface); border-top: 2px solid var(--accent); box-shadow: 0 -4px 12px rgb(0 0 0 / 0.15);
-}
-.rest-bar[data-over="true"] { border-top-color: var(--up-border); background: var(--up-bg); color: var(--up-text); }
-.rest-bar .rest-time { flex: 1; font-size: 1.2rem; font-weight: 700; font-variant-numeric: tabular-nums; }
-
 /* summary and recovery */
 .summary-stats { margin: 0 0 16px; }
 .callouts { border-color: var(--up-border); }
@@ -516,7 +508,4 @@ textarea {
   .ex.split > .ex-media { display: block; grid-column: 1; grid-row: 1 / span 2; align-self: start; min-width: 0; }
   .ex-rest > .log-area { order: -1; margin-top: 0; }
   .ex-rest .exercise-body:first-child { margin-top: 0; }
-  .rest-bar { padding-top: 4px; padding-bottom: max(4px, env(safe-area-inset-bottom)); }
-  .rest-bar .btn { min-height: 40px; padding: 6px 12px; }
-  .rest-bar .rest-time { font-size: 1.05rem; }
 }
