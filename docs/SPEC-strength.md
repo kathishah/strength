@@ -1,8 +1,11 @@
-# Recomp Tracker — Product Spec (v1.20)
+# Recomp Tracker — Product Spec (v1.21)
 
 A mobile-first strength-training log that records workouts and suggests what to lift next. It is designed for a single private account, with data synced across that user’s devices. Activity tracking and body metrics are out of scope.
 
 ## Changelog
+- **v1.21**
+  - No rest timer (4.3, 6.3, 8, 9, 10): the rest bar with its countdown, −15 / +15 and Skip, the vibration, the rest state in the local draft and the card line "Rest about 90 s between sets." are gone, and nothing starts when an exercise is ticked. `restTimerDefaultSec` is no longer read; the server still accepts the key so events already in a log stay valid, and a draft saved with the old rest fields loads with them ignored.
+  - Each set starts from what was lifted last time (5.2, 6.3, 8): every dial opens at the weight (or TRX or pushup level) that set had in the previous session, not at the heaviest weight on every set, so a 25 / 30 / 35 ramp opens as 25 / 30 / 35. A set not logged last time takes the one before it, and sets beyond today's plan are ignored. A changed dial moves the sets after it only while they started out equal to it, so flat weights behave as before and a ramp is not flattened. When a scheduled increase is due (5.12) every set goes up one increment. The suggestion line, the increase text and the finish-summary callout list every set's weight when the sets differ, and each logged set records its own suggestion. When increases are suggested (5.12) is unchanged. Reps and a carry's distance keep the recommended value.
 - **v1.20**
   - Local-only mode (6.7, 6.2): when the app's sync settings are missing or incomplete it runs with no account and no network, keeping events in the browser's IndexedDB (docs/SHOWCASE-AND-SELF-HOST-SPEC.md, sections 3 and 4). The header chip reads "On this device" and its panel says "Saved in this browser only. Not synced to other devices."; Home shows a one-time note about it; if the browser keeps nothing (IndexedDB unavailable) a notice on every screen says the workouts will be lost when the page closes.
   - Settings (6.7) depends on the mode. Synced mode is unchanged. Local-only Settings has Storage, Export backup (a JSON file in the format of `scripts/export-data.mjs`) and Clear data on this device (two taps). There is no in-app import: a backup moves to an AWS deployment with `scripts/post-events.mjs`. Demo Settings has the demo explanation and Reset.
@@ -305,7 +308,7 @@ A warm-up (about 5 min of easy-to-brisk cardio, then the McGill Big 3: curl-up, 
 
 ### 4.3 Workouts
 
-Exercises are done one at a time, in slot order: all sets of one exercise before the next (v1.19; there are no supersets). Rest about 90 seconds between sets.
+Exercises are done one at a time, in slot order: all sets of one exercise before the next (v1.19; there are no supersets).
 
 **Workout A**
 | Slot | Exercise | Sets | Reps | Type |
@@ -487,8 +490,10 @@ Implement as **pure functions** with unit tests. These rules drive the "suggeste
 - Display the current phase and target effort on the session screen, in plain words ("stop each set with about 3 reps left").
 
 ### 5.2 Base load and suggestion (weighted exercises)
-For each exercise, look at the most recent completed session containing that exercise (working sets only). If that session's working sets used different weights (e.g. a manual override), the heaviest weight used is the base load.
-- The suggestion is the base load (hold), or the base load plus one increment when a scheduled increase is due (5.12). The screen shows last session's sets ("Last: 35 × 12, 12, 11") next to the suggestion, and the weight box is editable.
+For each exercise, look at the most recent completed session containing that exercise (working sets only). If that session's working sets used different weights (a ramp from the first set to the last, or a manual override), the heaviest weight used is the **base load**. History, the "last increase" and the scheduled increase (5.12) use the base load; the weight each set opens at is that set's own weight (below).
+- **Each set starts from last time (v1.21).** Set *n* is pre-filled with the weight set *n* had in that session. A set number that was not logged (skipped, or a shorter session) takes the weight of the set before it, or the first logged set's weight if there is none; a set beyond what was logged takes the weight of the set before it, and logged sets beyond today's plan are ignored. Flat weights give the same weight on every set, as before. Reps and a carry's distance are not pre-filled from last time (6.3).
+- The suggestion is that pre-fill (hold), or that pre-fill plus one increment on every set when a scheduled increase is due (5.12; a set at 0 goes to `firstLoadedWeightLbs`). The screen shows last session's sets ("Last: 25 × 12 · 30 × 12 · 35 × 11") and the suggestion ("Suggested: 25 / 30 / 35 lbs", or "Suggested: 35 lbs" when the sets are the same) next to the dials, and each dial is editable. Back extension's load (5.4) and the TRX and pushup levels follow last time set by set in the same way.
+- Each logged set records its own pre-fill as `suggestedWeightLbs` (or `suggestedLevel`), so a changed set is one that differs from its own suggestion (8).
 - ~~1. If **every working set** reached the **top of the rep range** → suggest increasing the load next time and target the bottom of the rep range.~~
 - ~~2. Else if reps fell **below the bottom of the range** on at least one set in **each of the last 2 sessions** → suggest reducing load ~10% (rounded to available increment).~~
 - ~~3. Else → suggest the same load, and aim to add reps.~~
@@ -613,6 +618,12 @@ Struck examples belong to removed rules (v1.13). Unless stated otherwise, assume
 - ~~TRX chest press at level 1, below the bottom of the range in each of the last 2 sessions → stays at level 1 (minimum).~~
 - ~~TRX row at level 5 with 3×15 → stays at level 5; show the slower-lowering hint.~~
 - Swapping Chest-supported row → TRX row pre-fills level 2 with no history; ~~no ramp-up sets~~.
+- Goblet squat, last session 25 × 12, 30 × 12, 35 × 11 → the dials open at 25, 30 and 35 and the suggestion reads "Suggested: 25 / 30 / 35 lbs" (not 35 on every set).
+- Goblet squat, last session 35, 35, 35; the user changes set 1 to 40 → sets 2 and 3 follow to 40. Last session 25, 30, 35 and set 1 changed to 30 → set 2 stays 30 and set 3 stays 35.
+- Goblet squat, last session only sets 25 and 30, plan 3 sets → the dials open at 25, 30, 30. Last session set 2 skipped (25, then 35 as set 3) → 25, 25, 35. Last session 4 sets → the first three.
+- TRX row, last session at levels 2, 3, 3 → the dials open at levels 2, 3, 3.
+- Goblet squat, last session 25, 30, 35, scheduled increase due (5.12) → the dials open at 30, 35, 40 and the increase text reads "↑ +5 lbs on each set · Scheduled".
+- Goblet squat, last session 25, 30, 35, now logged as 25, 32.5, 35 → each set records its own suggestion (25, 30, 35), and the next session opens at 25, 32.5, 35.
 
 ### ~~5.8 Deload weeks~~ — removed (v1.13)
 
@@ -659,9 +670,9 @@ Not built. The original text is kept for reference.
 ### 5.12 Scheduled increases (every 3 weeks, per exercise)
 Tracked independently for each exercise.
 - **Timer start:** the date of the exercise's last load increase (a session whose heaviest weight is above the previous session's, whether it followed a suggestion or a manual override to a heavier weight). If there has been no increase yet, the timer starts on the date of its first completed session.
-- **Trigger:** at the first session on or after timer start + `scheduledIncreaseDays` (default 21), the suggested weight = base load + one increment (or `firstLoadedWeightLbs` from 0). Readiness is not checked and no warning is shown. Target reps = bottom of the rep range.
+- **Trigger:** at the first session on or after timer start + `scheduledIncreaseDays` (default 21), the suggested weight on every set = that set's weight last time + one increment (or `firstLoadedWeightLbs` from 0), so a ramp keeps its shape (a goblet squat at 25 / 30 / 35 becomes 30 / 35 / 40). Readiness is not checked and no warning is shown. Target reps = bottom of the rep range.
 - ~~If an earned increase (5.2 rule 1) is already due, apply only that one increase (never two increments at once).~~ An increase is always exactly one increment.
-- **Precedence:** a due scheduled increase is applied; otherwise the suggestion holds at the base load. (Removed: ~~1. deload week~~, ~~2. reduction~~, ~~3. back pain gate~~.)
+- **Precedence:** a due scheduled increase is applied; otherwise the suggestion holds at last time's weights (5.2). (Removed: ~~1. deload week~~, ~~2. reduction~~, ~~3. back pain gate~~.)
 - The increase applies to the suggestion only. The weight field stays editable; if the user logs the old weight instead, the timer does not reset (it resets only when a heavier weight is actually logged), so the next session suggests the increase again.
 - Not applied to bodyweight-based exercises (5.4: no progression), holds, or exercises with no starting weight and no history. ~~For suspension exercises, a scheduled increase is +1 level (max 5).~~
 - ~~Ramp-up sets (5.5) are calculated from the increased weight.~~
@@ -694,20 +705,19 @@ Test cases:
 - ~~Deload banner during a deload week (5.8), and the Start deload / Postpone controls.~~
 
 ### 6.3 Workout session (most important screen; phone-first)
-- **Exercises in one horizontal swipe carousel, as in the v0.2 viewer (0.B.1)** (v1.14): one card per swipe with the neighbours peeking, in slot order, labelled "Exercise 2 of 6" (v1.19: there are no supersets, so no grouping, no superset colour and no "Finisher"; do all sets of an exercise before the next). Each card shows the line "Rest about 90 s between sets" and: suggested weight, target reps, set count for the current phase, and last session's result (e.g. "Last: 35 × 12, 12, 11"). ~~Ramp-up sets shown above the first working set for slots 1 and 3, visually distinct.~~
-- **Logging (v1.14): one tick per exercise.** At the bottom of the card, where the viewer had "mark this exercise as done", a barrel dial per set holds the weight and one shared dial holds the reps; each shows one value, already at the suggested weight and the recommended reps, and turns in 2.5 lb notches (drag up for more, down for less, or tap its upper or lower half). One tick logs every set of the exercise at once; after that the card shows a one-line summary with Edit and Undo. A weight that differs between sets is set on that set's dial; a dial changed on a set carries to the sets after it. Levels (TRX, pushups) use dials of 1 to 5, carries a distance dial. No RIR. The layout follows what was asked for: the GIF is the hero at the top of the card, with the cue, muscles and the Options and TRX lists above the dials.
-- Changing the weight (or TRX level) on one set pre-fills it into the remaining sets of the same exercise in this session.
+- **Exercises in one horizontal swipe carousel, as in the v0.2 viewer (0.B.1)** (v1.14): one card per swipe with the neighbours peeking, in slot order, labelled "Exercise 2 of 6" (v1.19: there are no supersets, so no grouping, no superset colour and no "Finisher"; do all sets of an exercise before the next). Each card shows: suggested weight, target reps, set count for the current phase, and last session's result (e.g. "Last: 35 × 12, 12, 11"). ~~Ramp-up sets shown above the first working set for slots 1 and 3, visually distinct.~~
+- **Logging (v1.14): one tick per exercise.** At the bottom of the card, where the viewer had "mark this exercise as done", a barrel dial per set holds the weight and one shared dial holds the reps; each shows one value, a weight dial already at that set's weight from last time (5.2) and the reps dial at the recommended reps, and turns in 2.5 lb notches (drag up for more, down for less, or tap its upper or lower half). One tick logs every set of the exercise at once; after that the card shows a one-line summary with Edit and Undo. A weight that differs between sets is set on that set's dial; a dial changed on a set carries to the sets after it only while they started out with the same value (below). Levels (TRX, pushups) use dials of 1 to 5, carries a distance dial. No RIR. The layout follows what was asked for: the GIF is the hero at the top of the card, with the cue, muscles and the Options and TRX lists above the dials.
+- **Linked while equal (v1.21).** Changing the weight (or TRX level) on one set moves the sets after it that were pre-filled with the same value as the set before them, so a flat 35 / 35 / 35 follows set 1 (set 1 to 40 gives 40 / 40 / 40). A set that last time's ramp made different keeps its own value (25 / 30 / 35 with set 1 changed to 30 gives 30 / 30 / 35), and earlier sets never change.
 - For suspension exercises, the weight field is replaced by a level stepper (1–5) with the exercise's level description shown on tap.
-- **Increase highlight:** when the suggested weight is higher than the previous session's base load, the weight field and exercise header use a distinct accent color and bold weight, with an up-arrow badge and text such as "↑ +5 lbs from 25 · Scheduled". Meaning must not rely on color alone (arrow + text always shown). The highlight stays for that session only.
+- **Increase highlight:** when the suggested weight is higher than the previous session's base load, the weight field and exercise header use a distinct accent color and bold weight, with an up-arrow badge and text such as "↑ +5 lbs from 25 · Scheduled", or "↑ +5 lbs on each set · Scheduled" when the sets differ. Meaning must not rely on color alone (arrow + text always shown). The highlight stays for that session only.
 - ~~Calibration prompt after each working set during an exercise's first 2 sessions (5.6).~~
 - ~~Back pain before is an optional field asked at session start (one tap, skippable); it changes no suggestion.~~ Removed (v1.16).
 - ~~Deload banner and halved set counts during deload weeks (5.8).~~
-- Rest timer (default 90 s, adjustable) that starts when an exercise is marked done.
 - Swap exercise (Section 4.5). Tap exercise name for cues.
 - Optional session field: notes. (~~Back pain rating 0–10, before and after~~: removed, v1.16.)
 - **Draft safety:** an in-progress session must survive a page refresh, app switch, or dropped gym Wi-Fi. Persist the draft locally and save to the backend on finish (and opportunistically during the session).
 - Finish → summary screen showing total working sets, session duration, and any "weight increase next time" callouts. The summary has an **Edit workout** button (6.3, v1.15).
-- **Editing a finished workout (v1.15).** A finished workout can be reopened from History by date (6.6) or from its summary. It shows the same cards as during the workout, for that workout's day: the same exercises (swaps as they were), what was ticked with its summary line and Edit and Undo, and the rest with their dials at what was suggested for that day. Ticking an exercise logs its sets into the workout; Edit and Undo change or remove the logged sets. The workout keeps its date, start and finish times and notes; the rest timer does not run; swapping an exercise, Finish and Discard are not offered (a swap is for the next workout, and a finished workout is not deleted). Weights and reps logged this way count for the next suggestions like any others (5.2, 5.12), because they are sets of that workout.
+- **Editing a finished workout (v1.15).** A finished workout can be reopened from History by date (6.6) or from its summary. It shows the same cards as during the workout, for that workout's day: the same exercises (swaps as they were), what was ticked with its summary line and Edit and Undo, and the rest with their dials at what was suggested for that day. Ticking an exercise logs its sets into the workout; Edit and Undo change or remove the logged sets. The workout keeps its date, start and finish times and notes; swapping an exercise, Finish and Discard are not offered (a swap is for the next workout, and a finished workout is not deleted). Weights and reps logged this way count for the next suggestions like any others (5.2, 5.12), because they are sets of that workout.
 
 ### 6.4 Activity log — removed
 Steps, dance classes, hikes, and mobility are tracked on the Apple Watch. Nothing is logged in this app.
@@ -728,7 +738,7 @@ The app runs in one of three modes (docs/SHOWCASE-AND-SELF-HOST-SPEC.md, section
 - **Local only** (no sync settings; no account and no network). Three cards. **Storage:** whether workouts are saved on this device (or the browser is keeping them in memory only), how many events it holds and how many workouts are finished. **Export backup:** downloads `strength-events-<date>.json` as `{ exportedAt, count, events }`, the file `scripts/export-data.mjs` writes; there is no import in the app. Under it: "Moving to your own AWS deployment? Export a backup, then upload it with `scripts/post-events.mjs` (see the self-hosting guide)." **Clear data on this device:** two taps; the first reads "Tap again to delete all workouts on this device. Export first if you want a copy."; the second deletes the local database and the app's saved values (the theme choice stays) and reloads into an empty app.
 - **Demo** (the public sandbox). A short explanation, **Reset demo** (two taps) and a link back to the project page.
 - Sign out stays in the header (6.2), in synced mode only (local-only and demo have no account).
-- ~~Program start date, rest timer default, recovery days, units.~~ Not built. The start date stays 2026-09-28, the rest timer 90 s, the recovery days Tuesday and Thursday.
+- ~~Program start date, recovery days, units.~~ Not built. The start date stays 2026-09-28, the recovery days Tuesday and Thursday.
 - ~~Per exercise: starting weight, first-loaded weight, load increment; trap bar weight; scheduled increases on/off, interval, per-exercise on/off.~~ Not built. Defaults apply (5.3, 5.6, 5.12). The engine still reads `setting.changed` events for these keys, so a value can be set by a script if ever needed.
 - ~~Export all data as JSON (and CSV of logged sets).~~ Not a screen in synced mode: `scripts/export-data.mjs` writes the JSON and the CSV (archive/DEPLOYMENT-PLAN-history.md section 15e). Local-only mode has Export backup (above), which writes the JSON.
 
@@ -749,7 +759,7 @@ The app runs in one of three modes (docs/SHOWCASE-AND-SELF-HOST-SPEC.md, section
 
 All records belong to an owner (the signed-in user). Storage is an append-only event log (one event per change, edits are later events on the same entity, state is derived by replaying events); see DEPLOYMENT-PLAN.md and API-CONTRACT.md. The static seed data below ships with the app code; only user-generated records (sessions, set logs, settings, swaps, deloads) are stored as events.
 
-- **UserProfile**: programStartDate (initial value 2026-09-28), restTimerDefaultSec, recoveryDays (default [Tue, Thu]), trapBarWeightLbs (default 45), scheduledIncreasesEnabled (default true), scheduledIncreaseDays (default 21)
+- **UserProfile**: programStartDate (initial value 2026-09-28), recoveryDays (default [Tue, Thu]), trapBarWeightLbs (default 45), scheduledIncreasesEnabled (default true), scheduledIncreaseDays (default 21)
 - **Exercise**: name, type (dumbbell | barbell | machine | cable | bodyweight | bodyweight_loadable | bodyweight_ladder | suspension | carry | hold | mobility), repMin, repMax, perSide (bool), holdSeconds (nullable), loadIncrementLbs, startingWeightLbs (nullable), firstLoadedWeightLbs (nullable), startingNote (nullable), startingLevel (nullable; suspension, default 2), levelDescription (nullable; suspension), ~~loadsBack (bool)~~, scheduledIncreasesEnabled (default true), cues (optional text)
 - **WorkoutTemplate**: code (A | B | C), name
 - **TemplateSlot**: templateId, slotNumber (1–6), ~~supersetGroup (1 | 2 | 3 | null)~~ (removed, v1.19), exerciseId, phase2Sets, alternativeExerciseIds[]
@@ -758,7 +768,7 @@ All records belong to an owner (the signed-in user). Storage is an append-only e
 - **RoutineItem**: routineId, order, exerciseId, prescription (text), sets/holds, reps, holdSeconds, perSide
 - **WorkoutSession**: date, templateCode, startedAt, finishedAt, phase, programWeek, isDeload, backPainBefore, backPainAfter, notes (v1.16: the two back pain fields are no longer written by the app; old values stay valid in the log)
 - **ExerciseLevel** (for bodyweight_ladder): exerciseId, level, name, repMin, repMax, cue
-- **SetLog**: sessionId, exerciseId, levelNumber (nullable; ladder and suspension exercises), suggestedLevel (nullable), setNumber, isRampUp, isCalibration, suggestedWeightLbs (nullable), suggestionSource (starting | hold | scheduled | null in v1.13; the registry still accepts calibration, earned, reduction, deload and gated), weightLbs (nullable; actual, drives progression), reps (nullable), distanceM (nullable, carries), rir (nullable; not asked in the UI since v1.14), calibrationFeel (too_easy | about_right | too_hard | null), completed
+- **SetLog**: sessionId, exerciseId, levelNumber (nullable; ladder and suspension exercises), suggestedLevel (nullable), setNumber, isRampUp, isCalibration, suggestedWeightLbs (nullable; that set's own pre-fill since v1.21, 5.2), suggestionSource (starting | hold | scheduled | null in v1.13; the registry still accepts calibration, earned, reduction, deload and gated), weightLbs (nullable; actual, drives progression), reps (nullable), distanceM (nullable, carries), rir (nullable; not asked in the UI since v1.14), calibrationFeel (too_easy | about_right | too_hard | null), completed
 - ~~**DeloadWeek**: programWeek, source (scheduled | manual), postponedFromWeek (nullable)~~ (removed, v1.13; the event types stay in the registry, unused)
 
 Seed data: exercise catalog (65 exercises from v1.19) with cues, starting weights, first-loaded weights, and ~~loadsBack flags~~ (Sections 4 and 5), templates A/B/C with slots and alternatives (including TRX alternatives with starting levels and level descriptions, Section 4.5.1), the recovery routine (Section 4.6), and pushup ladder levels (Section 5.4). Seed data is bundled with the app, so there is nothing to seed into storage.
@@ -771,7 +781,6 @@ Seed data: exercise catalog (65 exercises from v1.19) with cues, starting weight
 - Installable as a PWA (home screen icon, standalone display).
 - Light and dark mode.
 - Fast: session screen interactive in under 2 seconds on a phone over mobile data.
-- The rest timer must stay accurate if the screen locks or the app is backgrounded (compute from timestamps, not intervals).
 - Accessible: 44px minimum tap targets, labeled inputs, sufficient contrast.
 - Privacy: health data is personal. No third-party analytics or trackers. All data access requires auth.
 
@@ -783,7 +792,7 @@ Seed data: exercise catalog (65 exercises from v1.19) with cues, starting weight
 1. **Scaffold + auth + deploy:** sign-in, empty home screen, event sync endpoints, deployed and reachable from phone (see DEPLOYMENT-PLAN.md).
 2. **Event store + seed data:** local outbox, sync, replay into state, catalog/templates/routines bundled in the app.
 3. **Progression engine:** pure functions for Section 5 as cut in v1.13 (starting weights, last-time data, first-loaded weight, scheduled increases) with unit tests covering every example in 5.7 and 5.12 that is not struck.
-4. **Workout logging:** pushup ladder in Workout B, session screen, rest timer, draft safety, swaps, summary, rotation logic, recovery routine guidance cards. Reopening a finished workout to correct it (v1.15) follows as a small addition before milestone 5.
+4. **Workout logging:** pushup ladder in Workout B, session screen, draft safety, swaps, summary, rotation logic, recovery routine guidance cards. Reopening a finished workout to correct it (v1.15) follows as a small addition before milestone 5.
 5. **History (by exercise and by date), the sync screen in Settings, an export script, the service worker (PWA polish).**
 6. **Alternatives and straight sets (v1.19):** the 16 new exercises and the alternatives of 4.5 in the seed, no supersets in the cards, history and engine, the viewer retired (0.C). (The Content-Security-Policy is already removed.)
 
@@ -794,6 +803,7 @@ Seed data: exercise catalog (65 exercises from v1.19) with cues, starting weight
 - Pushups appear in Workout B (no progression suggestions, v1.13).
 - If I finish a workout and find an exercise was not ticked or was logged wrongly, I can reopen that workout from History or its summary and fix it, and the next suggestions use the corrected numbers (6.3, v1.15).
 - On a new exercise, the starting weight is pre-filled, I can log a different weight, and the next session's suggestion is based on what I actually lifted.
+- If I lifted 25, 30 and 35 on an exercise's three sets, its dials open at 25, 30 and 35 next time, and changing one set does not flatten the others (5.2, 6.3, v1.21).
 - An exercise whose weight hasn't gone up in 3 weeks shows an increased, clearly highlighted suggestion labeled "Scheduled" at its next session.
 - A script exports all my data as JSON and my logged sets as CSV (not a screen).
 - History by date lists every finished workout, flags one with an exercise not ticked, and opens it for editing; History by exercise shows each exercise's last increase, next scheduled increase, chart and sessions.

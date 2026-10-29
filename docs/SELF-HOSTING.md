@@ -185,7 +185,7 @@ Run this once after setting up a new stack, on two devices (the installed phone 
 **Logging a workout** (airplane mode is the real test):
 
 1. Home is the day's cards under a slim header (B after the loaded Workout A; the recovery routine on Tuesday and Thursday). Tap the status line to open the day pills, the History and Settings icons, and the save state. A note above the cards warns if you did a workout yesterday.
-2. On an exercise card, turn the dials (each set's weight is already the suggestion, the reps the recommendation), then tap the tick. Swipe sideways to the next exercise. The rest timer runs after each tick; lock the screen and unlock it and it is still right.
+2. On an exercise card, turn the dials (each set's weight starts at what that set was last time, the reps at the recommendation), then tap the tick. Swipe sideways to the next exercise.
 3. Swipe the app away and reopen it in the middle of the workout: the exercises you ticked are still done and any dial you had turned is where you left it.
 4. Turn on airplane mode, log a whole workout, then on the last card tap **Save and finish**. The dot in the header turns amber with a count of events saved on this device; turn the network back on and it turns green within a few seconds. Open the other device: the workout is there.
 5. Open the header and pick Tuesday or Thursday: the recovery routine cards.
