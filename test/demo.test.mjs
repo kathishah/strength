@@ -317,7 +317,7 @@ describe('images: the demo\'s own art, the placeholder for the rest', () => {
     assert.ok(Object.values(EXERCISES).every((e) => !e.attribution));
     assert.ok(Object.entries(EXERCISES).every(([id, e]) => (DEMO_MEDIA.includes(id) ? e.gifUrl === `media/${id}.gif` : !e.gifUrl)));
     await boot(log);
-    // Open the Options and TRX lists so their thumbnails are drawn too.
+    // Open the Options list so its thumbnails are drawn too.
     for (const toggle of all(dom, (e) => e.tagName === 'BUTTON' && /alt-toggle/.test(e.className))) { toggle.click(); await settle(); }
     const pics = imgs(dom);
     assert.ok(pics.length >= 6, `${pics.length} images`);

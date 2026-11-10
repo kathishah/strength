@@ -29,7 +29,7 @@ function tableRows(text) {
   return rows;
 }
 
-// Exercise name in the spec ("Dumbbell bench press", "TRX Bulgarian split squat (rear foot in strap)") -> catalog id.
+// Exercise name in the spec ("Dumbbell bench press", "Bird dog (weighted hold)") -> catalog id.
 const norm = (s) => s.replace(/\s*\(.*\)\s*$/, '').replace(/\s*\(one side\)/, '').toLowerCase();
 const idByName = new Map(Object.entries(EXERCISES).map(([id, e]) => [norm(e.name), id]));
 function idOf(name) {
@@ -63,7 +63,7 @@ describe('rules.js covers the catalog', () => {
     const recovery = RECOVERY.map((r) => r.exercise);
     const inSlots = new Set();
     for (const w of Object.values(WORKOUTS)) {
-      for (const s of w.slots) [s.exercise, ...s.alternatives, ...s.trxAlternatives].forEach((id) => inSlots.add(id));
+      for (const s of w.slots) [s.exercise, ...s.alternatives].forEach((id) => inSlots.add(id));
     }
     for (const id of GUIDANCE_ONLY) {
       assert.ok(recovery.includes(id), `${id} is not in the recovery routine`);
@@ -74,7 +74,7 @@ describe('rules.js covers the catalog', () => {
   test('every slot exercise and alternative has rules', () => {
     for (const w of Object.values(WORKOUTS)) {
       for (const s of w.slots) {
-        for (const id of [s.exercise, ...s.alternatives, ...s.trxAlternatives]) assert.ok(RULES[id], `no rules for ${id}`);
+        for (const id of [s.exercise, ...s.alternatives]) assert.ok(RULES[id], `no rules for ${id}`);
       }
     }
   });
@@ -85,10 +85,6 @@ describe('rules.js covers the catalog', () => {
       if (r.progression === 'load') {
         assert.ok(r.loadIncrementLbs > 0, `${id} needs a load increment`);
         assert.ok(['dumbbell', 'barbell', 'machine', 'cable', 'carry'].includes(r.type), `${id} load type`);
-      }
-      if (r.progression === 'suspension') {
-        assert.equal(r.type, 'suspension');
-        assert.equal(r.startingLevel, 2, `${id} starts at level 2 (spec 4.5.1)`);
       }
       if (r.repMin !== null) assert.ok(r.repMin <= r.repMax, `${id} rep range`);
     }
@@ -158,6 +154,24 @@ describe('program.js matches spec 4.5 and 4.5.2 (alternatives, v1.19)', () => {
     }
   });
 
+  test('every exercise added in v1.22 (4.5.4) is in the catalog with rules and its start, and the slots list it', () => {
+    const rows = tableRows(section('#### 4.5.4 Exercises added in v1.22'));
+    assert.equal(rows.length, 6);
+    for (const [id, name, type, , alternativeFor, start] of rows) {
+      assert.equal(EXERCISES[id]?.name, name, `${id} name`);
+      assert.equal(EXERCISES[id].type, type, `${id} type`);
+      assert.equal(RULES[id].startingWeightLbs, Number(/^\d+/.exec(start)[0]), `${id} start`);
+      assert.ok(EXERCISES[id].start.startsWith(/^\d+/.exec(start)[0]), `${id} start text`);
+      for (const [, code, slotNumber] of alternativeFor.matchAll(/\(([ABC])(\d)\)/g)) {
+        assert.ok(WORKOUTS[code].slots[Number(slotNumber) - 1].alternatives.includes(id), `${id} is not an alternative in ${code}${slotNumber}`);
+      }
+    }
+    // The slots listed in the table are the only ones that offer a new exercise.
+    const listed = rows.flatMap(([id, , , , alternativeFor]) => [...alternativeFor.matchAll(/\(([ABC])(\d)\)/g)].map((m) => `${id}@${m[1]}${m[2]}`));
+    const offered = Object.entries(WORKOUTS).flatMap(([code, w]) => w.slots.flatMap((s) => s.alternatives.filter((a) => rows.some((r) => r[0] === a)).map((a) => `${a}@${code}${s.slot}`)));
+    assert.deepEqual(offered.sort(), listed.sort());
+  });
+
   test('every exercise added in v1.19 (4.5.2) is in the catalog with rules, and a slot lists it as an alternative', () => {
     const rows = tableRows(section('#### 4.5.2 Exercises added in v1.19'));
     assert.equal(rows.length, 16);
@@ -170,31 +184,6 @@ describe('program.js matches spec 4.5 and 4.5.2 (alternatives, v1.19)', () => {
         const s = WORKOUTS[code].slots[Number(slotNumber) - 1];
         assert.ok(s.alternatives.includes(id), `${id} is not an alternative in ${code}${slotNumber}`);
       }
-    }
-  });
-});
-
-describe('rules.js matches spec 4.5.1 (TRX)', () => {
-  const rows = tableRows(section('#### 4.5.1 TRX alternatives').split('Pairing note')[0]);
-  test('every row has rules with the reps in the table, and starting level 2', () => {
-    assert.equal(rows.length, 13);
-    for (const [, name, repsText] of rows) {
-      const id = idOf(name);
-      const r = RULES[id];
-      const want = parseReps(repsText);
-      if (want.holdSeconds) assert.deepEqual(r.holdSeconds, want.holdSeconds, id);
-      else assert.deepEqual({ repMin: r.repMin, repMax: r.repMax, perSide: r.perSide }, want, id);
-    }
-  });
-  test('the spec says the default starting level is 2', () => {
-    assert.match(section('#### 4.5.1 TRX alternatives'), /Default starting level: 2/);
-    const trx = Object.entries(RULES).filter(([, r]) => r.progression === 'suspension');
-    assert.equal(trx.length, 9);
-    for (const [id, r] of trx) assert.equal(r.startingLevel, 2, id);
-  });
-  test('every TRX alternative of the templates is a suspension rules entry', () => {
-    for (const w of Object.values(WORKOUTS)) {
-      for (const s of w.slots) for (const id of s.trxAlternatives) assert.equal(RULES[id].type, 'suspension', id);
     }
   });
 });
@@ -214,7 +203,7 @@ describe('rules.js matches spec 5.3 and 5.6', () => {
     const byType = { barbell: amount(rowFor('Barbell')), machine: amount(rowFor('Machine')), cable: amount(rowFor('Machine')), carry: amount(rowFor('Carry')) };
     assert.match(rowFor('Machine'), /face pull \+5 lbs/);
     // The exceptions for exercises added in v1.19, named in the note under the table (4.5.2).
-    const exceptions = { 'cable-glute-kickback': 5, 'cable-reverse-fly': 5, 'single-arm-cable-row': 5, 'trap-bar-carry': 10, 'goblet-carry': 5 };
+    const exceptions = { 'cable-glute-kickback': 5, 'cable-reverse-fly': 5, 'single-arm-cable-row': 5, 'trap-bar-carry': 10, 'goblet-carry': 5, 'db-pullover': 5 };
     const note = section('### 5.3 Load increments').toLowerCase();
     for (const id of Object.keys(exceptions)) assert.ok(note.includes(EXERCISES[id].name.toLowerCase().replace(/ \(.*/, '')), `5.3 note names ${id}`);
     for (const [id, r] of Object.entries(RULES)) {
@@ -230,7 +219,7 @@ describe('rules.js matches spec 5.3 and 5.6', () => {
   });
 
   test('bodyweight-based exercises have no increment and no progression (5.4, v1.13)', () => {
-    for (const id of ['dead-bug', 'back-extension-45', 'pushup', 'trx-row', 'trx-squat']) {
+    for (const id of ['dead-bug', 'back-extension-45', 'pushup']) {
       assert.ok(!['load'].includes(RULES[id].progression), id);
     }
     assert.equal(RULES['back-extension-45'].progression, 'loadable');

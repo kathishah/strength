@@ -322,106 +322,6 @@ export const EXERCISES = {
     tags: ["Core", "Lower back", "Glutes"],
     type: "bodyweight_loadable"
   },
-  "trx-squat": {
-    name: "TRX Squat",
-    gifUrl: "img/trx-squat.gif",
-    attribution: { label: "Truman State Campus Rec", url: "https://recreation.truman.edu/trx-suspension-trainer-lower-body-gifs/" },
-    notes: "Hold straps lightly; sit back and down. Use arms only as needed.",
-    tags: ["Quads", "Glutes"],
-    type: "suspension",
-    reps: "12–15",
-    trx: { levels: "Level 1: lean back, arms assist heavily. Level 5: minimal arm assist, full depth with 3 s lowering." }
-  },
-  "trx-bulgarian-split-squat": {
-    name: "TRX Bulgarian Split Squat (rear foot in strap)",
-    gifUrl: "img/trx-bulgarian-split-squat.gif",
-    attribution: { label: "Truman State Campus Rec", url: "https://recreation.truman.edu/trx-suspension-trainer-suspended-exercises-gifs/" },
-    notes: "Keep front knee tracking over toes; torso tall.",
-    tags: ["Quads", "Glutes", "Balance"],
-    type: "suspension",
-    reps: "8–12 per leg",
-    trx: { levels: "Level 1: shallow depth. Level 5: full depth with slow lowering." }
-  },
-  "trx-reverse-lunge": {
-    name: "TRX Reverse Lunge (hands on straps for balance)",
-    gifUrl: "img/trx-reverse-lunge.gif",
-    attribution: { label: "Truman State Campus Rec", url: "https://recreation.truman.edu/trx-suspension-trainer-lower-body-gifs/" },
-    notes: "Step back, lower straight down.",
-    tags: ["Quads", "Glutes"],
-    type: "suspension",
-    reps: "8–12 per leg",
-    trx: { levels: "Level 1: hands assist. Level 5: no assist, 3 s lowering." }
-  },
-  "trx-chest-press": {
-    name: "TRX Chest Press",
-    gifUrl: "img/trx-chest-press.gif",
-    attribution: { label: "Truman State Campus Rec", url: "https://recreation.truman.edu/trx-suspension-exercises-upper-body-gifs/" },
-    notes: "Straight line from head to heels; don't let hips sag.",
-    tags: ["Chest", "Triceps", "Core"],
-    type: "suspension",
-    reps: "10–15",
-    trx: { levels: "Level 1: nearly upright. Level 5: body angle close to 45°. Change by walking feet back." }
-  },
-  "trx-row": {
-    name: "TRX Row",
-    gifUrl: "img/trx-row.gif",
-    attribution: { label: "Truman State Campus Rec", url: "https://recreation.truman.edu/trx-suspension-exercises-upper-body-gifs/" },
-    notes: "Squeeze glutes and brace; pull handles to ribs. Less back support than the chest-supported row; use a more upright level on sore-back days.",
-    tags: ["Back", "Lats", "Biceps"],
-    type: "suspension",
-    reps: "10–15",
-    trx: { levels: "Level 1: nearly upright. Level 5: body close to horizontal. Change by walking feet forward." }
-  },
-  "trx-high-row": {
-    name: "TRX High Row",
-    gifUrl: "img/trx-high-row.gif",
-    attribution: { label: "Truman State Campus Rec", url: "https://recreation.truman.edu/trx-suspension-exercises-upper-body-gifs/" },
-    notes: "Pull with elbows high toward face level.",
-    tags: ["Lats", "Upper back"],
-    type: "suspension",
-    reps: "10–15",
-    trx: { levels: "Level 1: nearly upright. Level 5: steep lean." }
-  },
-  "trx-face-pull": {
-    name: "TRX Face Pull (or TRX reverse fly)",
-    gifUrl: "",
-    attribution: { label: "", url: "" },
-    notes: "Elbows high; squeeze shoulder blades together.",
-    tags: ["Rear delts", "Upper back"],
-    type: "suspension",
-    reps: "12–15",
-    trx: { levels: "Level 1: nearly upright. Level 5: steep lean." }
-  },
-  "trx-hip-thrust": {
-    name: "TRX Hip Thrust (heels in straps)",
-    gifUrl: "",
-    attribution: { label: "", url: "" },
-    notes: "Drive hips up through heels; no lower-back arch at the top.",
-    tags: ["Glutes", "Hamstrings"],
-    type: "suspension",
-    reps: "10–15",
-    trx: { levels: "Level 1: two legs, partial range. Level 5: single leg, full range." }
-  },
-  "trx-hamstring-curl": {
-    name: "TRX Hamstring Curl (heels in straps)",
-    gifUrl: "",
-    attribution: { label: "", url: "" },
-    notes: "Keep hips up throughout if possible; slow return.",
-    tags: ["Hamstrings", "Glutes"],
-    type: "suspension",
-    reps: "8–12",
-    trx: { levels: "Level 1: hips stay down. Level 5: single leg with hips held up." }
-  },
-  "trx-plank": {
-    name: "TRX Plank (feet in straps)",
-    gifUrl: "img/trx-plank.gif",
-    attribution: { label: "Truman State Campus Rec", url: "https://recreation.truman.edu/trx-suspension-trainer-suspended-exercises-gifs-2/" },
-    notes: "Body straight; don't let hips sag or pike.",
-    tags: ["Core"],
-    type: "suspension",
-    reps: "20–40 s hold",
-    trx: { hold: true }
-  },
   // ---- Added in spec v1.19 (4.5.2); images from 4.5.3 ----
   "hack-squat": {
     name: "Hack Squat",
@@ -566,6 +466,67 @@ export const EXERCISES = {
     tags: ["Grip", "Traps", "Core", "Glutes"],
     type: "carry",
     start: "Empty trap bar (45–65 lbs, set by the bar)"
+  },
+  // ---- Added in spec v1.22 (4.5.4): original art by the repository owner (no third-party source, no credit) ----
+  "db-floor-press": {
+    name: "Dumbbell Floor Press",
+    gifUrl: "img/db-floor-press.gif",
+    original: true,
+    attribution: { label: "", url: "" },
+    notes: "Lie on the floor with knees bent, lower your upper arms until they touch the floor, then press the dumbbells up over your chest.",
+    tags: ["Chest", "Triceps"],
+    type: "dumbbell",
+    start: "20 lbs per hand"
+  },
+  "db-chest-fly": {
+    name: "Dumbbell Chest Fly",
+    gifUrl: "img/db-chest-fly.gif",
+    original: true,
+    attribution: { label: "", url: "" },
+    notes: "Flat bench, soft elbows, open your arms wide in an arc until you feel a stretch across the chest, then bring the dumbbells back together over your chest.",
+    tags: ["Chest"],
+    type: "dumbbell",
+    start: "10 lbs per hand"
+  },
+  "db-pullover": {
+    name: "Dumbbell Pullover",
+    gifUrl: "img/db-pullover.gif",
+    original: true,
+    attribution: { label: "", url: "" },
+    notes: "Upper back across a bench, one dumbbell held in both hands over your chest. Lower it in an arc behind your head with soft elbows, then pull it back over your chest.",
+    tags: ["Lats", "Chest"],
+    type: "dumbbell",
+    start: "20 lbs (one dumbbell)"
+  },
+  "seated-arnold-press": {
+    name: "Seated Arnold Press",
+    gifUrl: "img/seated-arnold-press.gif",
+    original: true,
+    attribution: { label: "", url: "" },
+    notes: "Sit with your back supported, palms facing you at chest height. Rotate your palms to face forward as you press the dumbbells overhead, and reverse on the way down.",
+    tags: ["Shoulders"],
+    type: "dumbbell",
+    start: "15 lbs per hand"
+  },
+  "half-kneeling-one-arm-db-press": {
+    name: "Half-Kneeling One-Arm Dumbbell Press",
+    gifUrl: "img/half-kneeling-one-arm-db-press.gif",
+    original: true,
+    attribution: { label: "", url: "" },
+    notes: "Kneel on one knee with the other foot forward, ribs down and glutes tight on the kneeling side. Press the dumbbell overhead without leaning, then switch sides.",
+    tags: ["Shoulders", "Core"],
+    type: "dumbbell",
+    start: "10 lbs"
+  },
+  "incline-bench-db-y-raise": {
+    name: "Incline-Bench Dumbbell Y Raise",
+    gifUrl: "img/incline-bench-db-y-raise.gif",
+    original: true,
+    attribution: { label: "", url: "" },
+    notes: "Chest on an incline bench, thumbs up, raise light dumbbells forward and up in a Y shape, then lower slowly.",
+    tags: ["Rear delts", "Lower traps"],
+    type: "dumbbell",
+    start: "5 lbs per hand"
   },
   "hip-flexor-stretch": {
     name: "Half-Kneeling Hip Flexor Stretch",

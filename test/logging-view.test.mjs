@@ -188,7 +188,7 @@ describe('session view', () => {
     assert.equal(card(view(log), 'goblet-squat').increased, false); // day 20, not yet due, whatever the clock says now
   });
 
-  test('TRX and the pushup ladder: level rows, the description, and the range follows the level', () => {
+  test('the pushup ladder: level rows, the description, and the range follows the level', () => {
     const log = makeLog();
     log.session('2026-09-28', 'B', [atLevel('pushup', 3, [10, 10])]);
     open(log, '2026-10-05', 'B', { id: 'sess_open' });
@@ -203,25 +203,23 @@ describe('session view', () => {
     assert.deepEqual(c.rows.map((r) => [r.levelNumber, r.targetText]), [[1, '10–20'], [1, '10–20'], [1, '10–20']]);
   });
 
-  test('a swapped TRX exercise shows its level text; two TRX exercises get no pairing tip (there are no supersets)', () => {
+  test('a swapped-in pushup starts at level 1 and shows the ladder text', () => {
     const log = makeLog();
-    log.swap('A', 1, 'trx-squat').swap('A', 2, 'trx-chest-press');
-    const v = view(open(log));
-    const squat = card(v, 'trx-squat');
-    assert.equal(squat.swapped, true);
-    assert.equal(squat.rows[0].levelNumber, 2);
-    assert.equal(squat.sourceLabel, 'Starting level');
-    assert.match(squat.rows[0].levelInfo, /Level 1: lean back/);
-    assert.deepEqual(squat.hints, []);
-    assert.deepEqual(card(v, 'trx-chest-press').hints, []);
+    log.swap('A', 2, 'pushup');
+    const push = card(view(open(log)), 'pushup');
+    assert.equal(push.swapped, true);
+    assert.equal(push.rows[0].levelNumber, 1);
+    assert.equal(push.sourceLabel, 'Starting level');
+    assert.match(push.rows[0].levelInfo, /pushup/i);
+    assert.deepEqual(push.hints, []);
   });
 
-  test('swap options: default first, alternatives, then TRX; the current one marked; blocked once a set is logged', () => {
+  test('swap options: default first, then the alternatives; the current one marked; blocked once a set is logged', () => {
     const log = open();
     let c = card(view(log), 'goblet-squat');
     assert.deepEqual(c.swapOptions.map((o) => [o.exerciseId, o.kind, o.current]), [
       ['goblet-squat', 'default', true], ['leg-press', 'alternative', false], ['box-squat', 'alternative', false],
-      ['hack-squat', 'alternative', false], ['leg-extension', 'alternative', false], ['trx-squat', 'trx', false],
+      ['hack-squat', 'alternative', false], ['leg-extension', 'alternative', false],
     ]);
     assert.equal(c.canSwap, true);
     log.events.length; // logged set in the same session blocks it
@@ -241,11 +239,11 @@ describe('session view', () => {
     assert.ok(cards(a).every((x) => !('ssClass' in x) && !('partnerName' in x)));
   });
 
-  test('Options and TRX are separate lists; a swapped card says what it was swapped from', () => {
+  test('Options is the one list; a swapped card says what it was swapped from', () => {
     const v = view(open(makeLog().swap('A', 1, 'box-squat')));
     const c = card(v, 'box-squat');
     assert.deepEqual(c.optionGroups.alternatives.map((o) => [o.exerciseId, o.current]), [['leg-press', false], ['box-squat', true], ['hack-squat', false], ['leg-extension', false]]);
-    assert.deepEqual(c.optionGroups.trx.map((o) => o.exerciseId), ['trx-squat']);
+    assert.deepEqual(Object.keys(c.optionGroups), ['alternatives']);
     assert.equal(c.swappedFromName, 'Goblet Squat');
     assert.equal(card(view(open()), 'goblet-squat').swappedFromName, null);
   });

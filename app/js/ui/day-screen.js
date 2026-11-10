@@ -2,7 +2,7 @@
 // On a recovery day the cards are the recovery routine; otherwise they are the next workout's exercises, and the
 // workout starts by itself when the first exercise is marked done.
 //
-// Each exercise card reads top to bottom: name and position ("Exercise 2 of 6"), the form GIF as the hero, the cue, muscles, the Options and TRX lists, and
+// Each exercise card reads top to bottom: name and position ("Exercise 2 of 6"), the form GIF as the hero, the cue, muscles, the Options list, and
 // at the bottom: one barrel dial per set for the weight (2.5 lb notches, each already
 // at the suggested weight), one shared dial for the reps (already at the recommended number), and one tick for the whole exercise. The logic is in
 // logging/day-view.js and logging/actions.js; this file only draws.
@@ -21,17 +21,18 @@ const FIELD = {
   levelNumber: { caption: 'level', label: 'level', format: (v) => String(v) },
   reps: { caption: 'reps', label: 'reps', format: (v) => String(v) },
   distanceM: { caption: 'metres', label: 'distance in metres', format: (v) => String(v) },
+  holdSeconds: { caption: 'secs', label: 'time held in seconds', format: (v) => String(v) },
 };
 
 const cardKey = (c) => [
   c.exerciseId, c.mode, c.swapped, c.canSwap, c.chipText, c.increaseText, c.suggestionText, c.lastText, c.hints,
-  c.swapBlockedReason, c.summaryText, c.rows.map((r) => [r.id, r.status, r.reps === null]),
+  c.swapBlockedReason, c.summaryText, c.rows.map((r) => [r.id, r.status, r.reps === null, r.holdSeconds === null]),
 ];
 
 // ctx: { events, actions, now(), navigate(hash), notify(text, kind), header, day: { picked, forceWorkout } }
 // editId: the id of a finished workout reopened to correct it (#/workout/<id>); null for Home.
 export function mountDay(container, ctx, editId = null) {
-  const ui = { alt: new Map(), slide: 0 }; // alt: exercise id -> which list is open ('alternatives' | 'trx')
+  const ui = { alt: new Map(), slide: 0 }; // alt: exercise id -> which list is open ('alternatives')
   let current = null; // the latest view
   let structure = null;
   let dials = []; // { dial, read() } for every dial on screen, so they follow the values
@@ -52,7 +53,7 @@ export function mountDay(container, ctx, editId = null) {
   };
 
   function altPanel(card, group) {
-    return h('div', { class: 'alt-panel', 'data-group': group === 'trx' ? 'trxAlternatives' : 'alternatives', role: 'group', 'aria-label': `${group === 'trx' ? 'TRX' : 'Options'} for ${card.name}` },
+    return h('div', { class: 'alt-panel', 'data-group': group, role: 'group', 'aria-label': `Options for ${card.name}` },
       card.optionGroups[group].map((o) => h('div', { class: 'alt-item' },
         thumb(o.exerciseId, o.name),
         h('div', { class: 'alt-name', text: o.name }),
@@ -63,6 +64,22 @@ export function mountDay(container, ctx, editId = null) {
             ui.alt.delete(card.exerciseId);
           }),
         }, o.current ? 'In use' : 'Use this'))));
+  }
+
+  // The open Options list is as tall as its first three rows and scrolls when it has more (spec 6.3, v1.22). Rows differ in height when a
+  // name wraps to two lines, so the limit is measured from the rows, not fixed in CSS. Redone when the panel's width changes.
+  const OPTION_ROWS = 3;
+  const altResize = typeof ResizeObserver === 'function' ? new ResizeObserver((entries) => entries.forEach((e) => fitAltPanel(e.target))) : null;
+  function fitAltPanel(panel) {
+    const rows = [...panel.querySelectorAll('.alt-item')];
+    if (rows.length <= OPTION_ROWS || typeof panel.getBoundingClientRect !== 'function') { panel.style.maxHeight = ''; return; }
+    const rowsHeight = rows.slice(0, OPTION_ROWS).reduce((n, r) => n + r.getBoundingClientRect().height, 0);
+    if (!(rowsHeight > 0)) return; // not laid out (hidden, or no layout engine): leave it unlimited
+    panel.style.maxHeight = `${Math.ceil(rowsHeight + panel.offsetHeight - panel.clientHeight)}px`; // plus the panel's own border
+  }
+  function fitAltPanels() {
+    altResize?.disconnect();
+    for (const panel of body.querySelectorAll('.alt-panel')) { fitAltPanel(panel); altResize?.observe(panel); }
   }
 
   // The hero: the form GIF, then the cue, the partner line, hints, levels and the muscles (spec 0.B.2).
@@ -81,7 +98,6 @@ export function mountDay(container, ctx, editId = null) {
       h('div', { class: 'exercise-body' },
         c.notes,
         card.hints.map((t) => h('div', { class: 'pairing-tip', text: t })),
-        c.levelText ? h('div', { class: 'start-line', text: `Level: start at 2 of 5. ${c.levelText}` }) : null,
         c.rationale ? h('div', { class: 'start-line', text: c.rationale }) : null,
         c.ladder ? h('details', { class: 'ladder' }, h('summary', { text: 'Pushup ladder' }),
           h('ul', {}, c.ladder.map((l) => h('li', {}, h('strong', { text: `L${l.level}` }), ` ${l.variation} — ${l.reps}${l.cue ? ` · ${l.cue}` : ''}`)))) : null),
@@ -90,19 +106,21 @@ export function mountDay(container, ctx, editId = null) {
   }
 
   // ---- the input line: a barrel dial per set, one shared dial for reps (or metres), and one tick ----
-  // Skipping a set (tap its caption): its reps are cleared, so the tick leaves it out. Tapping again brings the reps back.
+  // Skipping a set (tap its caption): its reps (or its seconds, for a timed hold) are cleared, so the tick leaves it out. Tapping again brings the reps back.
   function toggleSkip(card, setNumber) {
     const rows = findCard(card.exerciseId).rows;
     const row = rows.find((r) => r.setNumber === setNumber);
-    const back = rows.find((r) => r.reps !== null)?.reps ?? row.placeholderReps;
-    ctx.actions.setValue(current.sessionId, card.exerciseId, setNumber, 'reps', row.reps === null ? back : null);
+    const field = card.inputs.hold ? 'holdSeconds' : 'reps';
+    const back = rows.find((r) => r[field] !== null)?.[field] ?? (card.inputs.hold ? card.suggestion.holdSeconds : row.placeholderReps);
+    ctx.actions.setValue(current.sessionId, card.exerciseId, setNumber, field, row[field] === null ? back : null);
     render();
   }
 
   function dialColumn(card, field, rowNumbers, caption, { skippable = false } = {}) {
     const { format, label } = FIELD[field];
     const first = card.rows.find((r) => r.setNumber === rowNumbers[0]);
-    const used = [...card.rows.map((r) => r[field]), ...(field === 'weightLbs' ? [card.suggestion.weightLbs, ...(card.suggestion.setWeightsLbs ?? [])] : [])];
+    const used = [...card.rows.map((r) => r[field]), ...(field === 'weightLbs' ? [card.suggestion.weightLbs, ...(card.suggestion.setWeightsLbs ?? [])] : []),
+      ...(field === 'holdSeconds' ? [card.suggestion.holdSeconds, ...(card.suggestion.setHolds ?? [])] : [])];
     const dial = createDial({
       values: dialNotches(field, used), format, label: `${card.name} ${rowNumbers.length > 1 ? 'all sets' : `set ${rowNumbers[0]}`} ${label}`,
       className: field === 'weightLbs' && card.increased ? 'increase' : '',
@@ -112,9 +130,11 @@ export function mountDay(container, ctx, editId = null) {
         render();
       },
     });
-    const read = () => findCard(card.exerciseId)?.rows.find((r) => r.setNumber === rowNumbers[0])?.[field] ?? first[field];
+    // A skipped timed hold has no seconds; its dial rests at the start value (dimmed) until the set is included again.
+    const read = () => findCard(card.exerciseId)?.rows.find((r) => r.setNumber === rowNumbers[0])?.[field] ?? (field === 'holdSeconds' ? card.suggestion.holdSeconds : first[field]);
     dials.push({ dial, read });
-    const skipped = skippable && first.reps === null;
+    const skipField = card.inputs.hold ? 'holdSeconds' : 'reps';
+    const skipped = skippable && first[skipField] === null;
     const cap = skippable
       ? h('button', { type: 'button', class: 'dcap skip', 'aria-pressed': String(skipped), 'aria-label': `${skipped ? 'Include' : 'Skip'} ${caption}`, onclick: () => toggleSkip(card, rowNumbers[0]) }, caption)
       : h('span', { class: 'dcap', text: caption });
@@ -124,13 +144,13 @@ export function mountDay(container, ctx, editId = null) {
   function logLine(card) {
     const editing = card.mode === 'editing';
     const numbers = card.rows.map((r) => r.setNumber);
-    const primary = card.inputs.weight ? 'weightLbs' : card.inputs.level ? 'levelNumber' : card.inputs.reps ? 'reps' : null;
+    const primary = card.inputs.weight ? 'weightLbs' : card.inputs.level ? 'levelNumber' : card.inputs.hold ? 'holdSeconds' : card.inputs.reps ? 'reps' : null;
     const secondary = primary === 'weightLbs' || primary === 'levelNumber' ? (card.inputs.distance ? 'distanceM' : card.inputs.reps ? 'reps' : null) : null;
     const cols = [];
     if (primary === null) cols.push(h('p', { class: 'hold-text', text: `${card.prescription}. Do your sets, then tap the tick.` }));
     else {
       // Not offered when reopening a logged exercise (that would be deleting a set: Undo does that) or with a single set.
-      const skippable = card.mode === 'input' && card.inputs.reps && numbers.length > 1;
+      const skippable = card.mode === 'input' && (card.inputs.reps || card.inputs.hold) && numbers.length > 1;
       for (const n of numbers) cols.push(dialColumn(card, primary, [n], `set ${n}`, { skippable }));
       if (secondary) cols.push(h('span', { class: 'times', 'aria-hidden': 'true' }, '×'), dialColumn(card, secondary, numbers, FIELD[secondary].caption));
     }
@@ -165,7 +185,6 @@ export function mountDay(container, ctx, editId = null) {
     const groups = card.optionGroups;
     const altButtons = [];
     if (groups.alternatives.length) altButtons.push(h('button', { type: 'button', class: 'alt-toggle opt', 'aria-expanded': String(open === 'alternatives'), disabled: !card.canSwap, onclick: toggle('alternatives') }, 'Options ', h('span', { class: 'alt-badge', text: String(groups.alternatives.length) })));
-    if (groups.trx.length) altButtons.push(h('button', { type: 'button', class: 'alt-toggle trx', 'aria-expanded': String(open === 'trx'), disabled: !card.canSwap, onclick: toggle('trx') }, 'TRX ', h('span', { class: 'alt-badge', text: String(groups.trx.length) })));
     // head / media / rest: plain stacked in portrait (display: contents), two columns in phone landscape (app.css).
     return h('article', { class: `ex slide split${card.increased ? ' increased' : ''}${card.done ? ' done' : ''}`, 'aria-label': card.name },
       h('div', { class: 'ex-head' },
@@ -298,6 +317,7 @@ export function mountDay(container, ctx, editId = null) {
       structure = key;
       const track = build(view);
       track.scrollLeft = x;
+      fitAltPanels();
       for (const { dial, read } of dials) dial.init(read());
       const target = restoreId ? document.getElementById(restoreId) : null;
       target?.focus({ preventScroll: true });
@@ -310,6 +330,7 @@ export function mountDay(container, ctx, editId = null) {
   return {
     update: render,
     destroy() {
+      altResize?.disconnect();
       for (const { dial } of dials) dial.dispose();
     },
   };

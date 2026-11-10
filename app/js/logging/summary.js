@@ -14,7 +14,7 @@ const isWorking = (set) => set.isRampUp !== true && set.completed !== false;
 // The template slot an exercise sits in (as the slot's exercise or one of its alternatives), or null.
 function slotOf(templateCode, exerciseId) {
   const slot = WORKOUTS[templateCode].slots.find(
-    (s) => s.exercise === exerciseId || s.alternatives.includes(exerciseId) || s.trxAlternatives.includes(exerciseId),
+    (s) => s.exercise === exerciseId || s.alternatives.includes(exerciseId),
   );
   return slot ? slot.slot : null;
 }
@@ -38,6 +38,7 @@ export function summaryView(state, sessionId) {
 
   const callouts = [];
   for (const exerciseId of ids) {
+    if (!Object.hasOwn(RULES, exerciseId)) continue; // sets logged for an exercise the app no longer has (TRX, v1.22): listed, no callout
     const next = suggestExercise(state, {
       exerciseId, templateCode: session.templateCode, slot: slotOf(session.templateCode, exerciseId), today: addDays(date, NEXT_TIME_DAYS),
     });
@@ -71,7 +72,7 @@ export function summaryView(state, sessionId) {
       count: order.get(exerciseId).length,
       text: setsText(
         order.get(exerciseId).sort((a, b) => a.setNumber - b.setNumber).map((s) => ({
-          weightLbs: s.weightLbs ?? null, reps: s.reps ?? null, levelNumber: s.levelNumber ?? null, distanceM: s.distanceM ?? null,
+          weightLbs: s.weightLbs ?? null, reps: s.reps ?? null, levelNumber: s.levelNumber ?? null, distanceM: s.distanceM ?? null, holdSeconds: s.holdSeconds ?? null,
         })),
         { carry: RULES[exerciseId]?.type === 'carry' },
       ),

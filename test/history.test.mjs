@@ -62,12 +62,12 @@ describe('base load', () => {
     assert.equal(hist(log, 'back-extension-45')[0].baseLoad, 0);
   });
 
-  test('suspension: the highest level; sets with no level do not count', () => {
-    const log = makeLog().session('2026-09-28', 'A', [atLevel('trx-row', 2, [15]), atLevel('trx-row', 3, [12, 11]), { exerciseId: 'trx-row', reps: [15] }]);
-    const [h] = hist(log, 'trx-row');
+  test('pushup ladder: the highest level; a set with no level counts as the starting level', () => {
+    const log = makeLog().session('2026-09-28', 'B', [atLevel('pushup', 2, [15]), atLevel('pushup', 3, [12, 11]), { exerciseId: 'pushup', reps: [15] }]);
+    const [h] = hist(log, 'pushup');
     assert.equal(h.baseLevel, 3);
     assert.deepEqual(h.atBase.map((s) => s.reps), [12, 11]);
-    assert.equal(h.sets.length, 3);
+    assert.equal(h.sets.length, 4);
   });
 
   test('a carry is judged by distance, not reps', () => {

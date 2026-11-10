@@ -79,14 +79,14 @@ export function increaseText(s) {
 
 // "35 × 12, 12, 11" for weights, "level 2 × 12, 12" for levels, "35 lbs × 40 m, 40 m" for carries, "8, 8" with neither.
 // Consecutive sets at the same weight (or level) are joined; a different weight starts a new group after " · ".
-// sets: [{ weightLbs, reps, levelNumber, distanceM }] in set order.
+// sets: [{ weightLbs, reps, levelNumber, distanceM, holdSeconds }] in set order; a timed hold reads "45 s, 50 s".
 export function setsText(sets, { carry = false, unit = '' } = {}) {
   const groups = [];
   for (const set of sets) {
     let head = null;
     if (set.levelNumber !== null) head = `level ${set.levelNumber}`;
     else if (set.weightLbs !== null) head = `${set.weightLbs}${carry ? ' lbs' : unit}`;
-    const done = carry ? `${set.distanceM} m` : String(set.reps);
+    const done = carry ? `${set.distanceM} m` : set.holdSeconds != null ? `${set.holdSeconds} s` : String(set.reps);
     const prev = groups[groups.length - 1];
     if (prev && prev.head === head) prev.done.push(done);
     else groups.push({ head, done: [done] });

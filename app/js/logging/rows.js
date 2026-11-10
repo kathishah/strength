@@ -17,9 +17,9 @@ export function inputsFor(suggestion) {
       ? { weight: true, level: false, reps: false, distance: true, hold: false }
       : { weight: true, level: false, reps: true, distance: false, hold: false };
     case 'loadable': return { weight: true, level: false, reps: true, distance: false, hold: false };
-    case 'ladder':
-    case 'suspension': return { weight: false, level: true, reps: true, distance: false, hold: false };
-    case 'hold': return { weight: false, level: false, reps: false, distance: false, hold: true };
+    case 'ladder': return { weight: false, level: true, reps: true, distance: false, hold: false };
+    case 'timed': return { weight: false, level: false, reps: false, distance: false, hold: true };
+    case 'hold': return { weight: false, level: false, reps: false, distance: false, hold: false }; // completion only
     default: return { weight: false, level: false, reps: true, distance: false, hold: false }; // bodyweight, none
   }
 }
@@ -32,19 +32,20 @@ export function canLog(values, inputs) {
   if (inputs.level && !(Number.isInteger(values.levelNumber) && values.levelNumber >= 1 && values.levelNumber <= 5)) return false;
   if (inputs.reps && !isNum(values.reps)) return false;
   if (inputs.distance && !isNum(values.distanceM)) return false;
+  if (inputs.hold && !(Number.isInteger(values.holdSeconds) && values.holdSeconds >= 1)) return false;
   return true;
 }
 
-const FIELDS = ['weightLbs', 'levelNumber', 'reps', 'distanceM'];
+const FIELDS = ['weightLbs', 'levelNumber', 'reps', 'distanceM', 'holdSeconds'];
 const has = (obj, key) => obj !== undefined && Object.hasOwn(obj, key);
 const orNull = (x) => (x === undefined ? null : x);
 
 // suggestion: the engine's suggestExercise result. logged: this exercise's sets in this session (replay records, deleted
-// ones already gone). draftRows: { [setNumber]: { weightLbs?, levelNumber?, reps?, distanceM? } }. editing: the exercise is reopened.
+// ones already gone). draftRows: { [setNumber]: { weightLbs?, levelNumber?, reps?, distanceM?, holdSeconds? } }. editing: the exercise is reopened.
 // planned: the slot's set count for the phase (0 for an exercise that is no longer in the plan). extra: sets added.
 //
 // Returns rows in set-number order:
-//   { id, setNumber, status, setId, weightLbs, levelNumber, reps, distanceM,
+//   { id, setNumber, status, setId, weightLbs, levelNumber, reps, distanceM, holdSeconds,
 //     suggestedWeightLbs, suggestedLevel,          // what "changed from" compares with
 //     weightChanged, levelChanged, canLog, dirty } // dirty: an editing row that differs from the logged set
 export function buildRows({ suggestion, logged = [], draftRows = {}, planned = 0, extra = 0, editing: reopened = false, targetRepsFor = () => suggestion.targetReps ?? null }) {
@@ -78,14 +79,19 @@ export function buildRows({ suggestion, logged = [], draftRows = {}, planned = 0
     const ownLevel = valueAt(suggestion.setLevels, setNumber, suggestion.level ?? null);
     const carryWeight = prev !== null && ownWeight === prev.ownWeight ? prev.weightLbs : ownWeight;
     const carryLevel = prev !== null && ownLevel === prev.ownLevel ? prev.levelNumber : ownLevel;
+    // A timed hold's seconds work like the weight: the set's own pre-fill (last time, else the start), following the row before while equal.
+    // A skipped row (no seconds) does not pass its blank on.
+    const ownHold = valueAt(suggestion.setHolds, setNumber, typeof suggestion.holdSeconds === 'number' ? suggestion.holdSeconds : null);
+    const carryHold = prev !== null && ownHold === prev.ownHold && prev.holdSeconds !== null ? prev.holdSeconds : ownHold;
     const levelNumber = inputs.level ? pick('levelNumber', carryLevel) : null;
     const values = {
       weightLbs: inputs.weight ? pick('weightLbs', carryWeight) : null,
       levelNumber,
       reps: inputs.reps ? pick('reps', carryReps ?? targetRepsFor(levelNumber)) : null,
       distanceM: inputs.distance ? pick('distanceM', carryDistance) : null,
+      holdSeconds: inputs.hold ? pick('holdSeconds', carryHold) : null,
     };
-    prev = { ownWeight, ownLevel, weightLbs: values.weightLbs, levelNumber: values.levelNumber };
+    prev = { ownWeight, ownLevel, ownHold, weightLbs: values.weightLbs, levelNumber: values.levelNumber, holdSeconds: values.holdSeconds };
     carryReps = values.reps;
     carryDistance = values.distanceM;
 
@@ -116,5 +122,6 @@ export function pickValues(values, inputs) {
     levelNumber: inputs.level ? values.levelNumber ?? null : null,
     reps: inputs.reps ? values.reps ?? null : null,
     distanceM: inputs.distance ? values.distanceM ?? null : null,
+    holdSeconds: inputs.hold ? values.holdSeconds ?? null : null,
   };
 }

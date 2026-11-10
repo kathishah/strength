@@ -36,7 +36,7 @@ export function mountExercise(container, ctx, exerciseId) {
         ? h('p', { class: 'empty-note', text: 'Nothing logged for this exercise yet. Its sessions and chart show up after your first one.' })
         : [
           switcher,
-          chart ? h('section', { class: 'card' }, chart, d.kind === 'weight' || d.kind === 'level' || d.kind === 'distance' || d.kind === 'reps' ? h('p', { class: 'small muted', text: ui.metric === 'top' ? 'Green lines mark an increase.' : 'Weight times reps, added up over the sets.' }) : null) : null,
+          chart ? h('section', { class: 'card' }, chart, d.kind === 'weight' || d.kind === 'level' || d.kind === 'distance' || d.kind === 'reps' || d.kind === 'time' ? h('p', { class: 'small muted', text: d.kind === 'time' ? (ui.metric === 'top' ? 'Green lines mark a longer hold.' : 'Seconds held, added up over the sets.') : ui.metric === 'top' ? 'Green lines mark an increase.' : 'Weight times reps, added up over the sets.' }) : null) : null,
           h('section', { class: 'card' },
             h('table', { class: 'htable' },
               h('thead', {}, h('tr', {}, h('th', { text: 'Date' }), h('th', { text: 'Sets' }), h('th', { class: 'r', text: d.kind === 'level' ? 'Level' : 'Top' }))),

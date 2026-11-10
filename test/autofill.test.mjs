@@ -108,13 +108,13 @@ describe('the examples of the draft spec', () => {
     assert.equal(c.suggestionText, 'Suggested: 25 / 30 / 35 lbs');
   });
 
-  test('A-7: levels follow too (TRX row 2 / 3 / 3), and are linked while equal', () => {
-    const log = makeLog().swap('A', 4, 'trx-row').session('2026-09-28', 'A', [levelSets('trx-row', [[2, 12], [3, 10], [3, 10]])]);
+  test('A-7: levels follow too (pushup 2 / 3 / 3), and are linked while equal', () => {
+    const log = makeLog().swap('A', 2, 'pushup').session('2026-09-28', 'A', [levelSets('pushup', [[2, 12], [3, 10], [3, 10]])]);
     log.session('2026-10-05', 'A', [], { finished: false, id: 'sess_open' });
-    const c = card(sessionView(log.state(), 'sess_open', emptyDraft('sess_open'), NOW), 'trx-row');
+    const c = card(sessionView(log.state(), 'sess_open', emptyDraft('sess_open'), NOW), 'pushup');
     assert.deepEqual(levels(c), [2, 3, 3]);
     assert.equal(c.suggestionText, 'Suggested: level 2 / 3 / 3');
-    const moved = card(sessionView(log.state(), 'sess_open', setRowField(emptyDraft('sess_open'), 'trx-row', 2, 'levelNumber', 4), NOW), 'trx-row');
+    const moved = card(sessionView(log.state(), 'sess_open', setRowField(emptyDraft('sess_open'), 'pushup', 2, 'levelNumber', 4), NOW), 'pushup');
     assert.deepEqual(levels(moved), [2, 4, 4]);
   });
 

@@ -119,7 +119,7 @@ describe('the edit view', () => {
     const v = view(l, 'sess_a1');
     assert.deepEqual([v.mode, v.templateCode, v.finished, v.older, v.warning], ['edit', 'A', true, [], null]);
     assert.equal(v.statusText, 'Workout A · Mon, Sep 28 · editing');
-    assert.ok(v.cards.every((c) => !c.canSwap && c.swapOptions.length === 0 && c.optionGroups.alternatives.length === 0 && c.optionGroups.trx.length === 0 && c.swappedFromName === null));
+    assert.ok(v.cards.every((c) => !c.canSwap && c.swapOptions.length === 0 && c.optionGroups.alternatives.length === 0 && c.swappedFromName === null));
   });
 
   test('is null for an unknown, open or deleted workout', () => {

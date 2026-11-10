@@ -1,4 +1,4 @@
-// Planning a workout day: set counts by phase, swaps, TRX tip, the fields written to a set (spec 4.3, 4.5, 5.1).
+// Planning a workout day: set counts by phase, swaps, the fields written to a set (spec 4.3, 4.5, 5.1).
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import { loggedDefaults, planSession, suggestExercise } from '../app/js/engine/index.js';
@@ -38,15 +38,15 @@ describe('planning a workout day', () => {
     assert.equal(plan(makeLog().swap('A', 1, 'lat-pulldown'), 'A', '2026-10-26').exercises[0].exerciseId, 'goblet-squat');
   });
 
-  test('swapping Chest-supported row for TRX row pre-fills level 2 (no weight)', () => {
-    const row = plan(makeLog().swap('A', 4, 'trx-row'), 'A', '2026-10-26').exercises[3];
-    assert.deepEqual([row.exerciseId, row.level, row.weightLbs, row.source], ['trx-row', 2, null, 'starting']);
+  test('swapping the Dumbbell bench press for the pushup pre-fills level 1 (no weight)', () => {
+    const row = plan(makeLog().swap('A', 2, 'pushup'), 'A', '2026-10-26').exercises[1];
+    assert.deepEqual([row.exerciseId, row.level, row.weightLbs, row.source], ['pushup', 1, null, 'starting']);
   });
 
-  test('two TRX exercises in a row get no pairing tip (there are no supersets, spec v1.19)', () => {
-    const both = plan(makeLog().swap('A', 4, 'trx-row').swap('A', 3, 'trx-hamstring-curl'), 'A', '2026-10-26');
-    assert.equal(both.exercises.some((e) => e.hints.some((h) => h.code === 'trx-pair')), false);
-    assert.equal(both.exercises.some((e) => 'superset' in e), false);
+  test('a swap to a TRX exercise left in an old log is ignored: the slot keeps its default (TRX was removed in v1.22)', () => {
+    const p = plan(makeLog().swap('A', 4, 'trx-row').swap('A', 3, 'trx-hamstring-curl'), 'A', '2026-10-26');
+    assert.deepEqual([p.exercises[3].exerciseId, p.exercises[2].exerciseId], ['chest-supported-row', 'db-romanian-deadlift']);
+    assert.equal(p.exercises.some((e) => 'superset' in e), false);
   });
 
   test('a swap into an exercise added in v1.19 takes the slot\'s sets and reps and its own starting weight', () => {
@@ -67,8 +67,8 @@ describe('planning a workout day', () => {
     const log = makeLog();
     const fields = loggedDefaults(suggestExercise(log.state(), { exerciseId: 'goblet-squat', ...firstSlotFor('goblet-squat'), today: '2026-09-28' }));
     assert.deepEqual(fields, { suggestedWeightLbs: 20, suggestedLevel: null, suggestionSource: 'starting' });
-    const level = loggedDefaults(suggestExercise(log.state(), { exerciseId: 'trx-row', ...firstSlotFor('trx-row'), today: '2026-09-28' }));
-    assert.deepEqual(level, { suggestedWeightLbs: null, suggestedLevel: 2, suggestionSource: 'starting' });
+    const level = loggedDefaults(suggestExercise(log.state(), { exerciseId: 'pushup', ...firstSlotFor('pushup'), today: '2026-09-28' }));
+    assert.deepEqual(level, { suggestedWeightLbs: null, suggestedLevel: 1, suggestionSource: 'starting' });
     for (const f of [fields, level]) {
       const ev = { id: '01J9Z000000000000000000001', ts: '2026-10-05T11:00:00.000Z-0001-d_7f3a', v: 1, type: 'set.logged', entityId: 's_1',
         payload: { sessionId: 'sess_1', exerciseId: 'goblet-squat', setNumber: 1, isRampUp: false, isCalibration: false, ...f } };
@@ -79,7 +79,7 @@ describe('planning a workout day', () => {
   test('every alternative of every slot can be swapped in and planned', () => {
     for (const [templateCode, w] of Object.entries(WORKOUTS)) {
       for (const slot of w.slots) {
-        for (const id of [slot.exercise, ...slot.alternatives, ...slot.trxAlternatives]) {
+        for (const id of [slot.exercise, ...slot.alternatives]) {
           for (const today of ['2026-10-06', '2026-10-26']) {
             const p = planSession(makeLog().swap(templateCode, slot.slot, id).state(), { today, templateCode });
             const e = p.exercises.find((x) => x.slot === slot.slot);

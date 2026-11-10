@@ -19,8 +19,8 @@ describe('eventsToCsv', () => {
     const rows = parse(eventsToCsv(base()));
     assert.deepEqual(rows[0], CSV_COLUMNS);
     assert.equal(rows.length, 4);
-    assert.deepEqual(rows[1].slice(0, 12), ['2026-09-29', 'A', '1', '1', 'sess_1', 'goblet-squat', 'Goblet Squat', '1', '20', '', '12', '']);
-    assert.deepEqual(rows[1].slice(12), ['20', 'starting', 'set_1']);
+    assert.deepEqual(rows[1].slice(0, 13), ['2026-09-29', 'A', '1', '1', 'sess_1', 'goblet-squat', 'Goblet Squat', '1', '20', '', '12', '', '']);
+    assert.deepEqual(rows[1].slice(13), ['20', 'starting', 'set_1']);
     assert.deepEqual(rows.slice(1).map((r) => [r[5], r[7]]), [['goblet-squat', '1'], ['goblet-squat', '2'], ['db-bench-press', '1']]);
   });
 
@@ -36,7 +36,7 @@ describe('eventsToCsv', () => {
       del('sess_2', 102, 'session'),
     ];
     const rows = parse(eventsToCsv(events));
-    assert.deepEqual(rows.slice(1).map((r) => [r[14], r[8], r[10]]), [['set_1', '20', '12'], ['set_2', '25', '9']]);
+    assert.deepEqual(rows.slice(1).map((r) => [r[15], r[8], r[10]]), [['set_1', '20', '12'], ['set_2', '25', '9']]);
   });
 
   test('duplicated and shuffled events give the same file; cells with commas or quotes are quoted', () => {

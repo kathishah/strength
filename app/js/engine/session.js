@@ -10,7 +10,7 @@ import { suggestExercise } from './suggest.js';
 export function exerciseForSlot(state, templateCode, slotNumber) {
   const slot = WORKOUTS[templateCode].slots.find((s) => s.slot === slotNumber);
   const swapped = state.swaps?.[`${templateCode}:${slotNumber}`];
-  const options = [...slot.alternatives, ...slot.trxAlternatives];
+  const options = slot.alternatives;
   return swapped && options.includes(swapped) && Object.hasOwn(RULES, swapped)
     ? { exerciseId: swapped, swapped: true, defaultExerciseId: slot.exercise, slot }
     : { exerciseId: slot.exercise, swapped: false, defaultExerciseId: slot.exercise, slot };

@@ -6,21 +6,22 @@
 
 The public demo uses a separate, original set: animated GIFs of anatomical figures with the worked muscles in red, created by the repository owner for this project and released under the repository's MIT license. They are in `demo/media/<exercise id>.gif` (listed in `DEMO_MEDIA` in `demo/media.js`), are not derived from any file in the inventory below, and are not part of the app's deploy. The 58 third-party images below stay uncleared and stay out of the demo.
 
+**Original art in the app's catalog (v1.22).** The six exercises of spec 4.5.4 (Dumbbell Floor Press, Dumbbell Chest Fly, Dumbbell Pullover, Seated Arnold Press, Half-Kneeling One-Arm Dumbbell Press, Incline-Bench Dumbbell Y Raise) use the same original art as the demo, from `demo/media/<exercise id>.gif`. They are not in `scripts/image-sources.json` and are not part of the third-party inventory below. The catalog marks them `original`, and a copy in the git-ignored `app/img/` shows them in a deployment made with `--include-images`.
+
 Per-file record: every file in `demo/media/` (18 exercises): creator is the repository owner; license is MIT with the repository; no attribution required.
 
 ## Inventory
 
-`scripts/image-sources.json` lists 58 third-party image URLs across six source domains:
+`scripts/image-sources.json` lists 51 third-party image URLs across five source domains:
 
 | Source | Count | Finding | Default disposition |
 |---|---:|---|---|
 | StrengthLog | 40 | Its published app terms say content is owned or licensed by StrengthLog, grant personal-use access, and restrict reproduction or integration into other software without prior written authorization. The terms are app-specific, so they do not establish the license for each website GIF; no redistribution license for these GIFs was found. | Not cleared; written permission or replacement required. |
-| Truman State Campus Recreation | 7 | The pages publish exercise GIFs for campus recreation use. The pages checked did not state a license granting redistribution in another app or image pack. | Not cleared; written permission or replacement required. |
 | Spotebi | 6 | No public redistribution license for the listed exercise illustrations was located in the pages checked. | Not cleared; written permission or replacement required. |
 | FitnessProgramer | 2 | No public redistribution license for the listed exercise GIFs was located in the pages checked. | Not cleared; written permission or replacement required. |
 | LoadMuscle | 2 | No public redistribution license for the listed animated WebP files was located in the pages checked. | Not cleared; written permission or replacement required. |
 | JEFIT | 1 | Its terms say copyrighted material may not be used beyond fair use without the copyright owner's permission. No license for the listed GIF was found. | Not cleared; permission or replacement required. |
-| **Total** | **58** | No source group had a clear, documented grant for redistribution in this project. A public URL or visible credit is not treated as permission. | **Do not include in the public demo or default self-host package.** |
+| **Total** | **51** | No source group had a clear, documented grant for redistribution in this project. A public URL or visible credit is not treated as permission. | **Do not include in the public demo or default self-host package.** |
 
 **Retired prototype page (removed).** `archive/routine_micro.html`, the retired v0.2 micro-session prototype, linked to exercise GIFs and pages hosted by third parties (about a dozen hosts, including Giphy, StrengthLog, JEFIT and Pinterest), so a browser that opened it loaded those files from their owners' servers. Those links were never part of the 58-image inventory above, were not cleared, and were not used by the app or the demo. Because GitHub Pages serves the whole repository, the page was deleted in October 2026 (decision recorded in the cleanup). It remains in the git history only.
 
@@ -29,7 +30,6 @@ This is a conservative publication audit, not a legal determination of every sit
 ## Source terms and pages reviewed
 
 - [StrengthLog app terms](https://www.strengthlog.com/app-terms-privacy/) — personal-use access and restrictions on reproducing or incorporating service content into other software without written authorization. Confirm directly with StrengthLog if seeking permission for its exercise GIFs.
-- [Truman State Campus Recreation exercise videos and photos](https://recreation.truman.edu/photos-video-home/) — public exercise reference pages; no reuse license was identified on the pages checked.
 - [Spotebi](https://spotebi.com/) — source pages are linked from `scripts/image-sources.json`; no redistribution grant was identified in the pages checked.
 - [FitnessProgramer](https://fitnessprogramer.com/) — source pages are linked from `scripts/image-sources.json`; no redistribution grant was identified in the pages checked.
 - [LoadMuscle](https://loadmuscle.com/) — source pages are linked from `scripts/image-sources.json`; no redistribution grant was identified in the pages checked.

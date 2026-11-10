@@ -59,6 +59,7 @@ describe('payload ranges (docs/API-CONTRACT.md section 4)', () => {
     ['reps', 0, 500, 501],
     ['rir', 0, 10, 11],
     ['levelNumber', 1, 5, 6],
+    ['holdSeconds', 1, 3600, 3601],
   ];
   for (const [name, lo, hi, over] of cases) {
     test(`${name}: ${lo} and ${hi} pass, ${over} and below ${lo} fail`, () => {

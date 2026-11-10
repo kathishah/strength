@@ -26,8 +26,8 @@ function index(state) {
   return [...sessions.values()].sort((a, b) => a.startedMs - b.startedMs || (a.session.id < b.session.id ? -1 : 1));
 }
 
-// What one set achieved: reps, or the distance walked for a carry; null if nothing was recorded.
-export const performance = (set, cfg) => (cfg.targetDistanceM !== null ? set.distanceM : set.reps) ?? null;
+// What one set achieved: reps, the distance walked for a carry, or the seconds held for a timed hold; null if nothing was recorded.
+export const performance = (set, cfg) => (cfg.progression === 'timed' ? set.holdSeconds : cfg.targetDistanceM !== null ? set.distanceM : set.reps) ?? null;
 
 const max = (xs) => xs.reduce((a, b) => (b > a ? b : a), -Infinity);
 
@@ -35,15 +35,15 @@ const max = (xs) => xs.reduce((a, b) => (b > a ? b : a), -Infinity);
 //   { sessionId, startedMs, date, templateCode, sets, baseLoad, baseLevel, atBase, setWeights, setLevels }
 //   sets:       working sets by set number
 //   baseLoad:   heaviest weight used (spec 5.2); null for exercises with no weight
-//   baseLevel:  highest level used (suspension and the pushup ladder); null otherwise
+//   baseLevel:  highest level used (the pushup ladder); null otherwise
 //   atBase:     the sets at the base load / level
 //   setWeights: the weight of each set number (a set not logged takes the one before it, prefill.js); null for exercises with no weight
 //   setLevels:  the same for levels; null otherwise
+//   setHolds:   the seconds held in each set number (timed holds); null otherwise
 export function exerciseHistory(state, cfg) {
   const out = [];
   for (const entry of index(state)) {
     let sets = (entry.byExercise.get(cfg.exerciseId) ?? []).filter((set) => performance(set, cfg) !== null);
-    if (cfg.progression === 'suspension') sets = sets.filter((s) => s.levelNumber != null);
     if (sets.length === 0) continue;
     sets.sort(bySetNumber);
 
@@ -53,7 +53,7 @@ export function exerciseHistory(state, cfg) {
     if (cfg.progression === 'load' || cfg.progression === 'loadable') {
       baseLoad = max(sets.map((s) => s.weightLbs ?? 0));
       atBase = sets.filter((s) => (s.weightLbs ?? 0) === baseLoad);
-    } else if (cfg.progression === 'suspension' || cfg.progression === 'ladder') {
+    } else if (cfg.progression === 'ladder') {
       baseLevel = max(sets.map((s) => s.levelNumber ?? cfg.startingLevel));
       atBase = sets.filter((s) => (s.levelNumber ?? cfg.startingLevel) === baseLevel);
     }
@@ -68,6 +68,7 @@ export function exerciseHistory(state, cfg) {
       atBase,
       setWeights: baseLoad === null ? null : valuesBySet(sets, (s) => s.weightLbs ?? 0),
       setLevels: baseLevel === null ? null : valuesBySet(sets, (s) => s.levelNumber ?? cfg.startingLevel),
+      setHolds: cfg.progression === 'timed' ? valuesBySet(sets, (s) => s.holdSeconds) : null,
     });
   }
   return out;
