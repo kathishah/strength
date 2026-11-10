@@ -6,7 +6,7 @@
 // returns a new draft and leaves the old one alone.
 //
 //   { v: 1, sessionId,
-//     rows: { [exerciseId]: { [setNumber]: { weightLbs?, levelNumber?, reps?, distanceM? } } },
+//     rows: { [exerciseId]: { [setNumber]: { weightLbs?, levelNumber?, reps?, distanceM?, holdSeconds? } } },
 //     editing: { [exerciseId]: true },     (a logged exercise reopened for changes)
 //     extra: { [exerciseId]: number },
 //     notes: string | null }
@@ -17,7 +17,7 @@ export const emptyDraft = (sessionId) => ({
   v: DRAFT_VERSION, sessionId, rows: {}, editing: {}, extra: {}, notes: null,
 });
 
-const ROW_FIELDS = ['weightLbs', 'levelNumber', 'reps', 'distanceM'];
+const ROW_FIELDS = ['weightLbs', 'levelNumber', 'reps', 'distanceM', 'holdSeconds'];
 const isObject = (x) => x !== null && typeof x === 'object' && !Array.isArray(x);
 const isNumOrNull = (x) => x === null || (typeof x === 'number' && Number.isFinite(x));
 const safeKey = (k) => k !== '__proto__' && k !== 'constructor' && k !== 'prototype';

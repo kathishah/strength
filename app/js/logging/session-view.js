@@ -13,13 +13,12 @@ import {
 
 const isWorking = (set) => set.isRampUp !== true && set.completed !== false;
 
-// The slot's exercise choices (spec 4.5, 4.5.1): the default, its alternatives, then the TRX alternatives.
+// The slot's exercise choices (spec 4.5): the default, then its alternatives.
 export function swapOptions(templateCode, slotNumber, currentId) {
   const slot = WORKOUTS[templateCode].slots.find((s) => s.slot === slotNumber);
   const list = [
     { exerciseId: slot.exercise, kind: 'default' },
     ...slot.alternatives.map((exerciseId) => ({ exerciseId, kind: 'alternative' })),
-    ...slot.trxAlternatives.map((exerciseId) => ({ exerciseId, kind: 'trx' })),
   ];
   return list
     .filter((o) => Object.hasOwn(RULES, o.exerciseId))
@@ -35,19 +34,15 @@ function cuesFor(exerciseId) {
     attribution: c?.attribution?.label ? c.attribution : null,
     startNote: c?.start ?? null,
     rationale: c?.rationale ?? null,
-    levelText: c?.trx?.levels ?? null,
     ladder: c?.ladder ?? null,
   };
 }
 
-// "Standard pushup (start here)", or the TRX level text, for the level a row is on.
+// "Standard pushup (start here)": the pushup ladder step for the level a row is on.
 function levelInfo(suggestion, levelNumber) {
   const c = EXERCISES[suggestion.exerciseId];
-  if (suggestion.progression === 'ladder') {
-    const step = c?.ladder?.find((l) => l.level === levelNumber);
-    return step ? `${step.variation}${step.cue ? `. ${step.cue}` : ''}` : null;
-  }
-  return c?.trx?.levels ?? null;
+  const step = c?.ladder?.find((l) => l.level === levelNumber);
+  return step ? `${step.variation}${step.cue ? `. ${step.cue}` : ''}` : null;
 }
 
 function buildCard({ state, sessionId, draft, e, slot, defaultExerciseId, swapped, templateCode, logged, planned }) {
@@ -98,11 +93,8 @@ function buildCard({ state, sessionId, draft, e, slot, defaultExerciseId, swappe
     swapOptions: options,
     canSwap: options.length > 1 && !swapBlocked,
     swapBlockedReason: swapBlocked ? 'Undo the sets you logged for this exercise to swap it.' : null,
-    // The two lists of the v0.2 viewer (spec 0.B.4): Options (back-friendly swaps) and TRX. The default is reached by Revert.
-    optionGroups: {
-      alternatives: options.filter((o) => o.kind === 'alternative'),
-      trx: options.filter((o) => o.kind === 'trx'),
-    },
+    // The Options list (back-friendly swaps, spec 4.5). The default is reached by Revert.
+    optionGroups: { alternatives: options.filter((o) => o.kind === 'alternative') },
     swappedFromName: swapped ? exerciseName(defaultExerciseId) : null,
     // The position label, filled in by labelCards once every card is known (spec 6.3).
     chipText: '',
@@ -110,10 +102,10 @@ function buildCard({ state, sessionId, draft, e, slot, defaultExerciseId, swappe
     mode: loggedCount === 0 ? 'input' : reopened ? 'editing' : 'done',
     done: loggedCount > 0,
     // The weight (or level) differs between sets, so one shared box cannot show it: the card lists a box per set.
-    setsDiffer: (inputs.weight && distinct('weightLbs')) || (inputs.level && distinct('levelNumber')),
+    setsDiffer: (inputs.weight && distinct('weightLbs')) || (inputs.level && distinct('levelNumber')) || (inputs.hold && distinct('holdSeconds')),
     summaryText: logged.length
       ? setsText([...logged].sort((a, b) => a.setNumber - b.setNumber).map((s) => ({
-        weightLbs: s.weightLbs ?? null, reps: s.reps ?? null, levelNumber: s.levelNumber ?? null, distanceM: s.distanceM ?? null,
+        weightLbs: s.weightLbs ?? null, reps: s.reps ?? null, levelNumber: s.levelNumber ?? null, distanceM: s.distanceM ?? null, holdSeconds: s.holdSeconds ?? null,
       })), { carry: e.type === 'carry', unit: ' lbs' })
       : '',
   };

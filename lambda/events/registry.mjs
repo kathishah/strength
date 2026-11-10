@@ -118,6 +118,7 @@ const SET_VALUE_FIELDS = {
   rir: nullable(RIR),
   levelNumber: nullable(LEVEL),
   distanceM: nullable(num(0, 10000)),
+  holdSeconds: nullable(int(1, 3600)),
   calibrationFeel: nullable(oneOf('too_easy', 'about_right', 'too_hard')),
   completed: bool,
 };

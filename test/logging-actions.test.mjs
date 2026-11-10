@@ -174,9 +174,9 @@ describe('Done on an exercise', () => {
   test('a hold logs completion only, one set per planned set', async () => {
     const w = await makeWorld();
     const id = await w.actions.startSession();
-    await w.actions.swap(id, { slotNumber: 5, exerciseId: 'trx-plank' });
-    await done(w, id, 'trx-plank');
-    const plank = setsOf(w, id, 'trx-plank');
+    await w.actions.swap(id, { slotNumber: 5, exerciseId: 'side-plank' });
+    await done(w, id, 'side-plank');
+    const plank = setsOf(w, id, 'side-plank');
     assert.equal(plank.length, 2);
     assert.ok(plank.every((s) => s.completed === true && s.reps === undefined && s.weightLbs === undefined));
     w.assertValid();
@@ -321,8 +321,8 @@ describe('swapping', () => {
     await assert.rejects(w.actions.swap(id, { slotNumber: 9, exerciseId: 'hip-thrust' }), /No such slot/);
     await done(w, id, 'db-romanian-deadlift');
     await assert.rejects(w.actions.swap(id, { slotNumber: 3, exerciseId: 'hip-thrust' }), /Undo the sets/);
-    await w.actions.swap(id, { slotNumber: 1, exerciseId: 'trx-squat' }); // other slots are free
-    assert.equal(card(w.view(id), 'trx-squat').rows[0].levelNumber, 2);
+    await w.actions.swap(id, { slotNumber: 1, exerciseId: 'hack-squat' }); // other slots are free
+    assert.equal(card(w.view(id), 'hack-squat').swapped, true);
   });
 });
 

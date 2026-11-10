@@ -18,12 +18,12 @@ describe('seed basics', () => {
     for (const w of Object.values(WORKOUTS)) for (const s of w.slots) assert.equal('superset' in s, false, `slot ${s.slot}`);
   });
 
-  test('every slot has 1 to 4 non-TRX alternatives, none repeated or equal to the slot exercise (spec 4.5)', () => {
+  test('every slot has at least one alternative (and no upper limit, v1.22), none repeated or equal to the slot exercise (spec 4.5)', () => {
     for (const [code, w] of Object.entries(WORKOUTS)) {
       for (const s of w.slots) {
-        const all = [s.exercise, ...s.alternatives, ...s.trxAlternatives];
+        const all = [s.exercise, ...s.alternatives];
         assert.equal(new Set(all).size, all.length, `${code}${s.slot} has a repeated exercise`);
-        assert.ok(s.alternatives.length >= 1 && s.alternatives.length <= 4, `${code}${s.slot} has ${s.alternatives.length} alternatives`);
+        assert.ok(s.alternatives.length >= 1, `${code}${s.slot} has ${s.alternatives.length} alternatives`);
       }
     }
   });
@@ -33,9 +33,23 @@ describe('seed basics', () => {
     for (const [id, e] of Object.entries(EXERCISES)) {
       if (!e.gifUrl) { assert.equal(Object.hasOwn(sources, id), false, `${id} has a source but no image`); continue; }
       assert.match(e.gifUrl, new RegExp(`^img/${id}\\.(gif|webp)$`), `${id} image path`);
+      if (e.original === true) { // original art (v1.22): no third-party source, no credit
+        assert.equal(Object.hasOwn(sources, id), false, `${id} is original art but has a third-party source`);
+        assert.deepEqual(e.attribution, { label: '', url: '' }, `${id} is original art and takes no credit`);
+        continue;
+      }
       assert.match(sources[id] ?? '', /^https:\/\//, `${id} has no source URL`);
       assert.ok(e.attribution.label && e.attribution.url, `${id} has no credit`);
     }
+  });
+
+  test('the six exercises of v1.22 have original art: an image path, no source, no credit (spec 4.5.3, 4.5.4)', () => {
+    const added = ['db-floor-press', 'db-chest-fly', 'db-pullover', 'seated-arnold-press', 'half-kneeling-one-arm-db-press', 'incline-bench-db-y-raise'];
+    for (const id of added) {
+      assert.equal(EXERCISES[id].original, true, `${id} original`);
+      assert.equal(EXERCISES[id].gifUrl, `img/${id}.gif`, `${id} image`);
+    }
+    assert.deepEqual(Object.entries(EXERCISES).filter(([, e]) => e.original).map(([id]) => id), added);
   });
 
   test('images of the exercises added in v1.19 are set, with a credit (spec 4.5.3)', () => {
@@ -52,12 +66,12 @@ describe('seed basics', () => {
 describe('seed integrity', () => {
   const ids = Object.keys(EXERCISES);
 
-  test('the catalog has 65 exercises (49 of v1.6 and the 16 added in v1.19)', () => assert.equal(ids.length, 65));
+  test('the catalog has 61 exercises (39 of v1.6 without TRX, the 16 added in v1.19 and the 6 of v1.22)', () => assert.equal(ids.length, 61));
 
   test('every id the templates and routine mention exists in the catalog', () => {
     const referenced = [];
     for (const w of Object.values(WORKOUTS)) {
-      for (const s of w.slots) referenced.push(s.exercise, ...s.alternatives, ...s.trxAlternatives);
+      for (const s of w.slots) referenced.push(s.exercise, ...s.alternatives);
     }
     for (const r of RECOVERY) referenced.push(r.exercise);
     const missing = [...new Set(referenced)].filter((id) => !Object.hasOwn(EXERCISES, id));

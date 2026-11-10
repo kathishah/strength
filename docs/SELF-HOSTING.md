@@ -89,7 +89,7 @@ The easiest route for the first deploy is a profile with administrator access. I
 
 ### Images are optional
 
-The default deployment contains no exercise images. Where an image is missing the app shows its built-in placeholder, and everything else works. The 58 third-party image sources listed in `scripts/image-sources.json` do not have documented redistribution rights, so they are not included, and the deploy never downloads images. Read the [media rights audit](MEDIA-RIGHTS-AUDIT.md) before you add any image of your own, and only add files you have the right to use. To publish images you have the rights to, put them in `app/img/` (git-ignored) and run `scripts/deploy-app.sh --include-images`.
+The default deployment contains no exercise images. Where an image is missing the app shows its built-in placeholder, and everything else works. The 51 third-party image sources listed in `scripts/image-sources.json` do not have documented redistribution rights, so they are not included, and the deploy never downloads images. Read the [media rights audit](MEDIA-RIGHTS-AUDIT.md) before you add any image of your own, and only add files you have the right to use. To publish images you have the rights to, put them in `app/img/` (git-ignored) and run `scripts/deploy-app.sh --include-images`.
 
 ### Where your settings live: `private/`
 

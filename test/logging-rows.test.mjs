@@ -17,12 +17,12 @@ describe('which boxes an exercise shows', () => {
   test('weight and reps, level and reps, distance and weight, nothing', () => {
     const log = fresh();
     assert.deepEqual(inputs(log, 'goblet-squat', 'A', 1), { weight: true, level: false, reps: true, distance: false, hold: false });
-    assert.deepEqual(inputs(log, 'trx-squat', 'A', 1), { weight: false, level: true, reps: true, distance: false, hold: false });
     assert.deepEqual(inputs(log, 'pushup', 'B', 5), { weight: false, level: true, reps: true, distance: false, hold: false });
     assert.deepEqual(inputs(log, 'farmer-carry', 'C', 5), { weight: true, level: false, reps: false, distance: true, hold: false });
     assert.deepEqual(inputs(log, 'dead-bug', 'A', 5), { weight: false, level: false, reps: true, distance: false, hold: false });
     assert.deepEqual(inputs(log, 'back-extension-45', 'B', 6), { weight: true, level: false, reps: true, distance: false, hold: false });
-    assert.deepEqual(inputs(log, 'trx-plank', 'A', 5), { weight: false, level: false, reps: false, distance: false, hold: true });
+    assert.deepEqual(inputs(log, 'side-plank', 'A', 5), { weight: false, level: false, reps: false, distance: false, hold: false });
+    assert.deepEqual(inputs(log, 'plank', 'A', 5), { weight: false, level: false, reps: false, distance: false, hold: true });
     assert.deepEqual(inputs(log, 'band-pull-apart', 'A', 6), { weight: false, level: false, reps: true, distance: false, hold: false });
   });
 });
@@ -99,11 +99,10 @@ describe('carry-over of weight to the remaining sets', () => {
     assert.deepEqual(buildRows({ suggestion: s(), ...three, draftRows: { 2: { reps: 9 } } }).map((r) => r.reps), [target, 9, 9]);
   });
 
-  test('levels carry the same way (TRX and the pushup ladder)', () => {
-    const trx = suggest(fresh(), 'trx-squat', 'A', 1);
-    assert.equal(trx.level, 2);
-    assert.deepEqual(buildRows({ suggestion: trx, planned: 3, draftRows: { 2: { levelNumber: 4 } } }).map((r) => r.levelNumber), [2, 4, 4]);
+  test('levels carry the same way (the pushup ladder)', () => {
     const pushup = suggest(fresh(), 'pushup', 'B', 5);
+    assert.equal(pushup.level, 1);
+    assert.deepEqual(buildRows({ suggestion: pushup, planned: 3, draftRows: { 2: { levelNumber: 4 } } }).map((r) => r.levelNumber), [1, 4, 4]);
     assert.deepEqual(buildRows({ suggestion: pushup, planned: 3, draftRows: { 1: { levelNumber: 3 } } }).map((r) => r.levelNumber), [3, 3, 3]);
   });
 
@@ -173,7 +172,7 @@ describe('other kinds of exercise', () => {
   });
 
   test('holds log completion only', () => {
-    const plank = suggest(fresh(), 'trx-plank', 'A', 5);
+    const plank = suggest(fresh(), 'side-plank', 'A', 5);
     const [row] = buildRows({ suggestion: plank, planned: 2 });
     assert.equal(row.canLog, true);
     assert.equal(row.weightLbs, null);
@@ -199,8 +198,8 @@ describe('other kinds of exercise', () => {
     const s = suggest(log, 'goblet-squat', 'A', 1);
     assert.deepEqual(weights(buildRows({ suggestion: s, planned: 2 })), [30, 30]);
     const c = fresh();
-    c.session('2026-09-28', 'B', [atLevel('trx-row', 3, [10, 10])]);
-    assert.equal(suggest(c, 'trx-row', 'A', 4).level, 3);
+    c.session('2026-09-28', 'B', [atLevel('pushup', 3, [10, 10])]);
+    assert.equal(suggest(c, 'pushup', 'B', 5).level, 3);
     const d = fresh();
     d.session('2026-09-28', 'C', [carry('farmer-carry', 40, [40, 40, 40])]);
     assert.equal(buildRows({ suggestion: suggest(d, 'farmer-carry', 'C', 5), planned: 1 })[0].weightLbs, 40);
@@ -216,6 +215,6 @@ describe('canLog and pickValues', () => {
 
   test('pickValues drops what the exercise does not show', () => {
     const inputs = inputsFor(suggest(fresh(), 'dead-bug', 'A', 5));
-    assert.deepEqual(pickValues({ weightLbs: 20, levelNumber: 2, reps: 8, distanceM: 40, rir: 2 }, inputs), { weightLbs: null, levelNumber: null, reps: 8, distanceM: null });
+    assert.deepEqual(pickValues({ weightLbs: 20, levelNumber: 2, reps: 8, distanceM: 40, rir: 2 }, inputs), { weightLbs: null, levelNumber: null, reps: 8, distanceM: null, holdSeconds: null });
   });
 });

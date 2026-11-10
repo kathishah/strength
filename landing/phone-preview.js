@@ -26,7 +26,7 @@ const SYNTHETIC = {
   'db-bench-press':       { weights: [15, 15, 17.5, 17.5, 20, 20], reps: [[12, 10, 9], [12, 11, 10], [10, 9, 8], [11, 10, 9], [9, 8, 8], [10, 9, 8]], next: 20, repsNow: 10, due: false, nextDate: '2026-10-30' },
   'db-romanian-deadlift': { weights: [10, 12.5, 12.5, 15, 15, 15], reps: [[10, 10, 9], [9, 9, 8], [10, 10, 9], [9, 8, 8], [10, 9, 9], [10, 10, 9]], next: 17.5, repsNow: 8, due: true },
 };
-const OPEN_ALTS = { alternatives: true, trx: true }; // both lists open, so the preview shows what the buttons hold
+const OPEN_ALTS = { alternatives: true }; // the list open, so the preview shows what the button holds
 
 const slots = WORKOUTS.A.slots.slice(0, 3);
 const SLIDES = slots.map((slot, i) => {
@@ -41,7 +41,7 @@ const SLIDES = slots.map((slot, i) => {
   return {
     id: slot.exercise, index: i, name: ex.name, notes: ex.notes, tags: ex.tags,
     prescription: `${slot.sets} × ${slot.reps}`, sets: Number(slot.sets),
-    options: slot.alternatives, trx: slot.trxAlternatives,
+    options: slot.alternatives,
     increased, next: syn.next, repsNow: syn.repsNow, sessions,
     increaseText: increased ? increaseText({ increased: true, weightLbs: syn.next, fromWeightLbs: lastW, source: 'scheduled' }) : null,
     lastText: lastText({ type: 'dumbbell', last: { date: DATES[DATES.length - 1], sets: sessions[sessions.length - 1].sets } }),
@@ -70,10 +70,9 @@ function header(title) {
         h('button', { type: 'button', class: 'theme-btn', tabindex: '-1' }, '◐'))));
 }
 
-function altPanel(slide, group) {
-  const ids = group === 'trx' ? slide.trx : slide.options;
-  return h('div', { class: 'alt-panel', 'data-group': group === 'trx' ? 'trxAlternatives' : 'alternatives', role: 'group' },
-    ids.map((id) => h('div', { class: 'alt-item' },
+function altPanel(slide) {
+  return h('div', { class: 'alt-panel', 'data-group': 'alternatives', role: 'group' },
+    slide.options.map((id) => h('div', { class: 'alt-item' },
       h('div', { class: 'alt-thumb' }, image(id, { width: 56, height: 42 })),
       h('div', { class: 'alt-name', text: EXERCISES[id].name }),
       h('button', { type: 'button', class: 'alt-use', tabindex: '-1', text: 'Use this' }))));
@@ -103,10 +102,8 @@ function workoutScreen(slide, dials) {
       h('div', { class: 'exercise-body', text: slide.notes }),
       h('div', { class: 'tags' }, slide.tags.map((t) => h('span', { class: 'tag', text: t }))),
       h('div', { class: 'alt-row' },
-        h('button', { type: 'button', class: 'alt-toggle opt', 'aria-expanded': String(OPEN_ALTS.alternatives), tabindex: '-1' }, 'Options ', h('span', { class: 'alt-badge', text: String(slide.options.length) })),
-        h('button', { type: 'button', class: 'alt-toggle trx', 'aria-expanded': String(OPEN_ALTS.trx), tabindex: '-1' }, 'TRX ', h('span', { class: 'alt-badge', text: String(slide.trx.length) }))),
-      altPanel(slide, 'options'),
-      altPanel(slide, 'trx'),
+        h('button', { type: 'button', class: 'alt-toggle opt', 'aria-expanded': String(OPEN_ALTS.alternatives), tabindex: '-1' }, 'Options ', h('span', { class: 'alt-badge', text: String(slide.options.length) }))),
+      altPanel(slide),
       h('div', { class: 'log-area' },
         h('p', { class: 'last muted small', text: slide.lastText }),
         h('div', { class: 'logline' },
@@ -197,7 +194,7 @@ export function createPreview({ interval = 7500 } = {}) {
       const device = h('div', { class: 'pp-device' });
       const screen = h('div', { class: 'pp-screen', role: 'img', 'aria-label': kind === 'history'
         ? 'The app’s exercise history screen with made-up data: last increase, a top-set chart with increases marked, and past sessions.'
-        : 'The app’s workout screen with made-up data: the exercise, its form image, the Options and TRX alternatives, and the weight and rep dials.' });
+        : 'The app’s workout screen with made-up data: the exercise, its form image, the Options alternatives, and the weight and rep dials.' });
       device.append(screen);
       container.append(device);
       screens.push({ el: screen, kind, dials: [] });

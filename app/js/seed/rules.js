@@ -1,7 +1,7 @@
 // Structured rules per exercise: the numeric fields spec section 8 lists, which the display catalog (catalog.js) does not
 // have. Same exercise ids as catalog.js and program.js.
 //
-// Values come from spec 4.3 (reps), 4.5.1 (TRX reps and levels), 5.3 (increments) and the 5.6 table
+// Values come from spec 4.3 (reps), 5.3 (increments) and the 5.6 table
 // (starting and first-loaded weights). test/rules.test.mjs reads those tables out of
 // docs/SPEC-strength.md and compares. A null where a value would be is "the spec gives none":
 //   - repMin/repMax/perSide/targetDistanceM null: an alternative with no range of its own uses the range of the
@@ -14,8 +14,8 @@
 //   loadable    45° back extension: pre-filled with last time's weight, never changed (no progression, spec 5.4)
 //   bodyweight  dead bug: no load, no progression
 //   ladder      pushup: pre-filled with last time's level, never changed
-//   suspension  TRX: pre-filled with last time's level (start 2), never changed
-//   hold        completion only (TRX plank, plank, side plank, weighted bird dog)
+//   hold        completion only (side plank, weighted bird dog)
+//   timed       plank: a time in seconds for each set, pre-filled with last time's (start 45), never changed
 //   none        sets and reps only (band pull-apart)
 const base = {
   progression: 'load',
@@ -98,25 +98,20 @@ export const RULES = {
   'cable-reverse-fly': ex('cable', { loadIncrementLbs: 5, startingWeightLbs: 10 }),
   'chest-supported-rear-delt-raise': ex('dumbbell', { loadIncrementLbs: DB, startingWeightLbs: 5 }),
   'db-lateral-raise': ex('dumbbell', { loadIncrementLbs: DB, startingWeightLbs: 5 }),
-  // A hold with its own time (4.5): completion only. Side plank (recovery item 4.6) is also an alternative to the dead bug.
-  plank: ex('hold', { progression: 'hold', holdSeconds: { min: 20, max: 40 } }),
+  // A hold with a time logged for each set (4.5, v1.22): starts at 45 s, then follows last time. Side plank (recovery item 4.6) is also an alternative to the dead bug.
+  plank: ex('hold', { progression: 'timed', holdSeconds: 45 }),
   'side-plank': ex('hold', { progression: 'hold', holdSeconds: { min: 15, max: 20 } }),
   'goblet-carry': ex('carry', { loadIncrementLbs: 5, startingWeightLbs: 25 }),
   // One total load, bar included (the bar weighs 45-65 lbs): +10 like the trap bar deadlift.
   'trap-bar-carry': ex('carry', { loadIncrementLbs: BB, startingWeightLbs: 45 }),
 
-  // ---- TRX alternatives (spec 4.5.1): level 1-5 instead of a load, starting level 2 ----
-  'trx-squat': ex('suspension', { progression: 'suspension', ...reps(12, 15), startingLevel: 2 }),
-  'trx-bulgarian-split-squat': ex('suspension', { progression: 'suspension', ...reps(8, 12, true), startingLevel: 2 }),
-  'trx-reverse-lunge': ex('suspension', { progression: 'suspension', ...reps(8, 12, true), startingLevel: 2 }),
-  'trx-chest-press': ex('suspension', { progression: 'suspension', ...reps(10, 15), startingLevel: 2 }),
-  'trx-row': ex('suspension', { progression: 'suspension', ...reps(10, 15), startingLevel: 2 }),
-  'trx-high-row': ex('suspension', { progression: 'suspension', ...reps(10, 15), startingLevel: 2 }),
-  'trx-face-pull': ex('suspension', { progression: 'suspension', ...reps(12, 15), startingLevel: 2 }),
-  'trx-hip-thrust': ex('suspension', { progression: 'suspension', ...reps(10, 15), startingLevel: 2 }),
-  'trx-hamstring-curl': ex('suspension', { progression: 'suspension', ...reps(8, 12), startingLevel: 2 }),
-  // "2 x 20-40 s hold; hold type, no levels". The spec's holdSeconds is one number; 4.5.1 gives a range.
-  'trx-plank': ex('suspension', { progression: 'hold', holdSeconds: { min: 20, max: 40 } }),
+  // ---- Added in spec v1.22 (4.5.4). Reps come from the slot they are swapped into (null here); the pullover is one dumbbell ----
+  'db-floor-press': ex('dumbbell', { loadIncrementLbs: DB, startingWeightLbs: 20 }),
+  'db-chest-fly': ex('dumbbell', { loadIncrementLbs: DB, startingWeightLbs: 10 }),
+  'db-pullover': ex('dumbbell', { loadIncrementLbs: DB1, startingWeightLbs: 20 }),
+  'seated-arnold-press': ex('dumbbell', { loadIncrementLbs: DB, startingWeightLbs: 15 }),
+  'half-kneeling-one-arm-db-press': ex('dumbbell', { perSide: true, loadIncrementLbs: DB, startingWeightLbs: 10 }),
+  'incline-bench-db-y-raise': ex('dumbbell', { loadIncrementLbs: DB, startingWeightLbs: 5 }),
 };
 
 // Catalog ids with no rules: recovery-routine items (spec 4.6), guidance only, never progressed and never

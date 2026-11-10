@@ -24,7 +24,7 @@ describe('last time and the pre-filled suggestion', () => {
     assert.deepEqual([s.weightLbs, s.fromWeightLbs, s.source], [35, 35, 'hold']);
     assert.deepEqual(s.last, {
       date: '2026-09-28',
-      sets: [30, 35, 35].map((w, i) => ({ weightLbs: w, reps: [12, 12, 11][i], levelNumber: null, distanceM: null })),
+      sets: [30, 35, 35].map((w, i) => ({ weightLbs: w, reps: [12, 12, 11][i], levelNumber: null, distanceM: null, holdSeconds: null })),
     });
   });
 
@@ -198,14 +198,6 @@ describe('bodyweight-based exercises never change (5.4, v1.13)', () => {
     assert.deepEqual([s.weightLbs, s.source, s.increased, s.nextScheduledDate], [10, 'hold', false, null]);
   });
 
-  test('TRX: starting level 2, then last time\'s level, whatever the reps', () => {
-    assert.deepEqual([sug(makeLog(), 'trx-row', '2026-09-28').level, sug(makeLog(), 'trx-row', '2026-09-28').source], [2, 'starting']);
-    const log = makeLog().session('2026-09-28', 'A', [atLevel('trx-row', 3, [15, 15, 15])]).session('2026-10-05', 'A', [atLevel('trx-row', 3, [5])]);
-    const s = sug(log, 'trx-row', '2027-01-04');
-    assert.deepEqual([s.level, s.weightLbs, s.source, s.nextScheduledDate], [3, null, 'hold', null]);
-    assert.equal(sug(log, 'trx-row', '2027-01-04').last.sets[0].levelNumber, 3);
-  });
-
   test('pushup: level 1 (10-20) at the start, then last time\'s level with that level\'s range', () => {
     const s0 = sug(makeLog(), 'pushup', '2026-09-28');
     assert.deepEqual([s0.level, s0.repMin, s0.repMax, s0.targetReps, s0.weightLbs], [1, 10, 20, 10, null]);
@@ -215,8 +207,8 @@ describe('bodyweight-based exercises never change (5.4, v1.13)', () => {
   });
 
   test('holds and band pull-apart: sets, not a suggestion', () => {
-    const plank = sug(makeLog(), 'trx-plank', '2026-12-14', { templateCode: 'A', slot: 5 });
-    assert.deepEqual([plank.weightLbs, plank.level, plank.source, plank.targetReps, plank.holdSeconds, plank.sets], [null, null, null, null, { min: 20, max: 40 }, 2]);
+    const plank = sug(makeLog(), 'side-plank', '2026-12-14', { templateCode: 'A', slot: 5 });
+    assert.deepEqual([plank.weightLbs, plank.level, plank.source, plank.targetReps, plank.holdSeconds, plank.sets], [null, null, null, null, { min: 15, max: 20 }, 2]);
     const band = sug(makeLog(), 'band-pull-apart', '2026-12-14', { templateCode: 'A', slot: 6 });
     assert.deepEqual([band.weightLbs, band.source, band.targetReps, band.repMin, band.repMax], [null, null, 12, 12, 15]);
   });
@@ -239,8 +231,8 @@ describe('invariants', () => {
       if (random() < 0.3) w += r.loadIncrementLbs ?? 5;
       if (random() < 0.15) w = Math.max(0, w - (r.loadIncrementLbs ?? 5));
       if (random() < 0.3) lv = Math.min(5, lv + 1);
-      const entry = r.progression === 'suspension' || r.progression === 'ladder'
-        ? atLevel(exerciseId, r.progression === 'ladder' ? Math.min(lv, 4) : lv, reps)
+      const entry = r.progression === 'ladder'
+        ? atLevel(exerciseId, Math.min(lv, 4), reps)
         : r.type === 'carry' ? carry(exerciseId, w, reps.map((x) => (x > 10 ? 40 : 30))) : lift(exerciseId, w, reps);
       log.session(date, 'A', [entry]);
     }
@@ -288,7 +280,7 @@ describe('invariants', () => {
 
 test('each suggestion has its own hints array (a hint added to one never shows on another)', () => {
   const a = sug(makeLog(), 'dead-bug', '2026-09-28');
-  const b = sug(makeLog(), 'trx-row', '2026-09-28');
+  const b = sug(makeLog(), 'pushup', '2026-09-28');
   a.hints.push({ code: 'x' });
   assert.deepEqual(b.hints, []);
   assert.deepEqual(sug(makeLog(), 'dead-bug', '2026-09-28').hints, []);

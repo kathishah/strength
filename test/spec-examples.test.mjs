@@ -62,9 +62,9 @@ example('5.7', 28, '459723ef', () => {
   assert.equal(pushupSets('2026-10-26').sets, 3);
 });
 
-example('5.7', 34, '9008ac2b', () => {
-  const row = bySlot(plan(makeLog().swap('A', 4, 'trx-row'), 'A', '2026-10-26'), 4);
-  assert.deepEqual([row.exerciseId, row.defaultExerciseId, row.swapped, row.level, row.weightLbs, row.source], ['trx-row', 'chest-supported-row', true, 2, null, 'starting']);
+example('5.7', 34, '9f226cdb', () => {
+  const row = bySlot(plan(makeLog().swap('A', 2, 'pushup'), 'A', '2026-10-26'), 2);
+  assert.deepEqual([row.exerciseId, row.defaultExerciseId, row.swapped, row.level, row.weightLbs, row.source], ['pushup', 'db-bench-press', true, 1, null, 'starting']);
 });
 
 // Each set starts from what was lifted last time (v1.21). The card of `exerciseId` in Workout A opened on `date`, with `draft` typed in.
@@ -95,9 +95,9 @@ example('5.7', 37, '55180ac0', () => {
   assert.deepEqual(weightsOf(openCard(squatWas([[25, 12], [30, 12], [35, 12], [35, 10]]), '2026-10-05', 'goblet-squat')), [25, 30, 35]);
 });
 
-example('5.7', 38, '97c82eb2', () => {
-  const log = makeLog().swap('A', 4, 'trx-row').session('2026-09-28', 'A', [levelSets('trx-row', [[2, 12], [3, 10], [3, 10]])]);
-  assert.deepEqual(openCard(log, '2026-10-05', 'trx-row').rows.map((r) => r.levelNumber), [2, 3, 3]);
+example('5.7', 38, 'c4cb10fe', () => {
+  const log = makeLog().swap('A', 2, 'pushup').session('2026-09-28', 'A', [levelSets('pushup', [[2, 12], [3, 10], [3, 10]])]);
+  assert.deepEqual(openCard(log, '2026-10-05', 'pushup').rows.map((r) => r.levelNumber), [2, 3, 3]);
 });
 
 example('5.7', 39, '36f955e9', () => {

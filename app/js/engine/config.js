@@ -14,7 +14,7 @@ export const slotDefaultId = (templateCode, slot) => slotOf(templateCode, slot)?
 export function firstSlotFor(exerciseId) {
   for (const [templateCode, w] of Object.entries(WORKOUTS)) {
     for (const s of w.slots) {
-      if (s.exercise === exerciseId || s.alternatives.includes(exerciseId) || s.trxAlternatives.includes(exerciseId)) {
+      if (s.exercise === exerciseId || s.alternatives.includes(exerciseId)) {
         return { templateCode, slot: s.slot };
       }
     }
@@ -39,7 +39,7 @@ export function resolveExercise(exerciseId, { settings = {}, templateCode = null
   const defaultId = where ? slotDefaultId(where.templateCode, where.slot) : null;
   const slotRules = defaultId && Object.hasOwn(RULES, defaultId) ? RULES[defaultId] : null;
 
-  // An alternative with no range of its own takes the slot's range (unloaded holds and TRX levels keep theirs).
+  // An alternative with no range of its own takes the slot's range (unloaded holds keep theirs).
   const inherits = rules.repMin === null && rules.targetDistanceM === null && ['load', 'loadable', 'none'].includes(rules.progression);
   const repMin = inherits ? slotRules?.repMin ?? null : rules.repMin;
   const repMax = inherits ? slotRules?.repMax ?? null : rules.repMax;

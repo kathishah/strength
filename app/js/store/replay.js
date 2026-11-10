@@ -16,7 +16,7 @@
 import { compareParsedTs, parseTs } from '../time.js';
 
 const SESSION_CREATE = ['templateCode', 'startedAt', 'programWeek', 'phase', 'isDeload', 'backPainBefore'];
-const SET_VALUE_FIELDS = ['weightLbs', 'reps', 'rir', 'levelNumber', 'distanceM', 'calibrationFeel', 'completed'];
+const SET_VALUE_FIELDS = ['weightLbs', 'reps', 'rir', 'levelNumber', 'distanceM', 'holdSeconds', 'calibrationFeel', 'completed'];
 const SET_CREATE = [
   'sessionId', 'exerciseId', 'setNumber', 'isRampUp', 'isCalibration',
   'suggestedWeightLbs', 'suggestedLevel', 'suggestionSource', ...SET_VALUE_FIELDS,

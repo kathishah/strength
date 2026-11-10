@@ -3,7 +3,7 @@
 // Weighted exercises: each set is pre-filled with the weight it had last time (spec 5.2), or that plus one increment when
 // a scheduled increase is due, on every set. `weightLbs` is the heaviest of them (last session's base load when it holds).
 // Nothing else changes a load: not rep performance, not back pain, not the week.
-// Bodyweight-based exercises (dead bug, back extension, TRX, pushup ladder) have no progression: each set is pre-filled
+// Bodyweight-based exercises (dead bug, back extension, pushup ladder) have no progression: each set is pre-filled
 // with the value it had last time, or the starting value. What was logged decides everything, not what was suggested.
 
 import { PUSHUP_LADDER } from '../seed/rules.js';
@@ -72,13 +72,13 @@ function suggestRepeat({ cfg, hist }) {
   switch (cfg.progression) {
     case 'loadable':
       return { ...none(), weightLbs: last?.baseLoad ?? cfg.startingWeightLbs, setWeightsLbs: last?.setWeights ?? null, fromWeightLbs: last?.baseLoad ?? null, source, targetReps: cfg.repMin };
-    case 'suspension':
-      return { ...none(), level: last?.baseLevel ?? cfg.startingLevel, setLevels: last?.setLevels ?? null, fromLevel: last?.baseLevel ?? null, source, targetReps: cfg.repMin };
     case 'ladder': {
       const level = last?.baseLevel ?? cfg.startingLevel;
       const { repMin, repMax } = PUSHUP_LADDER[level];
       return { ...none(), level, setLevels: last?.setLevels ?? null, fromLevel: last?.baseLevel ?? null, source, repMin, repMax, targetReps: repMin };
     }
+    case 'timed': // plank: each set's seconds from last time, else the start
+      return { ...none(), setHolds: last?.setHolds ?? null, source, targetReps: null };
     case 'bodyweight': // dead bug: no weight to show
       return { ...none(), source: null, targetReps: cfg.repMin };
     case 'none':
@@ -114,6 +114,7 @@ export function suggestExercise(state, { exerciseId, templateCode = null, slot =
     setWeightsLbs: r.setWeightsLbs ?? null,
     level,
     setLevels: r.setLevels ?? null,
+    setHolds: r.setHolds ?? null,
     targetReps: r.targetReps ?? null,
     source: r.source ?? null,
     fromWeightLbs,
@@ -127,7 +128,7 @@ export function suggestExercise(state, { exerciseId, templateCode = null, slot =
     scheduledIncrease: r.scheduledIncrease,
     last: last && {
       date: last.date,
-      sets: last.sets.map((s) => ({ weightLbs: s.weightLbs ?? null, reps: s.reps ?? null, levelNumber: s.levelNumber ?? null, distanceM: s.distanceM ?? null })),
+      sets: last.sets.map((s) => ({ weightLbs: s.weightLbs ?? null, reps: s.reps ?? null, levelNumber: s.levelNumber ?? null, distanceM: s.distanceM ?? null, holdSeconds: s.holdSeconds ?? null })),
     },
   };
 }

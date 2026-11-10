@@ -65,7 +65,7 @@ export function editView(state, { sessionId, nowMs, draftFor }) {
   for (const card of view.cards) {
     card.canSwap = false;
     card.swapOptions = [];
-    card.optionGroups = { alternatives: [], trx: [] };
+    card.optionGroups = { alternatives: [] };
     card.swappedFromName = null;
     card.swapBlockedReason = null;
   }

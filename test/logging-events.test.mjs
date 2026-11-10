@@ -46,11 +46,10 @@ describe('set.logged', () => {
 
   test('every kind of exercise produces a valid event: level, carry, bodyweight, hold, weight 0', () => {
     const cases = [
-      ['trx-squat', 'A', 1, values({ levelNumber: 3, reps: 12 })],
       ['pushup', 'B', 5, values({ levelNumber: 1, reps: 10 })],
       ['farmer-carry', 'C', 5, values({ weightLbs: 35, distanceM: 40 })],
       ['dead-bug', 'A', 5, values({ reps: 8 })],
-      ['trx-plank', 'A', 5, values()],
+      ['side-plank', 'A', 5, values()],
       ['leg-press', 'B', 1, values({ weightLbs: 0, reps: 12 })],
       ['back-extension-45', 'B', 6, values({ weightLbs: 0, reps: 12 })],
     ];

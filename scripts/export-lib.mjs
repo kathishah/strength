@@ -6,7 +6,7 @@ import { pacificDate, parseInstant } from '../app/js/time.js';
 
 export const CSV_COLUMNS = [
   'date', 'workout', 'programWeek', 'phase', 'sessionId', 'exerciseId', 'exercise', 'setNumber', 'weightLbs', 'levelNumber', 'reps',
-  'distanceM', 'suggestedWeightLbs', 'suggestionSource', 'setId',
+  'distanceM', 'holdSeconds', 'suggestedWeightLbs', 'suggestionSource', 'setId',
 ];
 
 const cell = (v) => {
@@ -17,7 +17,7 @@ const cell = (v) => {
 
 const slotOrder = (templateCode, exerciseId) => {
   const slots = WORKOUTS[templateCode]?.slots ?? [];
-  const i = slots.findIndex((s) => s.exercise === exerciseId || s.alternatives.includes(exerciseId) || s.trxAlternatives.includes(exerciseId));
+  const i = slots.findIndex((s) => s.exercise === exerciseId || s.alternatives.includes(exerciseId));
   return i < 0 ? 99 : i;
 };
 
@@ -35,7 +35,7 @@ export function eventsToCsv(events) {
       slot: slotOrder(session.templateCode, set.exerciseId),
       values: [
         Number.isNaN(startedMs) ? '' : pacificDate(startedMs), session.templateCode, session.programWeek, session.phase, set.sessionId, set.exerciseId,
-        EXERCISES[set.exerciseId]?.name ?? set.exerciseId, set.setNumber, set.weightLbs, set.levelNumber, set.reps, set.distanceM,
+        EXERCISES[set.exerciseId]?.name ?? set.exerciseId, set.setNumber, set.weightLbs, set.levelNumber, set.reps, set.distanceM, set.holdSeconds,
         set.suggestedWeightLbs, set.suggestionSource, set.id,
       ],
       setNumber: set.setNumber,

@@ -34,11 +34,12 @@ function sessionsByExercise(state) {
   return out;
 }
 
-const plain = (sets) => sets.map((s) => ({ weightLbs: s.weightLbs ?? null, reps: s.reps ?? null, levelNumber: s.levelNumber ?? null, distanceM: s.distanceM ?? null }));
+const plain = (sets) => sets.map((s) => ({ weightLbs: s.weightLbs ?? null, reps: s.reps ?? null, levelNumber: s.levelNumber ?? null, distanceM: s.distanceM ?? null, holdSeconds: s.holdSeconds ?? null }));
 
-// How an exercise's sessions are measured, from what was logged: a level, a distance, reps (no weight), a weight, or just "done" (holds).
+// How an exercise's sessions are measured, from what was logged: seconds held, a level, a distance, reps (no weight), a weight, or just "done" (holds).
 function kindOf(sessions) {
   const all = sessions.flatMap((x) => x.sets);
+  if (all.some((s) => s.holdSeconds != null)) return 'time';
   if (all.some((s) => s.levelNumber != null)) return 'level';
   if (all.some((s) => s.distanceM != null)) return 'distance';
   if (!all.some((s) => s.reps != null)) return 'done';
@@ -48,6 +49,7 @@ function kindOf(sessions) {
 function measure(kind, sets) {
   const reps = (s) => s.reps ?? 0;
   switch (kind) {
+    case 'time': return { top: max(sets.map((s) => s.holdSeconds ?? 0)), volume: sum(sets.map((s) => s.holdSeconds ?? 0)) };
     case 'level': return { top: max(sets.map((s) => s.levelNumber ?? 0)), volume: sum(sets.map(reps)) };
     case 'distance': return { top: max(sets.map((s) => s.distanceM ?? 0)), volume: sum(sets.map((s) => ((s.weightLbs ?? 0) > 0 ? s.weightLbs : 1) * (s.distanceM ?? 0))) };
     case 'reps': return { top: max(sets.map(reps)), volume: sum(sets.map(reps)) };
@@ -96,7 +98,7 @@ export function historyByExercise(state, today) {
 
 // ---- Exercise detail ----
 
-// null when the exercise is unknown. kind: 'weight' | 'level' | 'distance' | 'reps' | 'done' (no chart).
+// null when the exercise is unknown. kind: 'weight' | 'time' | 'level' | 'distance' | 'reps' | 'done' (no chart).
 // points oldest first (the chart); rows newest first (the table). increase: the top is above the session before it (spec 5.12).
 export function exerciseDetail(state, exerciseId, today) {
   if (!Object.hasOwn(RULES, exerciseId)) return null;
@@ -117,7 +119,7 @@ export function exerciseDetail(state, exerciseId, today) {
     exerciseId,
     name: exerciseName(exerciseId),
     kind,
-    topLabel: { weight: 'Top set (lbs)', level: 'Level', distance: 'Longest (m)', reps: 'Best set (reps)', done: 'Sets' }[kind],
+    topLabel: { weight: 'Top set (lbs)', time: 'Longest (s)', level: 'Level', distance: 'Longest (m)', reps: 'Best set (reps)', done: 'Sets' }[kind],
     stats: { lastIncreaseText: lastIncrease ? formatDay(lastIncrease) : '—', scheduledText, due: s.increased },
     points,
     rows: [...points].reverse(),

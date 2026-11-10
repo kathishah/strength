@@ -29,12 +29,16 @@ export const lift = (exerciseId, weightLbs, reps, extra = {}) => ({ exerciseId, 
 export const liftSets = (exerciseId, sets, extra = {}) => ({
   exerciseId, perSet: sets.map(([weightLbs, reps, setNumber]) => ({ weightLbs, reps, ...(setNumber === undefined ? {} : { setNumber }) })), ...extra,
 });
-// The same at a level: [[levelNumber, reps], ...] (suspension, pushup ladder).
+// The same at a level: [[levelNumber, reps], ...] (pushup ladder).
 export const levelSets = (exerciseId, sets, extra = {}) => ({
   exerciseId, perSet: sets.map(([levelNumber, reps, setNumber]) => ({ levelNumber, reps, ...(setNumber === undefined ? {} : { setNumber }) })), ...extra,
 });
-// Sets at a level (suspension, pushup ladder).
+// Sets at a level (pushup ladder).
 export const atLevel = (exerciseId, levelNumber, reps, extra = {}) => ({ exerciseId, levelNumber, reps, ...extra });
+// A timed hold (plank): the seconds held in each set, [45, 50] or [[45], [50, 3]] with a set number to leave a gap.
+export const hold = (exerciseId, seconds, extra = {}) => ({
+  exerciseId, perSet: seconds.map((s) => (Array.isArray(s) ? { holdSeconds: s[0], setNumber: s[1] } : { holdSeconds: s })), ...extra,
+});
 // Carry sets: distance walked per set.
 export const carry = (exerciseId, weightLbs, distances, extra = {}) => ({ exerciseId, weightLbs, distances, ...extra });
 // Ramp-up sets: [{ weightLbs, reps }].
