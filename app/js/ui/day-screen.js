@@ -58,12 +58,12 @@ export function mountDay(container, ctx, editId = null) {
         thumb(o.exerciseId, o.name),
         h('div', { class: 'alt-name', text: o.name }),
         h('button', {
-          type: 'button', class: 'alt-use', disabled: o.current,
+          type: 'button', class: o.revert ? 'alt-use revert' : 'alt-use',
           onclick: () => guard(async () => {
             await ctx.actions.swap(current.sessionId, { slotNumber: card.slot, exerciseId: o.exerciseId, templateCode: current.templateCode });
             ui.alt.delete(card.exerciseId);
           }),
-        }, o.current ? 'In use' : 'Use this'))));
+        }, o.revert ? 'Revert' : 'Use this'))));
   }
 
   // The open Options list is as tall as its first three rows and scrolls when it has more (spec 6.3, v1.22). Rows differ in height when a
@@ -196,7 +196,6 @@ export function mountDay(container, ctx, editId = null) {
       h('div', { class: 'ex-media' }, hero(card.name, card.cues.gifUrl, card.cues.attribution)),
       h('div', { class: 'ex-rest' },
         description(card),
-        card.swappedFromName ? h('div', { class: 'swap-note' }, `Swapped from ${card.swappedFromName} · `, h('button', { type: 'button', class: 'revert-btn', onclick: () => guard(async () => { ui.alt.delete(card.exerciseId); await ctx.actions.swap(current.sessionId, { slotNumber: card.slot, exerciseId: card.defaultExerciseId, templateCode: current.templateCode }); }) }, 'Revert')) : null,
         altButtons.length ? h('div', { class: 'alt-row' }, altButtons) : null,
         card.swapBlockedReason && altButtons.length ? h('p', { class: 'small muted', text: card.swapBlockedReason }) : null,
         open && card.canSwap ? altPanel(card, open) : null,
