@@ -25,6 +25,12 @@ export function swapOptions(templateCode, slotNumber, currentId) {
     .map((o) => ({ ...o, name: exerciseName(o.exerciseId), current: o.exerciseId === currentId }));
 }
 
+// What the Options list shows (spec 6.3): the choices that are not on the card. The default is one of them only after a swap, and then it is first.
+function listedOptions(options) {
+  const rest = options.filter((o) => !o.current);
+  return [...rest.filter((o) => o.kind === 'default').map((o) => ({ ...o, revert: true })), ...rest.filter((o) => o.kind === 'alternative')];
+}
+
 function cuesFor(exerciseId) {
   const c = EXERCISES[exerciseId];
   return {
@@ -93,9 +99,9 @@ function buildCard({ state, sessionId, draft, e, slot, defaultExerciseId, swappe
     swapOptions: options,
     canSwap: options.length > 1 && !swapBlocked,
     swapBlockedReason: swapBlocked ? 'Undo the sets you logged for this exercise to swap it.' : null,
-    // The Options list (back-friendly swaps, spec 4.5). The default is reached by Revert.
-    optionGroups: { alternatives: options.filter((o) => o.kind === 'alternative') },
-    swappedFromName: swapped ? exerciseName(defaultExerciseId) : null,
+    // The Options list (back-friendly swaps, spec 4.5, 6.3): every choice except the exercise on the card. After a swap the original comes
+    // first, marked `revert`, so it is drawn with Revert instead of Use this.
+    optionGroups: { alternatives: listedOptions(options) },
     // The position label, filled in by labelCards once every card is known (spec 6.3).
     chipText: '',
     // 'input': nothing logged yet; 'done': logged, shown as one summary line; 'editing': a logged exercise reopened.

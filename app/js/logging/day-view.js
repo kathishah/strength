@@ -66,7 +66,6 @@ export function editView(state, { sessionId, nowMs, draftFor }) {
     card.canSwap = false;
     card.swapOptions = [];
     card.optionGroups = { alternatives: [] };
-    card.swappedFromName = null;
     card.swapBlockedReason = null;
   }
   return {

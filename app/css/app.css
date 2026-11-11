@@ -26,9 +26,10 @@
   --opt-text: #0e7490; --opt-border: #67e8f9; --opt-bg: #ecfeff; --opt-active-bg: #cffafe; --opt-active-border: #0891b2; --opt-badge-bg: rgb(8 145 178 / 0.15);
   --tag-bg: #f1f5f9; --tag-border: #cbd5e1; --panel-bg: #f8fafc; --item-border: #e2e8f0; --thumb-bg: #eef2ff;
   --alt-use-bg: #e0e7ff; --alt-use-border: #6366f1;
+  --revert-bg: #0f172a; --revert-text: #f8fafc; --revert-border: #0f172a;
   --done-border: #16a34a; --done-shadow: 0 0 0 1px rgb(22 163 74 / 0.35), 0 10px 25px rgb(22 163 74 / 0.15);
   --done-flag-bg: #dcfce7; --done-flag-border: #86efac; --done-flag-text: #166534;
-  --startline: #4338ca; --pairing: #047857; --swap: #b45309;
+  --startline: #4338ca; --pairing: #047857;
   --header-bg: linear-gradient(135deg, #e0e7ff, #dbeafe); --header-border: #c7d2fe; --header-shadow: 0 8px 22px rgb(100 116 139 / 0.22);
   --accent-soft: rgb(79 70 229 / 0.12);
 }
@@ -61,9 +62,10 @@
     --opt-text: #67e8f9; --opt-border: rgb(34 211 238 / 0.5); --opt-bg: rgb(34 211 238 / 0.1); --opt-active-bg: rgb(34 211 238 / 0.25); --opt-active-border: #22d3ee; --opt-badge-bg: rgb(34 211 238 / 0.2);
     --tag-bg: rgb(15 23 42 / 0.9); --tag-border: rgb(55 65 81 / 0.9); --panel-bg: rgb(2 6 23 / 0.7); --item-border: rgb(31 41 55 / 0.8); --thumb-bg: #0b1020;
     --alt-use-bg: rgb(79 70 229 / 0.18); --alt-use-border: rgb(129 140 248 / 0.7);
+    --revert-bg: #f8fafc; --revert-text: #0f172a; --revert-border: #f8fafc;
     --done-border: rgb(34 197 94 / 0.9); --done-shadow: 0 0 0 1px rgb(34 197 94 / 0.45), 0 16px 40px rgb(22 163 74 / 0.4);
     --done-flag-bg: rgb(22 163 74 / 0.18); --done-flag-border: rgb(22 163 74 / 0.65); --done-flag-text: #bbf7d0;
-    --startline: #c7d2fe; --pairing: #6ee7b7; --swap: #fcd34d;
+    --startline: #c7d2fe; --pairing: #6ee7b7;
     --header-bg: linear-gradient(135deg, #0f172a, #1e3a8a); --header-border: rgb(148 163 184 / 0.3); --header-shadow: 0 8px 24px rgb(15 23 42 / 0.9);
     --accent-soft: rgb(79 70 229 / 0.3);
 }
@@ -94,9 +96,10 @@
     --opt-text: #67e8f9; --opt-border: rgb(34 211 238 / 0.5); --opt-bg: rgb(34 211 238 / 0.1); --opt-active-bg: rgb(34 211 238 / 0.25); --opt-active-border: #22d3ee; --opt-badge-bg: rgb(34 211 238 / 0.2);
     --tag-bg: rgb(15 23 42 / 0.9); --tag-border: rgb(55 65 81 / 0.9); --panel-bg: rgb(2 6 23 / 0.7); --item-border: rgb(31 41 55 / 0.8); --thumb-bg: #0b1020;
     --alt-use-bg: rgb(79 70 229 / 0.18); --alt-use-border: rgb(129 140 248 / 0.7);
+    --revert-bg: #f8fafc; --revert-text: #0f172a; --revert-border: #f8fafc;
     --done-border: rgb(34 197 94 / 0.9); --done-shadow: 0 0 0 1px rgb(34 197 94 / 0.45), 0 16px 40px rgb(22 163 74 / 0.4);
     --done-flag-bg: rgb(22 163 74 / 0.18); --done-flag-border: rgb(22 163 74 / 0.65); --done-flag-text: #bbf7d0;
-    --startline: #c7d2fe; --pairing: #6ee7b7; --swap: #fcd34d;
+    --startline: #c7d2fe; --pairing: #6ee7b7;
     --header-bg: linear-gradient(135deg, #0f172a, #1e3a8a); --header-border: rgb(148 163 184 / 0.3); --header-shadow: 0 8px 24px rgb(15 23 42 / 0.9);
     --accent-soft: rgb(79 70 229 / 0.3);
   }
@@ -297,8 +300,6 @@ a.btn.block { display: flex; }
 .ladder ul { margin: 6px 0 0; padding-left: 18px; }
 .tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
 .tag { color: var(--text); font-size: 0.72rem; padding: 3px 8px; border-radius: 999px; background: var(--tag-bg); border: 1px solid var(--tag-border); }
-.swap-note { font-size: 0.8rem; color: var(--swap); margin-top: 8px; }
-.revert-btn { background: none; border: 0; padding: 0 4px; min-height: 32px; color: var(--link); text-decoration: underline; font: inherit; cursor: pointer; }
 .alt-row { display: flex; gap: 8px; margin-top: 8px; }
 .alt-toggle {
   min-height: 44px; padding: 6px 14px; border-radius: 999px; font: inherit; font-size: 0.85rem; cursor: pointer; display: inline-flex;
@@ -320,7 +321,7 @@ a.btn.block { display: flex; }
   min-height: 44px; padding: 6px 12px; border-radius: 10px; font: inherit; font-size: 0.85rem; font-weight: 600; cursor: pointer;
   color: var(--text); background: var(--alt-use-bg); border: 1px solid var(--alt-use-border);
 }
-.alt-use:disabled { opacity: 0.6; cursor: default; }
+.alt-use.revert { color: var(--revert-text); background: var(--revert-bg); border-color: var(--revert-border); }
 .finish-card { border-left: 4px solid var(--border); }
 .finish-card h3 { margin: 0; }
 

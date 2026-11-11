@@ -239,13 +239,21 @@ describe('session view', () => {
     assert.ok(cards(a).every((x) => !('ssClass' in x) && !('partnerName' in x)));
   });
 
-  test('Options is the one list; a swapped card says what it was swapped from', () => {
+  test('Options is the one list: every choice but the one on the card; a swapped card lists the original first, to Revert', () => {
+    const plain = card(view(open()), 'goblet-squat');
+    assert.deepEqual(plain.optionGroups.alternatives.map((o) => [o.exerciseId, o.current, o.revert ?? false]),
+      [['leg-press', false, false], ['box-squat', false, false], ['hack-squat', false, false], ['leg-extension', false, false]]);
+
     const v = view(open(makeLog().swap('A', 1, 'box-squat')));
     const c = card(v, 'box-squat');
-    assert.deepEqual(c.optionGroups.alternatives.map((o) => [o.exerciseId, o.current]), [['leg-press', false], ['box-squat', true], ['hack-squat', false], ['leg-extension', false]]);
+    // The exercise in use is not listed; the original is first, marked revert; the others follow in the slot's order.
+    assert.deepEqual(c.optionGroups.alternatives.map((o) => [o.exerciseId, o.current, o.revert ?? false]),
+      [['goblet-squat', false, true], ['leg-press', false, false], ['hack-squat', false, false], ['leg-extension', false, false]]);
+    assert.equal(c.optionGroups.alternatives.length, plain.optionGroups.alternatives.length); // the Options badge does not change on a swap
     assert.deepEqual(Object.keys(c.optionGroups), ['alternatives']);
-    assert.equal(c.swappedFromName, 'Goblet Squat');
-    assert.equal(card(view(open()), 'goblet-squat').swappedFromName, null);
+    assert.equal('swappedFromName' in c, false); // the card carries no "Swapped from" note (v1.23): the original is reached from Options
+    // swapOptions (what a swap is checked against) still holds the default and marks the current one.
+    assert.deepEqual(c.swapOptions.map((o) => [o.exerciseId, o.current]), [['goblet-squat', false], ['leg-press', false], ['box-squat', true], ['hack-squat', false], ['leg-extension', false]]);
   });
 
   test('a card is done once its sets are logged (one Done per exercise); reopened it is editing; the view counts them', () => {

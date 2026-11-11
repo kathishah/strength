@@ -29,7 +29,7 @@
   --opt-text: #0e7490; --opt-border: #67e8f9; --opt-bg: #ecfeff; --opt-active-bg: #cffafe; --opt-active-border: #0891b2; --opt-badge-bg: rgb(8 145 178 / 0.15);
   --tag-bg: #f1f5f9; --tag-border: #cbd5e1; --panel-bg: #f8fafc; --item-border: #e2e8f0; --thumb-bg: #eef2ff;
   --alt-use-bg: #e0e7ff; --alt-use-border: #6366f1;
-  --startline: #4338ca; --pairing: #047857; --swap: #b45309;
+  --startline: #4338ca; --pairing: #047857;
   --header-bg: linear-gradient(135deg, #e0e7ff, #dbeafe); --header-border: #c7d2fe; --header-shadow: 0 8px 22px rgb(100 116 139 / 0.22);
   --accent-soft: rgb(79 70 229 / 0.12);
   --up-bg: #fef3c7; --up-text: #92400e; --up-border: #d97706; --warn-text: #92400e;
